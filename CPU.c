@@ -123,15 +123,18 @@ void CPU_dump(CPU* cpu, FILE* stream){
 void CPU_execute(CPU* cpu, Memory* mem){
     byte opcode = mem->data[cpu->PC];
     cpu->PC++;
-    instruction ins = instruction_table[opcode];
-    if(ins){
-        ins(cpu, mem);
+    instruction inst = instruction_table[opcode];
+    if(inst){
+        inst(cpu, mem);
     }
     else{
         fprintf(stderr, "ERROR: unknown opcode 0x%.2x\n", opcode);
         return;
     }
 }
+
+// instructions:
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void instruction_LDA_imm(CPU *cpu, Memory *mem)
 {
