@@ -40,7 +40,7 @@ void operation_LDA_Absolute(CPU *cpu, Memory *mem)
 
 void operation_LDA_Absolute_X(CPU *cpu, Memory *mem)
 {
-    
+
 }
 
 void operation_LDA_Absolute_Y(CPU *cpu, Memory *mem)
@@ -62,3 +62,25 @@ void operation_LDA_indirect_X(CPU *cpu, Memory *mem)
 void operation_LDA_indirect_Y(CPU *cpu, Memory *mem)
 {
 }
+
+// LDX:
+
+// LDY:
+
+// STA:
+
+void operation_STA_Absolute(CPU* cpu, Memory* mem)
+{
+    word abs = 0;
+    abs += mem->data[cpu->PC];
+    cpu->PC++;
+    abs += mem->data[cpu->PC] * 0x100;
+    mem->data[abs] = cpu->A;
+
+    cpu->PC++;
+    CPU_tick(cpu, 4);
+}
+
+// STX:
+
+// STY:

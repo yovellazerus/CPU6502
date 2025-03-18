@@ -44,12 +44,21 @@ void operation_LDA_Zero_Page_X(CPU* cpu, Memory* mem);
 void operation_LDA_indirect_X(CPU* cpu, Memory* mem);
 void operation_LDA_indirect_Y(CPU* cpu, Memory* mem);
 
+// LDX:
 
+// LDY:
+
+// STA:
+void operation_STA_Absolute(CPU* cpu, Memory* mem);
+
+// STX:
+
+// STY:
 
 
 
 static operation operation_table[NUMBER_OF_OPERATIONS] = {
-    // LDA
+    // LDA:
     [0xa9] = operation_LDA_Immediate,
     [0xad] = operation_LDA_Absolute,
     [0xbd] = operation_LDA_Absolute_X,
@@ -57,7 +66,19 @@ static operation operation_table[NUMBER_OF_OPERATIONS] = {
     [0xa5] = operation_LDA_Zero_Page,
     [0xb5] = operation_LDA_Zero_Page_X,
     [0xa1] = operation_LDA_indirect_X,
-    [0xb1] = operation_LDA_indirect_Y
+    [0xb1] = operation_LDA_indirect_Y,
+
+    // LDX:
+
+    // LDY:
+
+    // STA:
+    [0x8d] = operation_STA_Absolute,
+
+    // STX:
+
+    // STY:
+    
 };
 
 #endif // CPU_H
