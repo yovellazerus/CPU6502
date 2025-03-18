@@ -3,6 +3,8 @@
 
 #include "Memory.h"
 
+#define IS_SIGN_BYTE(ARG) ((ARG & 0b10000000) != 0)
+
 typedef struct cpu{
     byte A;
     byte X;
@@ -11,48 +13,51 @@ typedef struct cpu{
     byte SP;
     byte Flags;
     
-    size_t 	Cycles; 
+    size_t 	cycles;
+    const char* name; 
 } CPU;
 
 void CPU_dump(CPU* cpu, FILE* stream);
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);
-void CPU_init(CPU* cpu);
+void CPU_init(CPU* cpu, const char* name);
 
 void CPU_execute(CPU* cpu, Memory* mem);
+void CPU_tick(CPU* cpu, size_t amount);
+void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
-// instructions:
+// operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#define NUMBER_OF_INSTRUCTIONS 0xff
+#define NUMBER_OF_OPERATIONS 0xff
 
-typedef void (*instruction)(CPU*, Memory*);
+typedef void (*operation)(CPU*, Memory*);
 
 // LDA:
-void instruction_LDA_imm(CPU* cpu, Memory* mem);
-void instruction_LDA_abs(CPU* cpu, Memory* mem);
-void instruction_LDA_abs_X(CPU* cpu, Memory* mem);
-void instruction_LDA_abs_Y(CPU* cpu, Memory* mem);
-void instruction_LDA_zp(CPU* cpu, Memory* mem);
-void instruction_LDA_zp_X(CPU* cpu, Memory* mem);
-void instruction_LDA_indirect_X(CPU* cpu, Memory* mem);
-void instruction_LDA_indirect_Y(CPU* cpu, Memory* mem);
+void operation_LDA_Immediate(CPU* cpu, Memory* mem);
+void operation_LDA_Absolute(CPU* cpu, Memory* mem);
+void operation_LDA_Absolute_X(CPU* cpu, Memory* mem);
+void operation_LDA_Absolute_Y(CPU* cpu, Memory* mem);
+void operation_LDA_Zero_Page(CPU* cpu, Memory* mem);
+void operation_LDA_Zero_Page_X(CPU* cpu, Memory* mem);
+void operation_LDA_indirect_X(CPU* cpu, Memory* mem);
+void operation_LDA_indirect_Y(CPU* cpu, Memory* mem);
 
 
 
 
 
-static instruction instruction_table[NUMBER_OF_INSTRUCTIONS] = {
+static operation operation_table[NUMBER_OF_OPERATIONS] = {
     // LDA
-    [0xa9] = instruction_LDA_imm,
-    [0xad] = instruction_LDA_abs,
-    [0xbd] = instruction_LDA_abs_X,
-    [0xb9] = instruction_LDA_abs_Y,
-    [0xa5] = instruction_LDA_zp,
-    [0xb5] = instruction_LDA_zp_X,
-    [0xa1] = instruction_LDA_indirect_X,
-    [0xb1] = instruction_LDA_indirect_Y
+    [0xa9] = operation_LDA_Immediate,
+    [0xad] = operation_LDA_Absolute,
+    [0xbd] = operation_LDA_Absolute_X,
+    [0xb9] = operation_LDA_Absolute_Y,
+    [0xa5] = operation_LDA_Zero_Page,
+    [0xb5] = operation_LDA_Zero_Page_X,
+    [0xa1] = operation_LDA_indirect_X,
+    [0xb1] = operation_LDA_indirect_Y
 };
 
 #endif // CPU_H
