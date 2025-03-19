@@ -116,8 +116,13 @@ void test_basic(){
     memory.data[0x0002] = 0x8d;
     memory.data[0x0003] = 0x34;
     memory.data[0x0004] = 0x12;
+    memory.data[0x0005] = 0xaa;
+    memory.data[0x0006] = 0x48;
+    memory.data[0x0007] = 0xa9;
+    memory.data[0x0008] = 0x06;
+    memory.data[0x0009] = 0x68;
 
-    while (cpu.PC < 10) CPU_execute(&cpu, &memory);
+    while (memory.data[cpu.PC] != 0x00) CPU_execute(&cpu, &memory);
     
     Memory_dump(&memory, memory_file);
     CPU_dump(&cpu, cpu_file);

@@ -6,7 +6,7 @@ void CPU_init(CPU* cpu, const char* name){
     cpu->X = 0;
     cpu->Y = 0;
     cpu->PC = 0;
-    cpu->SP = 0;
+    cpu->SP = SP_INIT_VALUE;
     cpu->Flags = 0;
     cpu->cycles = 0;
     cpu->name = name;
@@ -102,7 +102,7 @@ bool CPU_offFlag(CPU* cpu, char flag){
 }
 
 void CPU_dump(CPU* cpu, FILE* stream){
-    fprintf(stream, "CPU: %s {\n", cpu->name ? cpu->name : "CPU1");
+    fprintf(stream, "CPU: %s {\n", cpu->name ? cpu->name : "");
     fprintf(stream, "A: %d\n", cpu->A);
     fprintf(stream, "X: %d\n", cpu->X);
     fprintf(stream, "Y: %d\n", cpu->Y);
