@@ -11,8 +11,14 @@ void operation_LDA_Immediate(CPU *cpu, Memory *mem)
     if(cpu->A == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->A)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     cpu->PC++;
     CPU_tick(cpu, 2);
@@ -29,8 +35,14 @@ void operation_LDA_Absolute(CPU *cpu, Memory *mem)
     if(cpu->A == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->A)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     cpu->PC++;
     CPU_tick(cpu, 4);
@@ -79,8 +91,14 @@ void operation_TAX_Implied(CPU* cpu, Memory* mem)
     if(cpu->X == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->X)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     CPU_tick(cpu, 2);
 }
@@ -91,8 +109,14 @@ void operation_TAY_Implied(CPU* cpu, Memory* mem)
     if(cpu->Y == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->Y)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     CPU_tick(cpu, 2); 
 }
@@ -103,8 +127,14 @@ void operation_TXA_Implied(CPU* cpu, Memory* mem)
     if(cpu->A == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->A)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     CPU_tick(cpu, 2); 
 }
@@ -115,8 +145,14 @@ void operation_TYA_Implied(CPU* cpu, Memory* mem)
     if(cpu->A == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->A)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     CPU_tick(cpu, 2); 
 }
@@ -135,8 +171,14 @@ void operation_PLA_Implied(CPU* cpu, Memory* mem)
     if(cpu->A == 0){
         CPU_onFlag(cpu, 'z');
     }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
     if(IS_SIGN_BYTE(cpu->A)){
         CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
     }
     CPU_tick(cpu, 4);
 

@@ -35,7 +35,7 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode);
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#define NUMBER_OF_OPERATIONS 0xff
+#define NUMBER_OF_POSSIBLE_OPERATIONS 0xff
 
 typedef void (*operation)(CPU*, Memory*);
 
@@ -48,9 +48,7 @@ void operation_LDA_Zero_Page_X(CPU* cpu, Memory* mem);
 void operation_LDA_indirect_X(CPU* cpu, Memory* mem);
 void operation_LDA_indirect_Y(CPU* cpu, Memory* mem);
 
-
 void operation_STA_Absolute(CPU* cpu, Memory* mem);
-
 
 void operation_TAX_Implied(CPU* cpu, Memory* mem);
 void operation_TAY_Implied(CPU* cpu, Memory* mem);
@@ -62,7 +60,7 @@ void operation_PLA_Implied(CPU* cpu, Memory* mem);
 
 void operation_NOP_Implied(CPU* cpu, Memory* mem);
 
-static operation operation_table[NUMBER_OF_OPERATIONS] = {
+static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     
     [0xa9] = operation_LDA_Immediate,
     [0xad] = operation_LDA_Absolute,
