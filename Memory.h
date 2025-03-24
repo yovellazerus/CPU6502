@@ -13,6 +13,21 @@
 
 #define MEM_SIZE (64*KB)
 
+#define RESET_VECTOR_HIGH_BYTE 0xfffd
+#define RESET_VECTOR_LOW_BYTE 0xfffc
+#define PROGRAM_ENTRY_HIGH_BYTE 0x00
+#define PROGRAM_ENTRY_LOW_BYTE 0x00
+
+#define INTERRUPT_VECTOR_HIGH_BYTE 0xffff
+#define INTERRUPT_VECTOR_LOW_BYTE 0xfffe
+#define INTERRUPT_HANDLER_HIGH_BYTE 0x60
+#define INTERRUPT_HANDLER_LOW_BYTE 0x00
+
+#define NMI_VECTOR_HIGH_BYTE 0xfffb
+#define NMI_VECTOR_LOW_BYTE 0xfffa
+#define NMI_HANDLER_HIGH_BYTE 0x80
+#define NMI_HANDLER_LOW_BYTE 0x00
+
 typedef unsigned char byte;
 typedef unsigned short word;
 

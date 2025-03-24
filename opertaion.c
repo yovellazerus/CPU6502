@@ -184,8 +184,116 @@ void operation_PLA_Implied(CPU* cpu, Memory* mem)
 
 }
 
-void operation_NOP_Implied(CPU* cpu, Memory* mem)
+void operation_JMP_Absolute(CPU *cpu, Memory *mem)
+{
+    word abs = 0;
+    abs += mem->data[cpu->PC];
+    cpu->PC++;
+    abs += mem->data[cpu->PC] * 0x100;
+    cpu->PC = abs;
+
+    CPU_tick(cpu, 3);
+}
+
+void operation_JMP_Indirect(CPU *cpu, Memory *mem)
+{
+    word abs = 0;
+    abs += mem->data[cpu->PC];
+    cpu->PC++;
+    abs += mem->data[cpu->PC] * 0x100;
+
+    word indr = 0;
+    indr += mem->data[abs];
+    /*
+    NB:
+    An original 6502 has does not correctly fetch the target address,
+    if the indirect vector falls on a page boundary (e.g. $xxFF where xx is any value from $00 to $FF). 
+    In this case fetches the LSB from $xxFF as expected but takes the MSB from $xx00. 
+    This is fixed in some later chips like the 65SC02,
+    so for compatibility always ensure the indirect vector is not at the end of the page.
+    */
+    if(indr != 0xff){
+        indr += mem->data[abs + 1] * 0x100;
+    }
+    
+    cpu->PC = mem->data[indr];
+
+    CPU_tick(cpu, 5);
+}
+
+void operation_JSR_Absolute(CPU *cpu, Memory *mem)
+{
+    word addr = 0;
+    addr += mem->data[cpu->PC];
+    cpu->PC++;
+    addr += mem->data[cpu->PC] * 0x0100;
+    cpu->PC++;
+
+    // TODO: not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0xff00;
+    cpu->SP--;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x00ff;
+    cpu->SP--;
+
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 6);
+}
+
+void operation_RTS_Implied(CPU *cpu, Memory *mem)
+{
+    word addr = 0;
+    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
+    cpu->SP++;
+    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES];
+    cpu->SP++;
+    
+    cpu->PC = addr;
+    CPU_tick(cpu, 6);
+}
+
+void operation_BRK_Implied(CPU *cpu, Memory *mem)
+{
+    word addr = 0;
+    addr += mem->data[INTERRUPT_VECTOR_LOW_BYTE];
+    addr += mem->data[INTERRUPT_VECTOR_HIGH_BYTE] * 0x0100;
+
+    // not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0xff00;
+    cpu->SP--;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x00ff;
+    cpu->SP--;
+
+    // push P(flags on the stack)
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    cpu->SP--;
+
+    CPU_onFlag(cpu, 'b');
+
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 7);
+}
+
+void operation_NOP_Implied(CPU *cpu, Memory *mem)
 {
     cpu->PC++;
     CPU_tick(cpu, 2);
+}
+
+void operation_RTI_Implied(CPU *cpu, Memory *mem)
+{
+    
+    cpu->SP++;
+    cpu->P = mem->data[cpu->SP + STACK_HIGH_ADDRES];
+
+    word addr = 0;
+    cpu->SP++;
+    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES];
+    cpu->SP++;
+    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
+
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 6);
 }
