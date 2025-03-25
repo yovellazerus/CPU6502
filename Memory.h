@@ -28,6 +28,11 @@
 #define NMI_HANDLER_HIGH_BYTE 0x80
 #define NMI_HANDLER_LOW_BYTE 0x00
 
+#define SP_INIT_VALUE 0xfd
+#define SP_HIGH_VALUE 0xff
+#define SP_LOW_VALUE 0x00
+#define STACK_HIGH_ADDRES 0x0100
+
 typedef unsigned char byte;
 typedef unsigned short word;
 
@@ -36,7 +41,8 @@ typedef struct memory{
 } Memory;
 
 void Memory_init(Memory* mem);
-void Memory_dump(Memory* mem, FILE* stream);
+void Memory_dump_all(Memory* mem, FILE* stream);
+void Memory_dump_stack(Memory* mem, byte sp, FILE* stream);
 
 
 

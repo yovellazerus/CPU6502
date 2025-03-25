@@ -19,7 +19,7 @@ void Memory_init(Memory* mem){
     mem->data[NMI_HANDLER_HIGH_BYTE * 0x0100 + NMI_HANDLER_LOW_BYTE] = 0x40;
 }
 
-void Memory_dump(Memory* mem, FILE* stream){
+void Memory_dump_all(Memory* mem, FILE* stream){
     word line = 0;
     for(int i = 0; i < MEM_SIZE; i++){
         if(i % 8 == 0){
@@ -27,5 +27,19 @@ void Memory_dump(Memory* mem, FILE* stream){
             line += 8;
         }
         fprintf(stream, " 0x%.2x ", mem->data[i]);
+    }
+}
+
+void Memory_dump_stack(Memory *mem, byte sp,FILE *stream)
+{
+    for(int i = STACK_HIGH_ADDRES + SP_HIGH_VALUE; i >= STACK_HIGH_ADDRES; i--){
+        fprintf(stream, "0x%.4x: ", i);
+        fprintf(stream, " 0x%.2x", mem->data[i]);
+        if(i == sp + STACK_HIGH_ADDRES){
+            fprintf(stream, " <--- sp\n");
+        }
+        else{
+            fprintf(stream, "\n");
+        }
     }
 }

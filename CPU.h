@@ -5,11 +5,6 @@
 
 #define IS_SIGN_BYTE(ARG) ((ARG & 0b10000000) != 0)
 
-#define SP_INIT_VALUE 0xfd
-#define SP_HIGH_VALUE 0xff
-#define SP_LOW_VALUE 0x00
-#define STACK_HIGH_ADDRES 0x0100
-
 typedef struct cpu{
     byte A;
     byte X;
