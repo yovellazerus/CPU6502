@@ -5,7 +5,8 @@ void CPU_init(CPU* cpu, const char* name){
     cpu->A = 0;
     cpu->X = 0;
     cpu->Y = 0;
-    cpu->PC = 0;
+    cpu->PC = RESET_VECTOR_LOW_BYTE;
+    cpu->PC += RESET_VECTOR_HIGH_BYTE * 0x0100;
     cpu->SP = SP_INIT_VALUE;
     cpu->P = 0;
     cpu->cycles = 0;
@@ -124,8 +125,8 @@ void CPU_dump(CPU* cpu, FILE* stream){
 }
 
 void CPU_execute(CPU* cpu, Memory* mem){
-    printf("(0x%.4x)\n", cpu->PC);
     byte opcode = mem->data[cpu->PC];
+    printf("0x%.4x: 0x%.2x\n", cpu->PC, opcode); // debug
     cpu->PC++;
     operation op = operation_table[opcode];
     if(op){
@@ -138,8 +139,8 @@ void CPU_execute(CPU* cpu, Memory* mem){
 
 void CPU_reset(CPU *cpu, Memory *mem)
 {
-    cpu->PC = mem->data[RESET_VECTOR_LOW_BYTE];
-    cpu->PC += mem->data[RESET_VECTOR_HIGH_BYTE] * 0x0100;
+    // TODO: maybe need to be a kmp instraction 
+    cpu->PC = mem->data[cpu->PC];
 }
 
 void CPU_tick(CPU* cpu, size_t amount){
