@@ -11,12 +11,13 @@
 #define MB (1024*KB)
 #define GB (1024*MB)
 
-#define MEM_SIZE (64*KB)
+#define MEMORY_SIZE (64*KB)
+#define ARRAY_SIZE(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 #define RESET_VECTOR_HIGH_BYTE 0xfffd
 #define RESET_VECTOR_LOW_BYTE 0xfffc
-#define PROGRAM_ENTRY_HIGH_BYTE 0x00
-#define PROGRAM_ENTRY_LOW_BYTE 0x00
+#define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0x40
+#define GLOBAL_PROGRAM_ENTRY_LOW_BYTE 0x00
 
 #define INTERRUPT_VECTOR_HIGH_BYTE 0xffff
 #define INTERRUPT_VECTOR_LOW_BYTE 0xfffe
@@ -37,12 +38,26 @@ typedef unsigned char byte;
 typedef unsigned short word;
 
 typedef struct memory{
-    byte data[MEM_SIZE];  
+    byte data[MEMORY_SIZE];
+    const char* label_table[MEMORY_SIZE]; // for debug  
 } Memory;
 
-void Memory_init(Memory* mem);
+typedef struct program{
+    const char* label;
+    word entry_point;
+    byte* code;
+    size_t size;
+} Program;
+
+void Memory_program_init(Program* program, const char* label, word entry_point, byte* code, size_t size);
+void Memory_load_program(Memory* mem, Program* program);
+void Memory_load_function(Memory* mem, const char* label, word entry_point, byte* code, size_t size);
+
+void Memory_init(Memory* mem, word entry_point);
+void Memory_set_entry_point(Memory* mem, word entry_point);
 void Memory_dump_all(Memory* mem, FILE* stream);
 void Memory_dump_stack(Memory* mem, byte sp, FILE* stream);
+
 
 
 

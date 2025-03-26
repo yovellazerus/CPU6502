@@ -230,9 +230,9 @@ void operation_JSR_Absolute(CPU *cpu, Memory *mem)
     cpu->PC++;
 
     // TODO: not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
-    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0xff00;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
     cpu->SP--;
-    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x00ff;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
     cpu->SP--;
 
     cpu->PC = addr;
@@ -243,10 +243,10 @@ void operation_JSR_Absolute(CPU *cpu, Memory *mem)
 void operation_RTS_Implied(CPU *cpu, Memory *mem)
 {
     word addr = 0;
-    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
     cpu->SP++;
     addr += mem->data[cpu->SP + STACK_HIGH_ADDRES];
     cpu->SP++;
+    addr += mem->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
     
     cpu->PC = addr;
     CPU_tick(cpu, 6);
@@ -259,9 +259,9 @@ void operation_BRK_Implied(CPU *cpu, Memory *mem)
     addr += mem->data[INTERRUPT_VECTOR_HIGH_BYTE] * 0x0100;
 
     // not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
-    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0xff00;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
     cpu->SP--;
-    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x00ff;
+    mem->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
     cpu->SP--;
 
     // push P(flags on the stack)

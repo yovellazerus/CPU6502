@@ -42,39 +42,23 @@ void test_basic(){
 
     Memory memory;
     CPU cpu;
-    Memory_init(&memory);
+    byte code1[] = {0xa9, 0xfe, 0x8d, 0x34, 0x12,
+                    0xaa, 0x48, 0xa9, 0x06 ,0xa9, 0x48,
+                    0x48, 0x48, 0x48 ,0x20, 0x00, 0x40, 
+                    0xa9, 0x42, 0xa9, 0xfe, 0xff,
+    };
+    byte function1[] = {
+        0x60, 
+    };
+    word entry_point1 = 0x1000;
+    Program program1;
+
+    Memory_init(&memory, entry_point1);
     CPU_init(&cpu, NULL);
-
     CPU_reset(&cpu, &memory);
-
-    memory.data[0x0000] = 0xa9;
-    memory.data[0x0001] = 0xfe;
-    memory.data[0x0002] = 0x8d;
-    memory.data[0x0003] = 0x34;
-    memory.data[0x0004] = 0x12;
-    memory.data[0x0005] = 0xaa;
-    memory.data[0x0006] = 0x48;
-    memory.data[0x0007] = 0xa9;
-    memory.data[0x0008] = 0x06;
-    memory.data[0x0009] = 0x68;
-
-    memory.data[0x000a] = 0xa9;
-    memory.data[0x000b] = 0x48;
-    memory.data[0x000c] = 0x48;
-    memory.data[0x000d] = 0x48;
-    memory.data[0x000e] = 0x48;
-    memory.data[0x000f] = 0x48;
-
-    memory.data[0x0010] = 0x20;
-    memory.data[0x0011] = 0xab;
-    memory.data[0x0012] = 0xcd;
-    memory.data[0x0013] = 0xa9;
-    memory.data[0x0014] = 0x42;
-    memory.data[0x0015] = 0xa9;
-    memory.data[0x0016] = 0xfe;
-    memory.data[0x0017] = 0xff;
-
-    memory.data[0xcdab] = 0x60;
+    Memory_program_init(&program1, "test_program", entry_point1, code1, ARRAY_SIZE(code1));
+    Memory_load_program(&memory, &program1);
+    Memory_load_function(&memory, "function1", 0x4000, function1, ARRAY_SIZE(function1));
 
     while (!cpu.hlt) CPU_execute(&cpu, &memory);
     

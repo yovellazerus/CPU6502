@@ -15,4 +15,4 @@ $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	del /F /Q testMain.o Memory.o CPU.o operation.o mos6502.exe 2>nul
+	del /Q testMain.o Memory.o CPU.o operation.o mos6502.exe 2>nul
