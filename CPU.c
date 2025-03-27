@@ -150,9 +150,8 @@ void CPU_tick(CPU* cpu, size_t amount){
 
 void CPU_invalid_opcode(CPU* cpu, byte opcode){
     // 6502 invalid opcode is like NOP
-    cpu->PC++;
     CPU_tick(cpu, 2);
     // for dubbing only!
-    fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 2);
+    fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 1);
     cpu->hlt = true;
 }

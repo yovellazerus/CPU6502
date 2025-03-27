@@ -60,6 +60,8 @@ void operation_JMP_Indirect(CPU* cpu, Memory* mem);
 void operation_JSR_Absolute(CPU* cpu, Memory* mem);
 void operation_RTS_Implied(CPU* cpu, Memory* mem);
 
+void operation_BEQ_Relative(CPU* cpu, Memory* mem);
+
 void operation_BRK_Implied(CPU* cpu, Memory* mem);
 void operation_NOP_Implied(CPU* cpu, Memory* mem);
 void operation_RTI_Implied(CPU* cpu, Memory* mem);
@@ -88,8 +90,9 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0x4c] = operation_JMP_Absolute,
     [0x6c] = operation_JMP_Indirect,
 
-    [0x20] = operation_JSR_Absolute,
+    [0xf0] = operation_BEQ_Relative,
 
+    [0x20] = operation_JSR_Absolute,
     [0x60] = operation_RTS_Implied,
 
     [0xff] = operation_BRK_Implied, // TODO: in reality it is 0x00...modified for dubbing!  

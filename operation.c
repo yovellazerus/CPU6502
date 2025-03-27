@@ -252,6 +252,28 @@ void operation_RTS_Implied(CPU *cpu, Memory *mem)
     CPU_tick(cpu, 6);
 }
 
+void operation_BEQ_Relative(CPU *cpu, Memory *mem)
+{
+    /*
+    Branch instructions use relative address to identify the target instruction if they are executed.
+    As relative addresses are stored using a signed 8 bit byte,
+    the target instruction must be within *126*(TODO: Not sure I'm handling this correctly.) 
+    bytes before the branch or 128 bytes after the branch.
+    */
+    signed char arg = (signed char)mem->data[cpu->PC];
+    cpu->PC++;
+    if(CPU_getFlag(cpu, 'z')){
+        CPU_tick(cpu, 1);
+        word old_cp = cpu->PC;
+        word new_cp = cpu->PC + arg;
+        if(old_cp & 0xff00 != new_cp & 0xff00){ // branching to a new page
+            CPU_tick(cpu, 1);
+        }
+        cpu->PC = new_cp;
+    }
+    CPU_tick(cpu, 2);
+}
+
 void operation_BRK_Implied(CPU *cpu, Memory *mem)
 {
     word addr = 0;
@@ -277,13 +299,11 @@ void operation_BRK_Implied(CPU *cpu, Memory *mem)
 
 void operation_NOP_Implied(CPU *cpu, Memory *mem)
 {
-    cpu->PC++;
     CPU_tick(cpu, 2);
 }
 
 void operation_RTI_Implied(CPU *cpu, Memory *mem)
 {
-    
     cpu->SP++;
     cpu->P = mem->data[cpu->SP + STACK_HIGH_ADDRES];
 

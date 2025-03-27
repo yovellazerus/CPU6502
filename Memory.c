@@ -8,7 +8,7 @@ void Memory_set_entry_point(Memory* mem, word entry_point){
 
 void Memory_init(Memory* mem, word entry_point){
     for(int i = 0; i < MEMORY_SIZE; i++){
-        mem->data[i] = 0;
+        mem->data[i] = 0x00;
     }
 
     Memory_set_entry_point(mem, entry_point);
@@ -74,7 +74,7 @@ void Memory_load_program(Memory* mem, Program* program){
     mem->label_table[start] = program->label;
 }
 
-void Memory_load_function(Memory* mem, const char* label, word entry_point, byte* code, size_t size){
+void Memory_load_code(Memory* mem, const char* label, word entry_point, byte* code, size_t size){
     word start = entry_point;
     for(size_t curr = 0; curr < size; curr++){
         mem->data[start + curr] = code[curr];

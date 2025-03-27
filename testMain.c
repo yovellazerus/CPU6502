@@ -42,23 +42,22 @@ void test_basic(){
 
     Memory memory;
     CPU cpu;
+    word entry_point = 0x1000;
+
     byte code1[] = {0xa9, 0xfe, 0x8d, 0x34, 0x12,
                     0xaa, 0x48, 0xa9, 0x06 ,0xa9, 0x48,
                     0x48, 0x48, 0x48 ,0x20, 0x00, 0x40, 
                     0xa9, 0x42, 0xa9, 0xfe, 0xff,
     };
     byte function1[] = {
-        0x60, 
+        0xa9, 0x00, 0xf0, 0x05, 0xa9, 0x01, 0x8d, 0x00, 0x20, 0x60,
     };
-    word entry_point1 = 0x1000;
-    Program program1;
 
-    Memory_init(&memory, entry_point1);
+    Memory_init(&memory, entry_point);
     CPU_init(&cpu, NULL);
     CPU_reset(&cpu, &memory);
-    Memory_program_init(&program1, "test_program", entry_point1, code1, ARRAY_SIZE(code1));
-    Memory_load_program(&memory, &program1);
-    Memory_load_function(&memory, "function1", 0x4000, function1, ARRAY_SIZE(function1));
+    Memory_load_code(&memory, "test_program", 0x1000, code1, ARRAY_SIZE(code1));
+    Memory_load_code(&memory, "function1", 0x4000, function1, ARRAY_SIZE(function1));
 
     while (!cpu.hlt) CPU_execute(&cpu, &memory);
     

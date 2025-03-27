@@ -51,7 +51,7 @@ typedef struct program{
 
 void Memory_program_init(Program* program, const char* label, word entry_point, byte* code, size_t size);
 void Memory_load_program(Memory* mem, Program* program);
-void Memory_load_function(Memory* mem, const char* label, word entry_point, byte* code, size_t size);
+void Memory_load_code(Memory* mem, const char* label, word entry_point, byte* code, size_t size);
 
 void Memory_init(Memory* mem, word entry_point);
 void Memory_set_entry_point(Memory* mem, word entry_point);
