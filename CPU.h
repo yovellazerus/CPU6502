@@ -100,6 +100,16 @@ void operation_BRK_Implied(CPU* cpu, Memory* memory);
 void operation_NOP_Implied(CPU* cpu, Memory* memory);
 void operation_RTI_Implied(CPU* cpu, Memory* memory);
 
+// Unofficial not documented operations:
+void operation_Unofficial_NOP_1A(CPU* cpu, Memory* memory);
+void operation_Unofficial_NOP_3A(CPU* cpu, Memory* memory);
+void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory);
+void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory);
+void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory);
+
+// My actions:
+// (There are none at the moment...)
+
 static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     
     [0xa9] = operation_LDA_Immediate,
@@ -126,7 +136,7 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0x8d] = operation_STA_Absolute,
     [0x85] = operation_STA_Zero_Page,
     [0x95] = operation_STA_Zero_Page_X,
-    [0x9D] = operation_STA_Absolute_X,
+    [0x9d] = operation_STA_Absolute_X,
     [0x99] = operation_STA_Absolute_Y,
     [0x81] = operation_STA_Indirect_X,
     [0x91] = operation_STA_Indirect_Y,
@@ -166,6 +176,16 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0xff] = operation_BRK_Implied, // TODO: in reality it is 0x00...modified for dubbing!  
     [0xea] = operation_NOP_Implied,
     [0x40] = operation_RTI_Implied,
+
+    // Unofficial not documented operations:
+    [0x1a] = operation_Unofficial_NOP_1A,
+    [0x3a] = operation_Unofficial_NOP_3A,
+    [0x5a] = operation_Unofficial_NOP_5A,
+    [0x7a] = operation_Unofficial_NOP_7A,
+    [0xfa] = operation_Unofficial_NOP_FA,
+
+    // My actions:
+    // (There are none at the moment...)
     
 };
 

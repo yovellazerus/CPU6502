@@ -607,3 +607,13 @@ void operation_RTI_Implied(CPU *cpu, Memory *memory)
 
     CPU_tick(cpu, 6);
 }
+
+// Unofficial not documented operations:
+void operation_Unofficial_NOP_1A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_3A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ CPU_tick(cpu, 4); }
+
+// My actions:
+// (There are none at the moment...)
