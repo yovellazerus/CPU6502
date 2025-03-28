@@ -70,6 +70,7 @@ bool is_page_crossed(word addres, byte offset){
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Load Operations:
 void operation_LDA_Immediate(CPU *cpu, Memory *memory)
 {
     byte imm = memory->data[cpu->PC];
@@ -289,6 +290,7 @@ void operation_LDY_Zero_Page_X(CPU* cpu, Memory* memory){
     CPU_tick(cpu, 4);
 }
 
+// Store Operations:
 void operation_STA_Absolute(CPU* cpu, Memory* memory)
 {
     word abs = 0;
@@ -423,6 +425,7 @@ void operation_STY_Absolute(CPU* cpu, Memory* memory){
     CPU_tick(cpu, 4);
 }
 
+// Register Transfers:
 void operation_TAX_Implied(CPU* cpu, Memory* memory)
 {
     cpu->X = cpu->A;
@@ -451,6 +454,7 @@ void operation_TYA_Implied(CPU* cpu, Memory* memory)
     CPU_tick(cpu, 2); 
 }
 
+// Stack Operations:
 void operation_PHA_Implied(CPU* cpu, Memory* memory)
 {
     memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->A;
@@ -467,6 +471,119 @@ void operation_PLA_Implied(CPU* cpu, Memory* memory)
 
 }
 
+// Logical:
+void operation_AND_Immediate(CPU* cpu, Memory* memory){
+    byte imm = memory->data[cpu->PC];
+    cpu->A &= imm;
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 2);
+}
+
+void operation_AND_Zero_Page(CPU* cpu, Memory* memory){
+    cpu->A &= memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 3);
+}
+
+void operation_AND_Zero_Page_X(CPU* cpu, Memory* memory){
+    cpu->A &= memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 4);
+}
+
+void operation_AND_Absolute(CPU* cpu, Memory* memory){
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->A &= memory->data[abs];
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 4);
+}
+
+void operation_AND_Absolute_X(CPU* cpu, Memory* memory){
+    byte offset = cpu->X;
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->A &= memory->data[abs + offset];
+
+    assignment_flag_control(cpu, 'A');
+    if(is_page_crossed(abs, offset)){
+        CPU_tick(cpu, 1);
+    }
+    CPU_tick(cpu, 4);
+}
+
+void operation_AND_Absolute_Y(CPU* cpu, Memory* memory){
+    byte offset = cpu->Y;
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->A &= memory->data[abs + offset];
+
+    assignment_flag_control(cpu, 'A');
+    if(is_page_crossed(abs, offset)){
+        CPU_tick(cpu, 1);
+    }
+    CPU_tick(cpu, 4);
+}
+
+void operation_AND_Indirect_X(CPU* cpu, Memory* memory){
+    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    cpu->PC++;
+
+    base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
+
+    word real_addres = 0;
+    real_addres += memory->data[ZERO_PAGE_START + base_addres];
+    real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
+
+    cpu->A &= memory->data[real_addres];
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 6);
+}
+
+void operation_AND_Indirect_Y(CPU* cpu, Memory* memory){
+    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    cpu->PC++;
+
+    word real_addres = 0;
+    real_addres += memory->data[base_addres];
+    real_addres += memory->data[base_addres + 1] * 0x0100;
+
+    if(is_page_crossed(real_addres, cpu->Y)){
+        CPU_tick(cpu, 1);
+    }
+
+    real_addres += cpu->Y;
+    
+    cpu->A &= memory->data[real_addres];
+
+    assignment_flag_control(cpu, 'A');
+    CPU_tick(cpu, 5);
+}
+
+// Arithmetic:
+
+// Increments & Decrements:
+
+// Shifts:
+
+// Jumps & Calls:
 void operation_JMP_Absolute(CPU *cpu, Memory *memory)
 {
     word abs = 0;
@@ -535,6 +652,7 @@ void operation_RTS_Implied(CPU *cpu, Memory *memory)
     CPU_tick(cpu, 6);
 }
 
+// Branches:
 void operation_BEQ_Relative(CPU *cpu, Memory *memory)
 {
     /*
@@ -557,14 +675,23 @@ void operation_BEQ_Relative(CPU *cpu, Memory *memory)
     CPU_tick(cpu, 2);
 }
 
+// Status Flag Changes:
 void operation_CLC_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'c'); }
+
 void operation_CLD_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'd'); }
+
 void operation_CLI_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'i'); }
+
 void operation_CLV_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'v'); }
+
 void operation_SEC_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'c');  }
+
 void operation_SED_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'd');  }
+
 void operation_SEI_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'i');  }
 
+
+// System Functions:
 void operation_BRK_Implied(CPU *cpu, Memory *memory)
 {
     word addr = 0;
@@ -610,10 +737,15 @@ void operation_RTI_Implied(CPU *cpu, Memory *memory)
 
 // Unofficial not documented operations:
 void operation_Unofficial_NOP_1A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+
 void operation_Unofficial_NOP_3A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+
 void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+
 void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+
 void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ CPU_tick(cpu, 4); }
+
 
 // My actions:
 // (There are none at the moment...)
