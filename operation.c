@@ -183,6 +183,112 @@ void operation_LDA_Indirect_Y(CPU *cpu, Memory *memory)
     CPU_tick(cpu, 5);
 }
 
+void operation_LDX_Immediate(CPU* cpu, Memory* memory){
+    byte imm = memory->data[cpu->PC];
+    cpu->X = imm;
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'X');
+    CPU_tick(cpu, 2);
+}
+
+void operation_LDX_Absolute(CPU* cpu, Memory* memory){
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->X = memory->data[abs];
+
+    assignment_flag_control(cpu, 'X');
+    CPU_tick(cpu, 4);
+}
+
+void operation_LDX_Absolute_Y(CPU* cpu, Memory* memory){
+    byte offset = cpu->Y;
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->X = memory->data[abs + offset];
+
+    assignment_flag_control(cpu, 'X');
+    if(is_page_crossed(abs, offset)){
+        CPU_tick(cpu, 1);
+    }
+    CPU_tick(cpu, 4);
+}
+
+void operation_LDX_Zero_Page(CPU* cpu, Memory* memory){
+    cpu->X = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'X');
+    CPU_tick(cpu, 3);
+}
+
+void operation_LDX_Zero_Page_Y(CPU* cpu, Memory* memory){
+    cpu->X = memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->Y) % PAGE_SIZE]; // zero page wrap around
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'X');
+    CPU_tick(cpu, 4);
+}
+
+void operation_LDY_Immediate(CPU* cpu, Memory* memory){
+    byte imm = memory->data[cpu->PC];
+    cpu->Y = imm;
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'Y');
+    CPU_tick(cpu, 2);
+}
+
+void operation_LDY_Absolute(CPU* cpu, Memory* memory){
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->Y = memory->data[abs];
+
+    assignment_flag_control(cpu, 'Y');
+    CPU_tick(cpu, 4);
+}
+
+void operation_LDY_Absolute_X(CPU* cpu, Memory* memory){
+    byte offset = cpu->X;
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    cpu->PC++;
+    cpu->Y = memory->data[abs + offset];
+
+    assignment_flag_control(cpu, 'Y');
+    if(is_page_crossed(abs, offset)){
+        CPU_tick(cpu, 1);
+    }
+    CPU_tick(cpu, 4);
+}
+
+void operation_LDY_Zero_Page(CPU* cpu, Memory* memory){
+    cpu->Y = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'Y');
+    CPU_tick(cpu, 3);
+}
+
+void operation_LDY_Zero_Page_X(CPU* cpu, Memory* memory){
+    cpu->Y = memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
+    cpu->PC++;
+
+    assignment_flag_control(cpu, 'Y');
+    CPU_tick(cpu, 4);
+}
+
 void operation_STA_Absolute(CPU* cpu, Memory* memory)
 {
     word abs = 0;
@@ -265,6 +371,56 @@ void operation_STA_Indirect_Y(CPU* cpu, Memory* memory){
     memory->data[real_addres] = cpu->A;
 
     CPU_tick(cpu, 6);
+}
+
+void operation_STX_Zero_Page(CPU* cpu, Memory* memory){
+    memory->data[ZERO_PAGE_START + memory->data[cpu->PC]] = cpu->X;
+    cpu->PC++;
+
+    CPU_tick(cpu, 3);
+}
+
+void operation_STX_Zero_Page_Y(CPU* cpu, Memory* memory){
+    memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->Y) % PAGE_SIZE] = cpu->X; // zero page wrap around
+    cpu->PC++;
+
+    CPU_tick(cpu, 4);
+}
+
+void operation_STX_Absolute(CPU* cpu, Memory* memory){
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    memory->data[abs] = cpu->X;
+    cpu->PC++;
+
+    CPU_tick(cpu, 4);
+}
+
+void operation_STY_Zero_Page(CPU* cpu, Memory* memory){
+    memory->data[ZERO_PAGE_START + memory->data[cpu->PC]] = cpu->Y;
+    cpu->PC++;
+
+    CPU_tick(cpu, 3);
+}
+
+void operation_STY_Zero_Page_X(CPU* cpu, Memory* memory){
+    memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE] = cpu->Y; // zero page wrap around
+    cpu->PC++;
+
+    CPU_tick(cpu, 4);
+}
+
+void operation_STY_Absolute(CPU* cpu, Memory* memory){
+    word abs = 0;
+    abs += memory->data[cpu->PC];
+    cpu->PC++;
+    abs += memory->data[cpu->PC] * 0x100;
+    memory->data[abs] = cpu->Y;
+    cpu->PC++;
+
+    CPU_tick(cpu, 4);
 }
 
 void operation_TAX_Implied(CPU* cpu, Memory* memory)

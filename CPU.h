@@ -45,6 +45,18 @@ void operation_LDA_Zero_Page_X(CPU* cpu, Memory* memory);
 void operation_LDA_Indirect_X(CPU* cpu, Memory* memory);
 void operation_LDA_Indirect_Y(CPU* cpu, Memory* memory);
 
+void operation_LDX_Immediate(CPU* cpu, Memory* memory);
+void operation_LDX_Absolute(CPU* cpu, Memory* memory);
+void operation_LDX_Absolute_Y(CPU* cpu, Memory* memory);
+void operation_LDX_Zero_Page(CPU* cpu, Memory* memory);
+void operation_LDX_Zero_Page_Y(CPU* cpu, Memory* memory);
+
+void operation_LDY_Immediate(CPU* cpu, Memory* memory);
+void operation_LDY_Absolute(CPU* cpu, Memory* memory);
+void operation_LDY_Absolute_X(CPU* cpu, Memory* memory);
+void operation_LDY_Zero_Page(CPU* cpu, Memory* memory);
+void operation_LDY_Zero_Page_X(CPU* cpu, Memory* memory);
+
 void operation_STA_Absolute(CPU* cpu, Memory* memory);
 void operation_STA_Zero_Page(CPU* cpu, Memory* memory);
 void operation_STA_Zero_Page_X(CPU* cpu, Memory* memory);
@@ -52,6 +64,14 @@ void operation_STA_Absolute_X(CPU* cpu, Memory* memory);
 void operation_STA_Absolute_Y(CPU* cpu, Memory* memory);
 void operation_STA_Indirect_X(CPU* cpu, Memory* memory);
 void operation_STA_Indirect_Y(CPU* cpu, Memory* memory);
+
+void operation_STX_Zero_Page(CPU* cpu, Memory* memory);
+void operation_STX_Zero_Page_Y(CPU* cpu, Memory* memory);
+void operation_STX_Absolute(CPU* cpu, Memory* memory);
+
+void operation_STY_Zero_Page(CPU* cpu, Memory* memory);
+void operation_STY_Zero_Page_X(CPU* cpu, Memory* memory);
+void operation_STY_Absolute(CPU* cpu, Memory* memory);
 
 void operation_TAX_Implied(CPU* cpu, Memory* memory);
 void operation_TAY_Implied(CPU* cpu, Memory* memory);
@@ -91,6 +111,18 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0xa1] = operation_LDA_Indirect_X,
     [0xb1] = operation_LDA_Indirect_Y,
 
+    [0xa2] = operation_LDX_Immediate,
+    [0xae] = operation_LDX_Absolute,
+    [0xbe] = operation_LDX_Absolute_Y,
+    [0xa6] = operation_LDX_Zero_Page,
+    [0xb6] = operation_LDX_Zero_Page_Y,
+
+    [0xa0] = operation_LDY_Immediate,
+    [0xac] = operation_LDY_Absolute,
+    [0xbc] = operation_LDY_Absolute_X,
+    [0xa4] = operation_LDY_Zero_Page,
+    [0xb4] = operation_LDY_Zero_Page_X,
+
     [0x8d] = operation_STA_Absolute,
     [0x85] = operation_STA_Zero_Page,
     [0x95] = operation_STA_Zero_Page_X,
@@ -98,6 +130,14 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0x99] = operation_STA_Absolute_Y,
     [0x81] = operation_STA_Indirect_X,
     [0x91] = operation_STA_Indirect_Y,
+
+    [0x86] = operation_STX_Zero_Page,
+    [0x96] = operation_STX_Zero_Page_Y,
+    [0x8e] = operation_STX_Absolute,
+
+    [0x84] = operation_STY_Zero_Page,
+    [0x94] = operation_STY_Zero_Page_X,
+    [0x8c] = operation_STY_Absolute,
 
     [0xaa] = operation_TAX_Implied,
     [0xa8] = operation_TAY_Implied,
