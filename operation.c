@@ -66,6 +66,147 @@ bool is_page_crossed(word addres, byte offset){
     return false;
 }
 
+void assignment_load(byte* dst, byte* src){
+    *dst = *src;
+}
+
+void assignment_and(byte* dst, byte* src){
+    *dst &= *src;
+}
+
+void assignment_or(byte* dst, byte* src){
+    *dst |= *src;
+}
+
+void assignment_xor(byte* dst, byte* src){
+    *dst ^= *src;
+}
+
+void assignment_add(byte* dst, byte* src){
+    *dst += *src;
+}
+
+void assignment_sub(byte* dst, byte* src){
+    *dst -= *src;
+}
+
+// TODO: modify this to work an store to(maybe not needed...)
+// TODO: more flags need to be set for add/sub and more!
+// TODO: Maybe even extend it beyond register A....
+void assignment_A_all_addresing_mods(CPU *cpu, Memory *memory, 
+                                    const char* addresing_mod,
+                                    void (*assignment_operation)(byte*, byte*)){
+
+    if(strcmp(addresing_mod, "Immediate") == 0){
+        byte imm = memory->data[cpu->PC];
+        assignment_operation(&(cpu->A), &imm);
+        cpu->PC++;
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 2);
+    }
+
+    else if(strcmp(addresing_mod, "Zero Page") == 0){
+        assignment_operation(&cpu->A, &memory->data[ZERO_PAGE_START + memory->data[cpu->PC]]);
+        cpu->PC++;
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 3);
+    }
+
+    else if(strcmp(addresing_mod, "Zero Page,X") == 0){
+        assignment_operation(&cpu->A, &memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]); // zero page wrap around
+        cpu->PC++;
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 4);
+    }
+
+    else if(strcmp(addresing_mod, "Absolute") == 0){
+        word abs = 0;
+        abs += memory->data[cpu->PC];
+        cpu->PC++;
+        abs += memory->data[cpu->PC] * 0x100;
+        cpu->PC++;
+        assignment_operation(&(cpu->A), &memory->data[abs]);
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 4);
+    }
+
+    else if(strcmp(addresing_mod, "Absolute,X") == 0){
+        byte offset = cpu->X;
+        word abs = 0;
+        abs += memory->data[cpu->PC];
+        cpu->PC++;
+        abs += memory->data[cpu->PC] * 0x100;
+        cpu->PC++;
+        assignment_operation(&cpu->A, &memory->data[abs + offset]);
+
+        assignment_flag_control(cpu, 'A');
+        if(is_page_crossed(abs, offset)){
+            CPU_tick(cpu, 1);
+        }
+        CPU_tick(cpu, 4);
+    }
+
+    else if(strcmp(addresing_mod, "Absolute,Y") == 0){
+        byte offset = cpu->Y;
+        word abs = 0;
+        abs += memory->data[cpu->PC];
+        cpu->PC++;
+        abs += memory->data[cpu->PC] * 0x100;
+        cpu->PC++;
+        assignment_operation(&cpu->A, &memory->data[abs + offset]);
+
+        assignment_flag_control(cpu, 'A');
+        if(is_page_crossed(abs, offset)){
+            CPU_tick(cpu, 1);
+        }
+        CPU_tick(cpu, 4);
+    }
+
+    else if(strcmp(addresing_mod, "(Indirect,X)") == 0){
+        word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+        cpu->PC++;
+
+        base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
+
+        word real_addres = 0;
+        real_addres += memory->data[ZERO_PAGE_START + base_addres];
+        real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
+
+        assignment_operation(&cpu->A, &memory->data[real_addres]);
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 6);
+    }
+
+    else if(strcmp(addresing_mod, "(Indirect),Y") == 0){
+        word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+        cpu->PC++;
+
+        word real_addres = 0;
+        real_addres += memory->data[base_addres];
+        real_addres += memory->data[base_addres + 1] * 0x0100;
+
+        if(is_page_crossed(real_addres, cpu->Y)){
+            CPU_tick(cpu, 1);
+        }
+
+        real_addres += cpu->Y;
+    
+        assignment_operation(&cpu->A, &memory->data[real_addres]);
+
+        assignment_flag_control(cpu, 'A');
+        CPU_tick(cpu, 5);
+    }
+
+    else{
+        assert(false && "unreachable");
+    }
+}
+
 
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,115 +214,130 @@ bool is_page_crossed(word addres, byte offset){
 // Load Operations:
 void operation_LDA_Immediate(CPU *cpu, Memory *memory)
 {
-    byte imm = memory->data[cpu->PC];
-    cpu->A = imm;
-    cpu->PC++;
+    // byte imm = memory->data[cpu->PC];
+    // cpu->A = imm;
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 2);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 2);
+    assignment_A_all_addresing_mods(cpu, memory, "Immediate", assignment_load);
+
 }
 
 void operation_LDA_Absolute(CPU *cpu, Memory *memory)
 {
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A = memory->data[abs];
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A = memory->data[abs];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 4);
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute", assignment_load);
 }
 
 void operation_LDA_Absolute_X(CPU *cpu, Memory *memory)
 {
-    byte offset = cpu->X;
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A = memory->data[abs + offset];
+    // byte offset = cpu->X;
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A = memory->data[abs + offset];
 
-    assignment_flag_control(cpu, 'A');
-    if(is_page_crossed(abs, offset)){
-        CPU_tick(cpu, 1);
-    }
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // if(is_page_crossed(abs, offset)){
+    //     CPU_tick(cpu, 1);
+    // }
+    // CPU_tick(cpu, 4);
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,X", assignment_load);
 }
 
 void operation_LDA_Absolute_Y(CPU *cpu, Memory *memory)
 {
-    byte offset = cpu->Y;
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A = memory->data[abs + offset];
+    // byte offset = cpu->Y;
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A = memory->data[abs + offset];
 
-    assignment_flag_control(cpu, 'A');
-    if(is_page_crossed(abs, offset)){
-        CPU_tick(cpu, 1);
-    }
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // if(is_page_crossed(abs, offset)){
+    //     CPU_tick(cpu, 1);
+    // }
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,Y", assignment_load);
 }
 
 void operation_LDA_Zero_Page(CPU *cpu, Memory *memory)
 {
-    cpu->A = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // cpu->A = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 3);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 3);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page", assignment_load);
+
 }
 
 void operation_LDA_Zero_Page_X(CPU *cpu, Memory *memory)
 {
-    cpu->A = memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
-    cpu->PC++;
+    // cpu->A = memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page,X", assignment_load);
 }
 
 void operation_LDA_Indirect_X(CPU *cpu, Memory *memory)
 {
-    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
+    // base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
 
-    word real_addres = 0;
-    real_addres += memory->data[ZERO_PAGE_START + base_addres];
-    real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
+    // word real_addres = 0;
+    // real_addres += memory->data[ZERO_PAGE_START + base_addres];
+    // real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
 
-    cpu->A = memory->data[real_addres];
+    // cpu->A = memory->data[real_addres];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 6);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 6);
+
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect,X)", assignment_load);
 }
 
 void operation_LDA_Indirect_Y(CPU *cpu, Memory *memory)
 {
-    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    word real_addres = 0;
-    real_addres += memory->data[base_addres];
-    real_addres += memory->data[base_addres + 1] * 0x0100;
+    // word real_addres = 0;
+    // real_addres += memory->data[base_addres];
+    // real_addres += memory->data[base_addres + 1] * 0x0100;
 
-    if(is_page_crossed(real_addres, cpu->Y)){
-        CPU_tick(cpu, 1);
-    }
+    // if(is_page_crossed(real_addres, cpu->Y)){
+    //     CPU_tick(cpu, 1);
+    // }
 
-    real_addres += cpu->Y;
+    // real_addres += cpu->Y;
     
-    cpu->A = memory->data[real_addres];
+    // cpu->A = memory->data[real_addres];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 5);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 5);
+
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect),Y", assignment_load);
 }
 
 void operation_LDX_Immediate(CPU* cpu, Memory* memory){
@@ -473,108 +629,125 @@ void operation_PLA_Implied(CPU* cpu, Memory* memory)
 
 // Logical:
 void operation_AND_Immediate(CPU* cpu, Memory* memory){
-    byte imm = memory->data[cpu->PC];
-    cpu->A &= imm;
-    cpu->PC++;
+    // byte imm = memory->data[cpu->PC];
+    // cpu->A &= imm;
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 2);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 2);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Immediate", assignment_and);
 }
 
 void operation_AND_Zero_Page(CPU* cpu, Memory* memory){
-    cpu->A &= memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // cpu->A &= memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 3);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 3);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page", assignment_and);
 }
 
 void operation_AND_Zero_Page_X(CPU* cpu, Memory* memory){
-    cpu->A &= memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
-    cpu->PC++;
+    // cpu->A &= memory->data[(ZERO_PAGE_START + memory->data[cpu->PC] + cpu->X) % PAGE_SIZE]; // zero page wrap around
+    // cpu->PC++;
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page,X", assignment_and);
 }
 
 void operation_AND_Absolute(CPU* cpu, Memory* memory){
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A &= memory->data[abs];
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A &= memory->data[abs];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute", assignment_and);
 }
 
 void operation_AND_Absolute_X(CPU* cpu, Memory* memory){
-    byte offset = cpu->X;
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A &= memory->data[abs + offset];
+    // byte offset = cpu->X;
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A &= memory->data[abs + offset];
 
-    assignment_flag_control(cpu, 'A');
-    if(is_page_crossed(abs, offset)){
-        CPU_tick(cpu, 1);
-    }
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // if(is_page_crossed(abs, offset)){
+    //     CPU_tick(cpu, 1);
+    // }
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,X", assignment_and);
 }
 
 void operation_AND_Absolute_Y(CPU* cpu, Memory* memory){
-    byte offset = cpu->Y;
-    word abs = 0;
-    abs += memory->data[cpu->PC];
-    cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
-    cpu->PC++;
-    cpu->A &= memory->data[abs + offset];
+    // byte offset = cpu->Y;
+    // word abs = 0;
+    // abs += memory->data[cpu->PC];
+    // cpu->PC++;
+    // abs += memory->data[cpu->PC] * 0x100;
+    // cpu->PC++;
+    // cpu->A &= memory->data[abs + offset];
 
-    assignment_flag_control(cpu, 'A');
-    if(is_page_crossed(abs, offset)){
-        CPU_tick(cpu, 1);
-    }
-    CPU_tick(cpu, 4);
+    // assignment_flag_control(cpu, 'A');
+    // if(is_page_crossed(abs, offset)){
+    //     CPU_tick(cpu, 1);
+    // }
+    // CPU_tick(cpu, 4);
+
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,Y", assignment_and);
 }
 
 void operation_AND_Indirect_X(CPU* cpu, Memory* memory){
-    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
+    // base_addres += cpu->X % PAGE_SIZE; // zero page wrap around
 
-    word real_addres = 0;
-    real_addres += memory->data[ZERO_PAGE_START + base_addres];
-    real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
+    // word real_addres = 0;
+    // real_addres += memory->data[ZERO_PAGE_START + base_addres];
+    // real_addres += memory->data[ZERO_PAGE_START + base_addres + 1] * 0x0100;
 
-    cpu->A &= memory->data[real_addres];
+    // cpu->A &= memory->data[real_addres];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 6);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 6);
+
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect,X)", assignment_and);
+
 }
 
 void operation_AND_Indirect_Y(CPU* cpu, Memory* memory){
-    word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
-    cpu->PC++;
+    // word base_addres = memory->data[ZERO_PAGE_START + memory->data[cpu->PC]];
+    // cpu->PC++;
 
-    word real_addres = 0;
-    real_addres += memory->data[base_addres];
-    real_addres += memory->data[base_addres + 1] * 0x0100;
+    // word real_addres = 0;
+    // real_addres += memory->data[base_addres];
+    // real_addres += memory->data[base_addres + 1] * 0x0100;
 
-    if(is_page_crossed(real_addres, cpu->Y)){
-        CPU_tick(cpu, 1);
-    }
+    // if(is_page_crossed(real_addres, cpu->Y)){
+    //     CPU_tick(cpu, 1);
+    // }
 
-    real_addres += cpu->Y;
+    // real_addres += cpu->Y;
     
-    cpu->A &= memory->data[real_addres];
+    // cpu->A &= memory->data[real_addres];
 
-    assignment_flag_control(cpu, 'A');
-    CPU_tick(cpu, 5);
+    // assignment_flag_control(cpu, 'A');
+    // CPU_tick(cpu, 5);
+
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect),Y", assignment_and);
 }
 
 // Arithmetic:
