@@ -14,10 +14,14 @@
 #define MEMORY_SIZE (64*KB)
 #define ARRAY_SIZE(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
+#define ZERO_PAGE_START 0x0000
+#define ZERO_PAGE_END 0x00ff
+#define PAGE_SIZE 0x0100
+
 #define RESET_VECTOR_HIGH_BYTE 0xfffd
 #define RESET_VECTOR_LOW_BYTE 0xfffc
-#define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0x40
-#define GLOBAL_PROGRAM_ENTRY_LOW_BYTE 0x00
+// #define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0x40
+// #define GLOBAL_PROGRAM_ENTRY_LOW_BYTE 0x00
 
 #define INTERRUPT_VECTOR_HIGH_BYTE 0xffff
 #define INTERRUPT_VECTOR_LOW_BYTE 0xfffe
@@ -50,13 +54,13 @@ typedef struct program{
 } Program;
 
 void Memory_program_init(Program* program, const char* label, word entry_point, byte* code, size_t size);
-void Memory_load_program(Memory* mem, Program* program);
-void Memory_load_code(Memory* mem, const char* label, word entry_point, byte* code, size_t size);
+void Memory_load_program(Memory* memory, Program* program);
+void Memory_load_code(Memory* memory, const char* label, word entry_point, byte* code, size_t size);
 
-void Memory_init(Memory* mem, word entry_point);
-void Memory_set_entry_point(Memory* mem, word entry_point);
-void Memory_dump_all(Memory* mem, FILE* stream);
-void Memory_dump_stack(Memory* mem, byte sp, FILE* stream);
+void Memory_init(Memory* memory, word entry_point);
+void Memory_set_entry_point(Memory* memory, word entry_point);
+void Memory_dump_all(Memory* memory, FILE* stream);
+void Memory_dump_stack(Memory* memory, byte sp, FILE* stream);
 
 
 

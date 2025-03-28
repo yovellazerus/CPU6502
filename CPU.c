@@ -7,7 +7,7 @@ void CPU_init(CPU* cpu, const char* name){
     cpu->Y = 0;
     cpu->PC = RESET_VECTOR_LOW_BYTE;
     cpu->SP = SP_INIT_VALUE;
-    cpu->P = 0;
+    cpu->P = 0; // TODO: D is not define in reset and interrupts 
     cpu->cycles = 0;
     cpu->name = name;
     cpu->hlt = false;
@@ -123,24 +123,24 @@ void CPU_dump(CPU* cpu, FILE* stream){
     fprintf(stream, "}\n");
 }
 
-void CPU_execute(CPU* cpu, Memory* mem){
-    byte opcode = mem->data[cpu->PC];
+void CPU_execute(CPU* cpu, Memory* memory){
+    byte opcode = memory->data[cpu->PC];
     printf("0x%.4x: 0x%.2x\n", cpu->PC, opcode); // debug
     cpu->PC++;
     operation op = operation_table[opcode];
     if(op){
-        op(cpu, mem);
+        op(cpu, memory);
     }
     else{
         CPU_invalid_opcode(cpu, opcode);
     }
 }
 
-void CPU_reset(CPU *cpu, Memory *mem)
+void CPU_reset(CPU *cpu, Memory *memory)
 {
     // TODO: maybe need to be a jmp instraction
-    cpu->PC = mem->data[RESET_VECTOR_LOW_BYTE];
-    cpu->PC += mem->data[RESET_VECTOR_HIGH_BYTE] * 0x0100; 
+    cpu->PC = memory->data[RESET_VECTOR_LOW_BYTE];
+    cpu->PC += memory->data[RESET_VECTOR_HIGH_BYTE] * 0x0100; 
 }
 
 void CPU_tick(CPU* cpu, size_t amount){
