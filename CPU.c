@@ -15,6 +15,9 @@ bool CPU_getFlag(CPU* cpu, char flag){
         case 'v':
             return (1 & (cpu->P >> 6));
             break;
+        case 'u':
+            return (1 & (cpu->P >> 5));
+            break;
         case 'b':
             return (1 & (cpu->P >> 4));
             break;
@@ -106,6 +109,7 @@ void CPU_dump(CPU* cpu, FILE* stream){
     fprintf(stream, "P {\n");
     fprintf(stream, "    n: %d\n", CPU_getFlag(cpu, 'n'));
     fprintf(stream, "    v: %d\n", CPU_getFlag(cpu, 'v'));
+    fprintf(stream, "    unused: %d\n", CPU_getFlag(cpu, 'u'));
     fprintf(stream, "    b: %d\n", CPU_getFlag(cpu, 'b'));
     fprintf(stream, "    d: %d\n", CPU_getFlag(cpu, 'd'));
     fprintf(stream, "    i: %d\n", CPU_getFlag(cpu, 'i'));

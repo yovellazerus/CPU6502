@@ -20,18 +20,19 @@
 
 #define RESET_VECTOR_HIGH_BYTE 0xfffd
 #define RESET_VECTOR_LOW_BYTE 0xfffc
-#define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0xc0
+#define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0x80 /*program start at 0x8000 for now,There is no operating system yet, 
+                                            so the program starts here without any special preparations.*/
 #define GLOBAL_PROGRAM_ENTRY_LOW_BYTE 0x00
 #define GLOBAL_START ((GLOBAL_PROGRAM_ENTRY_HIGH_BYTE * 0x0100) + GLOBAL_PROGRAM_ENTRY_LOW_BYTE)
 
 #define INTERRUPT_VECTOR_HIGH_BYTE 0xffff
 #define INTERRUPT_VECTOR_LOW_BYTE 0xfffe
-#define INTERRUPT_HANDLER_HIGH_BYTE 0x60
-#define INTERRUPT_HANDLER_LOW_BYTE 0x00
+#define INTERRUPT_HANDLER_HIGH_BYTE 0xff
+#define INTERRUPT_HANDLER_LOW_BYTE 0x80
 
 #define NMI_VECTOR_HIGH_BYTE 0xfffb
 #define NMI_VECTOR_LOW_BYTE 0xfffa
-#define NMI_HANDLER_HIGH_BYTE 0x80
+#define NMI_HANDLER_HIGH_BYTE 0xff
 #define NMI_HANDLER_LOW_BYTE 0x00
 
 #define SP_INIT_VALUE 0xfd
