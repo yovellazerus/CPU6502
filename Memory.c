@@ -15,8 +15,8 @@ void Memory_init(Memory* memory){
     
     // for now ROM and RAM are the same memory component, this is not true in actual implementation...
     // this is ROM:
-    memory->data[RESET_VECTOR_HIGH_BYTE] = GLOBAL_PROGRAM_ENTRY_LOW_BYTE;
-    memory->data[RESET_VECTOR_LOW_BYTE] = GLOBAL_PROGRAM_ENTRY_HIGH_BYTE;
+    memory->data[RESET_VECTOR_HIGH_BYTE] = GLOBAL_PROGRAM_ENTRY_HIGH_BYTE;
+    memory->data[RESET_VECTOR_LOW_BYTE] = GLOBAL_PROGRAM_ENTRY_LOW_BYTE;
 
     memory->data[INTERRUPT_VECTOR_HIGH_BYTE] = INTERRUPT_HANDLER_HIGH_BYTE;
     memory->data[INTERRUPT_VECTOR_LOW_BYTE] = INTERRUPT_HANDLER_LOW_BYTE;

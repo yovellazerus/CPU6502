@@ -148,9 +148,9 @@ void CPU_reset(CPU *cpu, Memory *memory)
     CPU_tick(cpu, 6);
 
     word bus;
-    bus = memory->data[RESET_VECTOR_LOW_BYTE] * 0x0100;
+    bus = memory->data[RESET_VECTOR_LOW_BYTE];
     CPU_tick(cpu, 1);
-    bus += memory->data[RESET_VECTOR_HIGH_BYTE];
+    bus += memory->data[RESET_VECTOR_HIGH_BYTE] * 0x0100;
     CPU_tick(cpu, 1);
     printf("0x%.4x\n", bus);
     cpu->PC = bus;
