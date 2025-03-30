@@ -584,6 +584,7 @@ void operation_STY_Absolute(CPU* cpu, Memory* memory){
 // Register Transfers:
 void operation_TAX_Implied(CPU* cpu, Memory* memory)
 {
+    (void) memory;
     cpu->X = cpu->A;
     assignment_flag_control(cpu, 'X');
     CPU_tick(cpu, 2);
@@ -591,6 +592,7 @@ void operation_TAX_Implied(CPU* cpu, Memory* memory)
 
 void operation_TAY_Implied(CPU* cpu, Memory* memory)
 {
+    (void) memory;
     cpu->Y = cpu->A;
     assignment_flag_control(cpu, 'Y');
     CPU_tick(cpu, 2); 
@@ -598,6 +600,7 @@ void operation_TAY_Implied(CPU* cpu, Memory* memory)
 
 void operation_TXA_Implied(CPU* cpu, Memory* memory)
 {
+    (void) memory;
     cpu->A = cpu->X;
     assignment_flag_control(cpu, 'A');
     CPU_tick(cpu, 2); 
@@ -605,6 +608,7 @@ void operation_TXA_Implied(CPU* cpu, Memory* memory)
 
 void operation_TYA_Implied(CPU* cpu, Memory* memory)
 {
+    (void) memory;
     cpu->A = cpu->Y;
     assignment_flag_control(cpu, 'A');
     CPU_tick(cpu, 2); 
@@ -849,19 +853,20 @@ void operation_BEQ_Relative(CPU *cpu, Memory *memory)
 }
 
 // Status Flag Changes:
-void operation_CLC_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'c'); }
+void operation_CLC_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_offFlag(cpu, 'c'); }
 
-void operation_CLD_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'd'); }
+void operation_CLD_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_offFlag(cpu, 'd'); }
 
-void operation_CLI_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'i'); }
+void operation_CLI_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_offFlag(cpu, 'i'); }
 
-void operation_CLV_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_offFlag(cpu, 'v'); }
+void operation_CLV_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_offFlag(cpu, 'v'); }
 
-void operation_SEC_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'c');  }
+void operation_SEC_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_onFlag(cpu, 'c');  }
 
-void operation_SED_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'd');  }
+void operation_SED_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_onFlag(cpu, 'd');  }
 
-void operation_SEI_Implied(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); CPU_onFlag(cpu, 'i');  }
+void operation_SEI_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_onFlag(cpu, 'i');  }
+
 
 
 // System Functions:
@@ -889,6 +894,8 @@ void operation_BRK_Implied(CPU *cpu, Memory *memory)
 
 void operation_NOP_Implied(CPU *cpu, Memory *memory)
 {
+    (void) memory;
+
     CPU_tick(cpu, 2);
 }
 
@@ -909,16 +916,17 @@ void operation_RTI_Implied(CPU *cpu, Memory *memory)
 }
 
 // Unofficial not documented operations:
-void operation_Unofficial_NOP_1A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_1A(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); }
 
-void operation_Unofficial_NOP_3A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_3A(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); }
 
-void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); }
 
-void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory){ CPU_tick(cpu, 2); }
+void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); }
 
-void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ CPU_tick(cpu, 4); }
+void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 4); }
 
 
-// My actions:
+
+// My operations:
 // (There are none at the moment...)

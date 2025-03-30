@@ -5,6 +5,10 @@
 
 #define IS_SIGN_BYTE(ARG) ((ARG & 0b10000000) != 0)
 
+#define RESET_P_REGISTER 0x34 // 0b00110100
+
+#define Undefined_byte() (rand() / 256)
+
 typedef struct cpu{
     byte A;
     byte X;
@@ -131,7 +135,7 @@ void operation_Unofficial_NOP_5A(CPU* cpu, Memory* memory);
 void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory);
 void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory);
 
-// My actions:
+// My operations:
 // (There are none at the moment...)
 
 static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
@@ -231,7 +235,7 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [0x7a] = operation_Unofficial_NOP_7A,
     [0xfa] = operation_Unofficial_NOP_FA,
 
-    // My actions:
+    // My operations:
     // (There are none at the moment...)
     
 };

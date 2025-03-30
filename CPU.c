@@ -2,40 +2,33 @@
 #include "CPU.h"
 
 void CPU_init(CPU* cpu, const char* name){
-    cpu->A = 0;
-    cpu->X = 0;
-    cpu->Y = 0;
-    cpu->PC = RESET_VECTOR_LOW_BYTE;
-    cpu->SP = SP_INIT_VALUE;
-    cpu->P = 0; // TODO: D is not define in reset and interrupts 
-    cpu->cycles = 0;
     cpu->name = name;
-    cpu->hlt = false;
+    cpu->cycles = 0;
 }
 
 // TODO: The order of the flags is probably reversed...
 bool CPU_getFlag(CPU* cpu, char flag){
     switch (flag){
         case 'n':
-            return (1 & (cpu->P >> 0));
+            return (1 & (cpu->P >> 7));
             break;
         case 'v':
-            return (1 & (cpu->P >> 1));
+            return (1 & (cpu->P >> 6));
             break;
         case 'b':
-            return (1 & (cpu->P >> 2));
+            return (1 & (cpu->P >> 4));
             break;
         case 'd':
             return (1 & (cpu->P >> 3));
             break;
         case 'i':
-            return (1 & (cpu->P >> 4));
+            return (1 & (cpu->P >> 2));
             break;
         case 'z':
-            return (1 & (cpu->P >> 5));
+            return (1 & (cpu->P >> 1));
             break;
         case 'c':
-            return (1 & (cpu->P >> 6));
+            return (1 & (cpu->P >> 0));
             break;
         default:
             fprintf(stderr, "ERROR: unknown cpu flag %c\n", flag);
@@ -46,25 +39,25 @@ bool CPU_getFlag(CPU* cpu, char flag){
 bool CPU_onFlag(CPU* cpu, char flag){
     switch (flag){
         case 'n':
-            cpu->P |= 0b00000001;
+            cpu->P |= 0x80; // 0b10000000
             break;
         case 'v':
-            cpu->P |= 0b00000010;
+            cpu->P |= 0x40; // 0b01000000
             break;
         case 'b':
-            cpu->P |= 0b00000100;;
+            cpu->P |= 0x10; // 0b00010000
             break;
         case 'd':
-            cpu->P |= 0b00001000;
+            cpu->P |= 0x08; // 0b00001000
             break;
         case 'i':
-            cpu->P |= 0b00010000;
+            cpu->P |= 0x04;  // 0b00000100
             break;
         case 'z':
-            cpu->P |= 0b00100000;
+            cpu->P |= 0x02; // 0b00000010
             break;
         case 'c':
-            cpu->P |= 0b01000000;
+            cpu->P |= 0x01; // 0b00000001
             break;
         default:
             fprintf(stderr, "ERROR: unknown cpu flag '%c'\n", flag);
@@ -76,25 +69,25 @@ bool CPU_onFlag(CPU* cpu, char flag){
 bool CPU_offFlag(CPU* cpu, char flag){
     switch (flag){
         case 'n':
-            cpu->P &= 0b11111110;
+            cpu->P &= ~0x80; // 0b01111111
             break;
         case 'v':
-            cpu->P &= 0b11111101;
+            cpu->P &= ~0x40; // 0b10111111
             break;
         case 'b':
-            cpu->P &= 0b11111011;;
+            cpu->P &= ~0x10; // 0b11101111
             break;
         case 'd':
-            cpu->P &= 0b11110111;
+            cpu->P &= ~0x08; // 0b11110111
             break;
         case 'i':
-            cpu->P &= 0b11101111;
+            cpu->P &= ~0x04;  // 0b11111011
             break;
         case 'z':
-            cpu->P &= 0b11011111;
+            cpu->P &= ~0x02; // 0b11111101
             break;
         case 'c':
-            cpu->P &= 0b10111111;
+            cpu->P &= ~0x01; // 0b11111110
             break;
         default:
             fprintf(stderr, "ERROR: unknown cpu flag %c\n", flag);
@@ -136,11 +129,29 @@ void CPU_execute(CPU* cpu, Memory* memory){
     }
 }
 
+
+// done at the hardware level not using normal cpu instructions.
+// call wan the reset input is set low, not an interrupt!  
 void CPU_reset(CPU *cpu, Memory *memory)
 {
-    // TODO: maybe need to be a jmp instraction
-    cpu->PC = memory->data[RESET_VECTOR_LOW_BYTE];
-    cpu->PC += memory->data[RESET_VECTOR_HIGH_BYTE] * 0x0100; 
+    cpu->A = Undefined_byte();
+    cpu->X = Undefined_byte();
+    cpu->Y = Undefined_byte();
+    cpu->SP = SP_INIT_VALUE;
+    cpu->P = RESET_P_REGISTER; 
+    cpu->hlt = false;
+
+    CPU_tick(cpu, 6);
+
+    word bus;
+    bus = memory->data[RESET_VECTOR_LOW_BYTE] * 0x0100;
+    CPU_tick(cpu, 1);
+    bus += memory->data[RESET_VECTOR_HIGH_BYTE];
+    CPU_tick(cpu, 1);
+    printf("0x%.4x\n", bus);
+    cpu->PC = bus;
+    CPU_tick(cpu, 1); 
+
 }
 
 void CPU_tick(CPU* cpu, size_t amount){
