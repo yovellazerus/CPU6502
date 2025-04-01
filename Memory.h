@@ -12,6 +12,9 @@
 #define HIGH_BYTE(WORD) (WORD / 0x0100)
 #define LOW_BYTE(WORD) (WORD % 0x0100)
 
+#define LOAD_LABEL(MEMORY, LABEL) (MEMORY->label_table[LABEL] = #LABEL)
+#define NAME(ARG) (#ARG)
+
 #define ZERO_PAGE_START 0x0000
 #define ZERO_PAGE_END 0x00ff
 #define PAGE_SIZE 0x0100

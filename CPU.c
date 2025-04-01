@@ -116,7 +116,7 @@ void CPU_dump(CPU* cpu, FILE* stream){
     fprintf(stream, "    z: %d\n", CPU_getFlag(cpu, 'z'));
     fprintf(stream, "    c: %d\n", CPU_getFlag(cpu, 'c'));
     fprintf(stream, "  }\n");
-    fprintf(stream, " cycles: %zu\n", cpu->cycles);
+    fprintf(stream, "cycles: %zu\n", cpu->cycles);
     fprintf(stream, "}\n");
 }
 

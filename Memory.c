@@ -35,11 +35,17 @@ void Memory_init(Memory* memory){
     }
 }
 
+// TODO: weird bug, not printing labels not in new line 
 void Memory_dump_all(Memory* memory, FILE* stream){
     word line = 0;
+    bool toPrintLabel = false;
     for(int i = 0; i < MEMORY_SIZE; i++){
+        toPrintLabel = false;
+        if(memory->label_table[i] != NULL){
+            toPrintLabel = true;
+        }
         if(i % 8 == 0){
-            if(memory->label_table[line]) fprintf(stream, "  %s <0x%.4x>", memory->label_table[line], line);
+            if(toPrintLabel) fprintf(stream, "  %s <0x%.4x>", memory->label_table[i], i);
             fprintf(stream, "\n0x%.4x: ", line);
             line += 8;
         }
