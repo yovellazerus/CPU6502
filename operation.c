@@ -615,9 +615,26 @@ void operation_TYA_Implied(CPU* cpu, Memory* memory)
 }
 
 // Stack Operations:
+void operation_TSX_Implied(CPU* cpu, Memory* memory){
+    cpu->X = cpu->SP;
+    assignment_flag_control(cpu, 'X');
+    CPU_tick(cpu, 2);
+}
+
+void operation_TXS_Implied(CPU* cpu, Memory* memory){
+    cpu->SP = cpu->X;
+    CPU_tick(cpu, 2);
+}
+
 void operation_PHA_Implied(CPU* cpu, Memory* memory)
 {
     memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->A;
+    cpu->SP--;
+    CPU_tick(cpu, 3);
+}
+
+void operation_PHP_Implied(CPU* cpu, Memory* memory){
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
     cpu->SP--;
     CPU_tick(cpu, 3);
 }
@@ -629,6 +646,13 @@ void operation_PLA_Implied(CPU* cpu, Memory* memory)
     assignment_flag_control(cpu, 'A');
     CPU_tick(cpu, 4);
 
+}
+
+void operation_PLP_Implied(CPU* cpu, Memory* memory){
+    cpu->SP++;
+    cpu->P = memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    CPU_onFlag(cpu, 'u'); // always on
+    CPU_tick(cpu, 4);
 }
 
 // Logical:
@@ -991,8 +1015,6 @@ void operation_SED_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cp
 
 void operation_SEI_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_onFlag(cpu, 'i');  }
 
-
-
 // System Functions:
 void operation_BRK_Implied(CPU *cpu, Memory *memory)
 {
@@ -1027,6 +1049,7 @@ void operation_RTI_Implied(CPU *cpu, Memory *memory)
 {
     cpu->SP++;
     cpu->P = memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    CPU_onFlag(cpu, 'u'); // always on
 
     word addr = 0;
     cpu->SP++;

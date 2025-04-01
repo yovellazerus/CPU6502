@@ -47,6 +47,9 @@ bool CPU_onFlag(CPU* cpu, char flag){
         case 'v':
             cpu->P |= 0x40; // 0b01000000
             break;
+        case 'u':
+            cpu->P |= 0x20; // 0b00100000
+            break;
         case 'b':
             cpu->P |= 0x10; // 0b00010000
             break;

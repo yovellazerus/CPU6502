@@ -84,8 +84,12 @@ typedef enum{
     tya = 0x98,
 
     // Stack Operations:
+    tsx = 0xba,
+    txs = 0x9a,
     pha = 0x48,
+    php = 0x08,
     pla = 0x68,
+    plp = 0x28,
 
     // Logical:
     andi = 0x29,
@@ -209,8 +213,12 @@ void operation_TXA_Implied(CPU* cpu, Memory* memory);
 void operation_TYA_Implied(CPU* cpu, Memory* memory);
 
 // Stack Operations:
+void operation_TSX_Implied(CPU* cpu, Memory* memory);
+void operation_TXS_Implied(CPU* cpu, Memory* memory);
 void operation_PHA_Implied(CPU* cpu, Memory* memory);
+void operation_PHP_Implied(CPU* cpu, Memory* memory);
 void operation_PLA_Implied(CPU* cpu, Memory* memory);
+void operation_PLP_Implied(CPU* cpu, Memory* memory);
 
 // Logical:
 void operation_AND_Immediate(CPU* cpu, Memory* memory);
@@ -330,8 +338,12 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [tya] = operation_TYA_Implied,
 
     // Stack Operations:
+    [tsx] = operation_TSX_Implied,
+    [txs] = operation_TXS_Implied,
     [pha] = operation_PHA_Implied,
+    [php] = operation_PHP_Implied,
     [pla] = operation_PLA_Implied,
+    [plp] = operation_PLP_Implied,
 
     // Logical:
     [andi] = operation_AND_Immediate,
