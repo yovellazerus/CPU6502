@@ -754,6 +754,130 @@ void operation_AND_Indirect_Y(CPU* cpu, Memory* memory){
     assignment_A_all_addresing_mods(cpu, memory, "(Indirect),Y", assignment_and);
 }
 
+void operation_EOR_Immediate(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Immediate", assignment_xor);
+}
+
+void operation_EOR_Zero_Page(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page", assignment_xor);
+}
+
+void operation_EOR_Zero_Page_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page,X", assignment_xor);
+}
+
+void operation_EOR_Absolute(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute", assignment_xor);
+}
+
+void operation_EOR_Absolute_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,X", assignment_xor);
+}
+
+void operation_EOR_Absolute_Y(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,Y", assignment_xor);
+}
+
+void operation_EOR_Indirect_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect,X)", assignment_xor);
+}
+
+void operation_EOR_Indirect_Y(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect),Y", assignment_xor);
+}
+
+void operation_ORA_Immediate(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Immediate", assignment_or);
+}
+
+void operation_ORA_Zero_Page(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page", assignment_or);
+}
+
+void operation_ORA_Zero_Page_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Zero Page,X", assignment_or);
+}
+
+void operation_ORA_Absolute(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute", assignment_or);
+}
+
+void operation_ORA_Absolute_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,X", assignment_or);
+}
+
+void operation_ORA_Absolute_Y(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "Absolute,Y", assignment_or);
+}
+
+void operation_ORA_Indirect_X(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect,X)", assignment_or);
+}
+
+void operation_ORA_Indirect_Y(CPU* cpu, Memory* memory){
+    assignment_A_all_addresing_mods(cpu, memory, "(Indirect),Y", assignment_or);
+}
+
+void operation_BIT_Zero_Page(CPU* cpu, Memory* memory){
+    word addr = memory->data[cpu->PC];
+    cpu->PC++;
+
+    byte m = memory->data[addr + ZERO_PAGE_START];
+
+    byte ignore = cpu->A & m;
+    if(ignore == 0){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_SIGN_BYTE(m)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    if(IS_6BIT_ON_BYTE(m)){
+        CPU_onFlag(cpu, 'v');
+    }
+    else{
+        CPU_offFlag(cpu, 'v');
+    }
+
+    CPU_tick(cpu, 3);
+}
+
+void operation_BIT_Absolute(CPU* cpu, Memory* memory){
+    word addr = memory->data[cpu->PC];
+    cpu->PC++;
+    addr += memory->data[cpu->PC] * 0x0100;
+    cpu->PC++;
+
+    byte m = memory->data[addr];
+
+    byte ignore = cpu->A & m;
+    if(ignore == 0){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_SIGN_BYTE(m)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    if(IS_6BIT_ON_BYTE(m)){
+        CPU_onFlag(cpu, 'v');
+    }
+    else{
+        CPU_offFlag(cpu, 'v');
+    }
+
+    CPU_tick(cpu, 4);
+}
+
 // Arithmetic:
 
 // Increments & Decrements:

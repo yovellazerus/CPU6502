@@ -3,7 +3,8 @@
 
 #include "Memory.h"
 
-#define IS_SIGN_BYTE(ARG) ((ARG & 0b10000000) != 0)
+#define IS_SIGN_BYTE(ARG) ((ARG & 0x80) != 0)
+#define IS_6BIT_ON_BYTE(ARG) ((ARG & 0x40 != 0))
 
 #define RESET_P_REGISTER 0x34 // 0b00110100
 
@@ -95,6 +96,27 @@ typedef enum{
     anday = 0x39,
     andix = 0x21,
     andiy = 0x23,
+
+    eori = 0x49,
+    eorz = 0x45,
+    eorzx = 0x55,
+    eora = 0x4d,
+    eorax = 0x5d,
+    eoray = 0x59,
+    eorix = 0x41,
+    eoriy = 0x51,
+
+    orai = 0x09,
+    oraz = 0x05,
+    orazx = 0x15,
+    oraa = 0x0d,
+    oraax = 0x1d,
+    oraay = 0x19,
+    oraix = 0x01,
+    oraiy = 0x11,
+
+    bitz = 0x24,
+    bita = 0x2c,
 
     // Arithmetic:
 
@@ -200,6 +222,27 @@ void operation_AND_Absolute_Y(CPU* cpu, Memory* memory);
 void operation_AND_Indirect_X(CPU* cpu, Memory* memory);
 void operation_AND_Indirect_Y(CPU* cpu, Memory* memory);
 
+void operation_EOR_Immediate(CPU* cpu, Memory* memory);
+void operation_EOR_Zero_Page(CPU* cpu, Memory* memory);
+void operation_EOR_Zero_Page_X(CPU* cpu, Memory* memory);
+void operation_EOR_Absolute(CPU* cpu, Memory* memory);
+void operation_EOR_Absolute_X(CPU* cpu, Memory* memory);
+void operation_EOR_Absolute_Y(CPU* cpu, Memory* memory);
+void operation_EOR_Indirect_X(CPU* cpu, Memory* memory);
+void operation_EOR_Indirect_Y(CPU* cpu, Memory* memory);
+
+void operation_ORA_Immediate(CPU* cpu, Memory* memory);
+void operation_ORA_Zero_Page(CPU* cpu, Memory* memory);
+void operation_ORA_Zero_Page_X(CPU* cpu, Memory* memory);
+void operation_ORA_Absolute(CPU* cpu, Memory* memory);
+void operation_ORA_Absolute_X(CPU* cpu, Memory* memory);
+void operation_ORA_Absolute_Y(CPU* cpu, Memory* memory);
+void operation_ORA_Indirect_X(CPU* cpu, Memory* memory);
+void operation_ORA_Indirect_Y(CPU* cpu, Memory* memory);
+
+void operation_BIT_Zero_Page(CPU* cpu, Memory* memory);
+void operation_BIT_Absolute(CPU* cpu, Memory* memory);
+
 // Arithmetic:
 
 // Increments & Decrements:
@@ -299,6 +342,27 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [anday] = operation_AND_Absolute_Y,
     [andix] = operation_AND_Indirect_X,
     [andiy] = operation_AND_Indirect_Y,
+
+    [eori] = operation_EOR_Immediate,
+    [eorz] = operation_EOR_Zero_Page,
+    [eorzx] = operation_EOR_Zero_Page_X,
+    [eora] = operation_EOR_Absolute,
+    [eorax] = operation_EOR_Absolute_X,
+    [eoray] = operation_EOR_Absolute_Y,
+    [eorix] = operation_EOR_Indirect_X,
+    [eoriy] = operation_EOR_Indirect_Y,
+
+    [orai] = operation_ORA_Immediate,
+    [oraz] = operation_ORA_Zero_Page,
+    [orazx] = operation_ORA_Zero_Page_X,
+    [oraa] = operation_ORA_Absolute,
+    [oraax] = operation_ORA_Absolute_X,
+    [oraay] = operation_ORA_Absolute_Y,
+    [oraix] = operation_ORA_Indirect_X,
+    [oraiy] = operation_ORA_Indirect_Y,
+
+    [bitz] = operation_BIT_Zero_Page,
+    [bita] = operation_BIT_Absolute,
 
     // Arithmetic:
 
