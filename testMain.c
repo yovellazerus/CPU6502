@@ -13,6 +13,7 @@
 #define LABEL_HIGH(LABEL) (LABEL / 0x0100)
 
 #define LOAD_LABEL(LABEL, MEMORY) (MEMORY->label_table[LABEL] = #LABEL)
+#define NAME(ARG) (#ARG)
 
 void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file);
 
@@ -59,17 +60,36 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
     Memory_init(memory);
     CPU_reset(cpu, memory);
 
-    byte code[] = {0xa9, 0xfe, 0x8d, 0x34, 0x12,
-                    0xaa, 0x48, 0xa9, 0x06 ,0xa9, 0x48,
-                    0x48, 0x48, 0x48 ,0x20, 0x00, 0x40, 
-                    0xa9, 0x42, 0xa9, 0xfe, 0xff,
-    };
+    word foo_addr = 0x4000;
+    word res_addr = 0x2000;
     byte foo[] = {
-        0xa9, 0x00, 0xf0, 0x05, 0xa9, 0x01, 0x8d, 0x00, 0x20, 0x60,
+        0xa9, 0x01, 
+        0xf0, 0x05, 
+        0xa9, 0x01, 
+        0x8d, LOW_BYTE(res_addr), HIGH_BYTE(res_addr), 
+        0x60,
     };
 
-    Memory_load_code(memory, "test_program", GLOBAL_START, code, ARRAY_SIZE(code));
-    Memory_load_code(memory, "foo", 0x4000, foo, ARRAY_SIZE(foo));
+    word var_addr = 0x1234;
+    byte code[] = {
+        0xa9, 0xfe, 
+        0x8d, LOW_BYTE(var_addr), HIGH_BYTE(var_addr),
+        0xaa, 
+        0x48, 
+        0xa9, 0x06, 
+        0xa9, 0x48,
+        0x48, 
+        0x48, 
+        0x48, 
+        0x20, LOW_BYTE(foo_addr), HIGH_BYTE(foo_addr), 
+        0xa9, 0x42, 
+        0xa9, 0xfe, 
+        0xff,
+    };
+    
+
+    Memory_load_code(memory, NAME(code), GLOBAL_START, code, ARRAY_SIZE(code));
+    Memory_load_code(memory, NAME(foo), foo_addr, foo, ARRAY_SIZE(foo));
 
     while (!cpu->hlt) CPU_execute(cpu, memory);
     

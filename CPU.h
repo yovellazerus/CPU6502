@@ -7,7 +7,7 @@
 
 #define RESET_P_REGISTER 0x34 // 0b00110100
 
-#define Undefined_byte() (rand() / 256)
+#define UNDEFINED_BYTE() (rand() / 256)
 
 typedef struct cpu{
     byte A;
@@ -35,6 +35,107 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+typedef enum{
+    // Load Operations:
+    ldai = 0xa9,
+    ldaz = 0xa5,
+    ldazx = 0xb5,
+    ldaa = 0xad,
+    ldaax = 0xbd,
+    ldaay = 0xb9,
+    ldaix = 0xa1,
+    ldaiy = 0xb1,
+
+    ldxi = 0xa2,
+    ldxa = 0xae,
+    ldxay = 0xbe,
+    ldxz = 0xa6,
+    ldxzy = 0xb6,
+
+    ldyi = 0xa0,
+    ldya = 0xac,
+    ldyax = 0xbc,
+    ldyz = 0xa4,
+    ldyzx = 0xb4,
+
+    // Store Operations:
+    staa = 0x8d,
+    staz = 0x85,
+    stazx = 0x95,
+    staax = 0x9d,
+    staay = 0x99,
+    staix = 0x81,
+    staiy = 0x91,
+
+    stxz = 0x86,
+    stxzy = 0x96,
+    stxa = 0x8e,
+
+    styz = 0x84,
+    styzx = 0x94,
+    stya = 0x8c,
+
+    // Register Transfers:
+    tax = 0xaa,
+    tay = 0xa8,
+    txa = 0x8a,
+    tya = 0x98,
+
+    // Stack Operations:
+    pha = 0x48,
+    pla = 0x68,
+
+    // Logical:
+    andi = 0x29,
+    andz = 0x25,
+    andzx = 0x35,
+    anda = 0x2d,
+    andax = 0x3d,
+    anday = 0x39,
+    andix = 0x21,
+    andiy = 0x23,
+
+    // Arithmetic:
+
+    // Increments & Decrements:
+
+    // Shifts:
+
+    // Jumps & Calls:
+    jmpa = 0x4c,
+    jmpi = 0x6c,
+    jsr = 0x20,
+    rts = 0x60,
+
+    // Branches:
+    beq = 0xf0,
+
+    // Status Flag Changes:
+    clc = 0x18,
+    cld = 0xd8,
+    cli = 0x58,
+    clv = 0xb8,
+    sec = 0x38,
+    sed = 0xf8,
+    sei = 0x78,
+
+    // System Functions:
+    brk = 0xff, // TODO: in reality it is 0x00...modified for dubbing!  
+    nop = 0xea,
+    rti = 0x40,
+
+    // Unofficial not documented operations:
+    nop1a = 0x1a,
+    nop3a = 0x3a,
+    nop5a = 0x5a,
+    nop7a = 0x7a,
+    nopfa = 0xfa,
+
+    // My operations:
+    // (There are none at the moment...)
+    
+} OPCODE;
 
 #define NUMBER_OF_POSSIBLE_OPERATIONS (0xff + 1)
 
@@ -141,63 +242,63 @@ void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory);
 static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     
     // Load Operations:
-    [0xa9] = operation_LDA_Immediate,
-    [0xa5] = operation_LDA_Zero_Page,
-    [0xb5] = operation_LDA_Zero_Page_X,
-    [0xad] = operation_LDA_Absolute,
-    [0xbd] = operation_LDA_Absolute_X,
-    [0xb9] = operation_LDA_Absolute_Y,
-    [0xa1] = operation_LDA_Indirect_X,
-    [0xb1] = operation_LDA_Indirect_Y,
+    [ldai] = operation_LDA_Immediate,
+    [ldaz] = operation_LDA_Zero_Page,
+    [ldazx] = operation_LDA_Zero_Page_X,
+    [ldaa] = operation_LDA_Absolute,
+    [ldaax] = operation_LDA_Absolute_X,
+    [ldaay] = operation_LDA_Absolute_Y,
+    [ldaix] = operation_LDA_Indirect_X,
+    [ldaiy] = operation_LDA_Indirect_Y,
 
-    [0xa2] = operation_LDX_Immediate,
-    [0xae] = operation_LDX_Absolute,
-    [0xbe] = operation_LDX_Absolute_Y,
-    [0xa6] = operation_LDX_Zero_Page,
-    [0xb6] = operation_LDX_Zero_Page_Y,
+    [ldxi] = operation_LDX_Immediate,
+    [ldxa] = operation_LDX_Absolute,
+    [ldxay] = operation_LDX_Absolute_Y,
+    [ldxz] = operation_LDX_Zero_Page,
+    [ldxzy] = operation_LDX_Zero_Page_Y,
 
-    [0xa0] = operation_LDY_Immediate,
-    [0xac] = operation_LDY_Absolute,
-    [0xbc] = operation_LDY_Absolute_X,
-    [0xa4] = operation_LDY_Zero_Page,
-    [0xb4] = operation_LDY_Zero_Page_X,
+    [ldyi] = operation_LDY_Immediate,
+    [ldya] = operation_LDY_Absolute,
+    [ldyax] = operation_LDY_Absolute_X,
+    [ldyz] = operation_LDY_Zero_Page,
+    [ldyzx] = operation_LDY_Zero_Page_X,
 
     // Store Operations:
-    [0x8d] = operation_STA_Absolute,
-    [0x85] = operation_STA_Zero_Page,
-    [0x95] = operation_STA_Zero_Page_X,
-    [0x9d] = operation_STA_Absolute_X,
-    [0x99] = operation_STA_Absolute_Y,
-    [0x81] = operation_STA_Indirect_X,
-    [0x91] = operation_STA_Indirect_Y,
+    [staa] = operation_STA_Absolute,
+    [staz] = operation_STA_Zero_Page,
+    [stazx] = operation_STA_Zero_Page_X,
+    [staax] = operation_STA_Absolute_X,
+    [staay] = operation_STA_Absolute_Y,
+    [staix] = operation_STA_Indirect_X,
+    [staiy] = operation_STA_Indirect_Y,
 
-    [0x86] = operation_STX_Zero_Page,
-    [0x96] = operation_STX_Zero_Page_Y,
-    [0x8e] = operation_STX_Absolute,
+    [stxz] = operation_STX_Zero_Page,
+    [stxzy] = operation_STX_Zero_Page_Y,
+    [stxa] = operation_STX_Absolute,
 
-    [0x84] = operation_STY_Zero_Page,
-    [0x94] = operation_STY_Zero_Page_X,
-    [0x8c] = operation_STY_Absolute,
+    [styz] = operation_STY_Zero_Page,
+    [styzx] = operation_STY_Zero_Page_X,
+    [stya] = operation_STY_Absolute,
 
     // Register Transfers:
-    [0xaa] = operation_TAX_Implied,
-    [0xa8] = operation_TAY_Implied,
-    [0x8a] = operation_TXA_Implied,
-    [0x98] = operation_TYA_Implied,
+    [tax] = operation_TAX_Implied,
+    [tay] = operation_TAY_Implied,
+    [txa] = operation_TXA_Implied,
+    [tya] = operation_TYA_Implied,
 
     // Stack Operations:
-    [0x48] = operation_PHA_Implied,
-    [0x68] = operation_PLA_Implied,
+    [pha] = operation_PHA_Implied,
+    [pla] = operation_PLA_Implied,
 
     // Logical:
-    [0x29] = operation_AND_Immediate,
-    [0x25] = operation_AND_Zero_Page,
-    [0x35] = operation_AND_Zero_Page_X,
-    [0x2d] = operation_AND_Absolute,
-    [0x3d] = operation_AND_Absolute_X,
-    [0x39] = operation_AND_Absolute_Y,
-    [0x21] = operation_AND_Indirect_X,
-    [0x23] = operation_AND_Indirect_Y,
+    [andi] = operation_AND_Immediate,
+    [andz] = operation_AND_Zero_Page,
+    [andzx] = operation_AND_Zero_Page_X,
+    [anda] = operation_AND_Absolute,
+    [andax] = operation_AND_Absolute_X,
+    [anday] = operation_AND_Absolute_Y,
+    [andix] = operation_AND_Indirect_X,
+    [andiy] = operation_AND_Indirect_Y,
 
     // Arithmetic:
 
@@ -206,34 +307,34 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     // Shifts:
 
     // Jumps & Calls:
-    [0x4c] = operation_JMP_Absolute,
-    [0x6c] = operation_JMP_Indirect,
-    [0x20] = operation_JSR_Absolute,
-    [0x60] = operation_RTS_Implied,
+    [jmpa] = operation_JMP_Absolute,
+    [jmpi] = operation_JMP_Indirect,
+    [jsr] = operation_JSR_Absolute,
+    [rts] = operation_RTS_Implied,
 
     // Branches:
-    [0xf0] = operation_BEQ_Relative,
+    [beq] = operation_BEQ_Relative,
 
     // Status Flag Changes:
-    [0x18] = operation_CLC_Implied,
-    [0xd8] = operation_CLD_Implied,
-    [0x58] = operation_CLI_Implied,
-    [0xb8] = operation_CLV_Implied,
-    [0x38] = operation_SEC_Implied,
-    [0xf8] = operation_SED_Implied,
-    [0x78] = operation_SEI_Implied,
+    [clc] = operation_CLC_Implied,
+    [cld] = operation_CLD_Implied,
+    [cli] = operation_CLI_Implied,
+    [clv] = operation_CLV_Implied,
+    [sec] = operation_SEC_Implied,
+    [sed] = operation_SED_Implied,
+    [sei] = operation_SEI_Implied,
 
     // System Functions:
-    [0xff] = operation_BRK_Implied, // TODO: in reality it is 0x00...modified for dubbing!  
-    [0xea] = operation_NOP_Implied,
-    [0x40] = operation_RTI_Implied,
+    [brk] = operation_BRK_Implied,  
+    [nop] = operation_NOP_Implied,
+    [rti] = operation_RTI_Implied,
 
     // Unofficial not documented operations:
-    [0x1a] = operation_Unofficial_NOP_1A,
-    [0x3a] = operation_Unofficial_NOP_3A,
-    [0x5a] = operation_Unofficial_NOP_5A,
-    [0x7a] = operation_Unofficial_NOP_7A,
-    [0xfa] = operation_Unofficial_NOP_FA,
+    [nop1a] = operation_Unofficial_NOP_1A,
+    [nop3a] = operation_Unofficial_NOP_3A,
+    [nop5a] = operation_Unofficial_NOP_5A,
+    [nop7a] = operation_Unofficial_NOP_7A,
+    [nopfa] = operation_Unofficial_NOP_FA,
 
     // My operations:
     // (There are none at the moment...)

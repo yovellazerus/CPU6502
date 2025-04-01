@@ -109,7 +109,7 @@ void CPU_dump(CPU* cpu, FILE* stream){
     fprintf(stream, "P {\n");
     fprintf(stream, "    n: %d\n", CPU_getFlag(cpu, 'n'));
     fprintf(stream, "    v: %d\n", CPU_getFlag(cpu, 'v'));
-    fprintf(stream, "    unused: %d\n", CPU_getFlag(cpu, 'u'));
+    fprintf(stream, "    u: %d\n", CPU_getFlag(cpu, 'u'));
     fprintf(stream, "    b: %d\n", CPU_getFlag(cpu, 'b'));
     fprintf(stream, "    d: %d\n", CPU_getFlag(cpu, 'd'));
     fprintf(stream, "    i: %d\n", CPU_getFlag(cpu, 'i'));
@@ -138,9 +138,9 @@ void CPU_execute(CPU* cpu, Memory* memory){
 // call wan the reset input is set low, not an interrupt!  
 void CPU_reset(CPU *cpu, Memory *memory)
 {
-    cpu->A = Undefined_byte();
-    cpu->X = Undefined_byte();
-    cpu->Y = Undefined_byte();
+    cpu->A = UNDEFINED_BYTE();
+    cpu->X = UNDEFINED_BYTE();
+    cpu->Y = UNDEFINED_BYTE();
     cpu->SP = SP_INIT_VALUE;
     cpu->P = RESET_P_REGISTER; 
     cpu->hlt = false;

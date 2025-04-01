@@ -7,12 +7,10 @@
 #include <string.h>
 #include <assert.h>
 
-#define KB 1024
-#define MB (1024*KB)
-#define GB (1024*MB)
-
-#define MEMORY_SIZE (64*KB)
+#define MEMORY_SIZE (64*1024)
 #define ARRAY_SIZE(ARR) (sizeof(ARR) / sizeof(ARR[0]))
+#define HIGH_BYTE(WORD) (WORD / 0x0100)
+#define LOW_BYTE(WORD) (WORD % 0x0100)
 
 #define ZERO_PAGE_START 0x0000
 #define ZERO_PAGE_END 0x00ff

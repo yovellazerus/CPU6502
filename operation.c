@@ -452,7 +452,7 @@ void operation_STA_Absolute(CPU* cpu, Memory* memory)
     word abs = 0;
     abs += memory->data[cpu->PC];
     cpu->PC++;
-    abs += memory->data[cpu->PC] * 0x100;
+    abs += memory->data[cpu->PC] * 0x0100;
     memory->data[abs] = cpu->A;
     cpu->PC++;
 
