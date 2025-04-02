@@ -177,7 +177,7 @@ typedef enum{
     // My operations:
     // (There are none at the moment...)
     
-} OPCODE;
+} Opcode;
 
 #define NUMBER_OF_POSSIBLE_OPERATIONS (0xff + 1)
 
