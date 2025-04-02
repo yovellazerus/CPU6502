@@ -103,9 +103,6 @@ void assignment_sub(byte* dst, byte* src){
     *dst -= *src;
 }
 
-// TODO: modify this to work an store to(maybe not needed...)
-// TODO: more flags need to be set for add/sub and more!
-// TODO: Maybe even extend it beyond register A....
 void assignment_A_all_addresing_mods(CPU *cpu, Memory *memory, 
                                     Addresing_mod addresing_mod,
                                     void (*assignment_operation)(byte*, byte*)){
@@ -116,7 +113,7 @@ void assignment_A_all_addresing_mods(CPU *cpu, Memory *memory,
     byte offset;
     word base_addres;
     word real_addres;
-    
+
     switch (addresing_mod)
     {
     case Immediate:
