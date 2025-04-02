@@ -123,6 +123,14 @@ typedef enum{
     bita = 0x2c,
 
     // Arithmetic:
+    adci = 0x69,
+    adcz = 0x65,
+    adczx = 0x75,
+    adca = 0x6d,
+    adcax = 0x7d,
+    adcay = 0x79,
+    adcix = 0x61,
+    adciy = 0x71,
 
     // Increments & Decrements:
 
@@ -135,7 +143,15 @@ typedef enum{
     rts = 0x60,
 
     // Branches:
+    bcc = 0x90,
+    bcs = 0xb0,
     beq = 0xf0,
+    bmi = 0x30,
+    bne = 0xd0,
+    bpl = 0x10,
+    bvc = 0x50,
+    bvs = 0x70,
+
 
     // Status Flag Changes:
     clc = 0x18,
@@ -252,6 +268,14 @@ void operation_BIT_Zero_Page(CPU* cpu, Memory* memory);
 void operation_BIT_Absolute(CPU* cpu, Memory* memory);
 
 // Arithmetic:
+void operation_ADC_Immediate(CPU* cpu, Memory* memory);
+void operation_ADC_Zero_Page(CPU* cpu, Memory* memory);
+void operation_ADC_Zero_Page_X(CPU* cpu, Memory* memory);
+void operation_ADC_Absolute(CPU* cpu, Memory* memory);
+void operation_ADC_Absolute_X(CPU* cpu, Memory* memory);
+void operation_ADC_Absolute_Y(CPU* cpu, Memory* memory);
+void operation_ADC_Indirect_X(CPU* cpu, Memory* memory);
+void operation_ADC_Indirect_Y(CPU* cpu, Memory* memory);
 
 // Increments & Decrements:
 
@@ -264,7 +288,14 @@ void operation_JSR_Absolute(CPU* cpu, Memory* memory);
 void operation_RTS_Implied(CPU* cpu, Memory* memory);
 
 // Branches:
+void operation_BCC_Relative(CPU* cpu, Memory* memory);
+void operation_BCS_Relative(CPU* cpu, Memory* memory);
 void operation_BEQ_Relative(CPU* cpu, Memory* memory);
+void operation_BMI_Relative(CPU* cpu, Memory* memory);
+void operation_BNE_Relative(CPU* cpu, Memory* memory);
+void operation_BPL_Relative(CPU* cpu, Memory* memory);
+void operation_BVC_Relative(CPU* cpu, Memory* memory);
+void operation_BVS_Relative(CPU* cpu, Memory* memory);
 
 // Status Flag Changes:
 void operation_CLC_Implied(CPU* cpu, Memory* memory);
@@ -377,6 +408,14 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [bita] = operation_BIT_Absolute,
 
     // Arithmetic:
+    [adci] = operation_ADC_Immediate,
+    [adcz] = operation_ADC_Zero_Page,
+    [adczx] = operation_ADC_Zero_Page_X,
+    [adca] = operation_ADC_Absolute,
+    [adcax] = operation_ADC_Absolute_X,
+    [adcay] = operation_ADC_Absolute_Y,
+    [adcix] = operation_ADC_Indirect_X,
+    [adciy] = operation_ADC_Indirect_Y,
 
     // Increments & Decrements:
 
@@ -389,7 +428,14 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [rts] = operation_RTS_Implied,
 
     // Branches:
+    [bcc] = operation_BCC_Relative,
+    [bcs] = operation_BCS_Relative,
     [beq] = operation_BEQ_Relative,
+    [bmi] = operation_BMI_Relative,
+    [bne] = operation_BNE_Relative,
+    [bpl] = operation_BPL_Relative,
+    [bvc] = operation_BVC_Relative,
+    [bvs] = operation_BVS_Relative,
 
     // Status Flag Changes:
     [clc] = operation_CLC_Implied,

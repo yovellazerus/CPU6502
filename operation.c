@@ -207,6 +207,41 @@ void assignment_A_all_addresing_mods(CPU *cpu, Memory *memory,
     }
 }
 
+void branch_operation_aux(CPU* cpu, Memory* memory, char flag, bool is_set){
+    /*
+    Branch instructions use relative address to identify the target instruction if they are executed.
+    As relative addresses are stored using a signed 8 bit byte,
+    the target instruction must be within *126*(TODO: Not sure I'm handling this correctly.) 
+    bytes before the branch or 128 bytes after the branch.
+    */
+   signed char arg = (signed char)memory->data[cpu->PC];
+   cpu->PC++;
+   if(is_set){
+        if(CPU_getFlag(cpu, flag)){
+            CPU_tick(cpu, 1);
+            word old_cp = cpu->PC;
+            word new_cp = cpu->PC + arg;
+            if(is_page_crossed(old_cp, arg)){ // branching to a new page
+                CPU_tick(cpu, 1);
+            }
+            cpu->PC = new_cp;
+        }
+   }
+   else{
+        if(!CPU_getFlag(cpu, flag)){
+            CPU_tick(cpu, 1);
+            word old_cp = cpu->PC;
+            word new_cp = cpu->PC + arg;
+            if(is_page_crossed(old_cp, arg)){ // branching to a new page
+                CPU_tick(cpu, 1);
+            }
+            cpu->PC = new_cp;
+        }
+   }
+   
+   CPU_tick(cpu, 2);
+}
+
 
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -903,6 +938,45 @@ void operation_BIT_Absolute(CPU* cpu, Memory* memory){
 }
 
 // Arithmetic:
+void operation_ADC_Immediate(CPU* cpu, Memory* memory){
+    assert(false);
+}
+
+void operation_ADC_Zero_Page(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Zero_Page_X(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Absolute(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Absolute_X(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Absolute_Y(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Indirect_X(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
+void operation_ADC_Indirect_Y(CPU* cpu, Memory* memory){
+    assert(false);
+
+}
+
 
 // Increments & Decrements:
 
@@ -978,27 +1052,38 @@ void operation_RTS_Implied(CPU *cpu, Memory *memory)
 }
 
 // Branches:
-void operation_BEQ_Relative(CPU *cpu, Memory *memory)
-{
-    /*
-    Branch instructions use relative address to identify the target instruction if they are executed.
-    As relative addresses are stored using a signed 8 bit byte,
-    the target instruction must be within *126*(TODO: Not sure I'm handling this correctly.) 
-    bytes before the branch or 128 bytes after the branch.
-    */
-    signed char arg = (signed char)memory->data[cpu->PC];
-    cpu->PC++;
-    if(CPU_getFlag(cpu, 'z')){
-        CPU_tick(cpu, 1);
-        word old_cp = cpu->PC;
-        word new_cp = cpu->PC + arg;
-        if(is_page_crossed(old_cp, arg)){ // branching to a new page
-            CPU_tick(cpu, 1);
-        }
-        cpu->PC = new_cp;
-    }
-    CPU_tick(cpu, 2);
+void operation_BCC_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'c', false);
 }
+
+void operation_BCS_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'c', true);
+}
+
+void operation_BEQ_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'z', true);
+}
+
+void operation_BMI_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'n', true);
+}
+
+void operation_BNE_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'z', false);
+}
+
+void operation_BPL_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'n', false);
+}
+
+void operation_BVC_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'v', false);
+}
+
+void operation_BVS_Relative(CPU* cpu, Memory* memory){
+    branch_operation_aux(cpu, memory, 'v', true);
+}
+
 
 // Status Flag Changes:
 void operation_CLC_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 2); CPU_offFlag(cpu, 'c'); }
