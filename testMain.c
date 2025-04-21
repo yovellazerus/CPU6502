@@ -9,6 +9,30 @@
 #include "CPU.h"
 #include "Memory.h"
 
+#include <conio.h>
+
+#define NO_INT 0
+#define NMI 1
+#define IRQ 2
+#define RESET 3
+
+// very basic input system for now and not portable....
+int trigger_interrupt(){
+    if (_kbhit()) {
+        char c = _getch();
+        if(c == 'q'){
+            return NMI;
+        }
+        else if(c == 'r'){
+            return RESET;
+        }
+        else{
+            return IRQ;
+        }
+    }
+    return NO_INT;
+}
+
 void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file);
 
 int main()
@@ -79,6 +103,7 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
         ldai, 0x42, 
         ldai, 0xfe, 
         brk,
+        hlt, // not in real cpu
     };
     
 
@@ -87,7 +112,14 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
     LOAD_LABEL(memory, res);
     LOAD_LABEL(memory, var);
 
-    while (!cpu->hlt) CPU_execute(cpu, memory);
+    while (!cpu->hlt)
+    {
+        CPU_execute(cpu, memory);
+        int interrupt_status = trigger_interrupt();
+        if(interrupt_status == IRQ) CPU_generate_irq(cpu, memory);
+        else if(interrupt_status == NMI) CPU_generate_nmi(cpu, memory);
+        else if(interrupt_status == RESET) CPU_reset(cpu, memory);
+    } 
     
     Memory_dump_all(memory, memory_file);
     Memory_dump_stack(memory, cpu->SP, stack_file);

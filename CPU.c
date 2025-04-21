@@ -155,7 +155,6 @@ void CPU_reset(CPU *cpu, Memory *memory)
     CPU_tick(cpu, 1);
     bus += memory->data[RESET_VECTOR_HIGH_BYTE] * 0x0100;
     CPU_tick(cpu, 1);
-    printf("0x%.4x\n", bus);
     cpu->PC = bus;
     CPU_tick(cpu, 1); 
 
@@ -172,4 +171,59 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode){
     // for dubbing only!
     fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 1);
     cpu->hlt = true;
+}
+
+void CPU_generate_irq(CPU *cpu, Memory *memory)
+{
+    // if interrupt flag disable return
+    if(CPU_getFlag(cpu, 'i') == 1){
+        return;
+    }
+
+    // pull irq handler addres from the interrupt vector 
+    word addr = 0;
+    addr += memory->data[INTERRUPT_VECTOR_LOW_BYTE];
+    addr += memory->data[INTERRUPT_VECTOR_HIGH_BYTE] * 0x0100;
+
+    // push return addres to stack
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    cpu->SP--;
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    cpu->SP--;
+
+    // push P(flags on the stack)
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    cpu->SP--;
+
+    // jump to handler
+    cpu->PC = addr;
+
+    CPU_onFlag(cpu, 'i');
+    CPU_tick(cpu, 7);
+
+}
+
+void CPU_generate_nmi(CPU *cpu, Memory *memory)
+{
+
+    // pull nmi handler addres from the nmi vector 
+    word addr = 0;
+    addr += memory->data[NMI_VECTOR_LOW_BYTE];
+    addr += memory->data[NMI_VECTOR_HIGH_BYTE] * 0x0100;
+
+    // push return addres to stack
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    cpu->SP--;
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    cpu->SP--;
+
+    // push P(flags on the stack)
+    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    cpu->SP--;
+
+    // jump to handler
+    cpu->PC = addr;
+
+    CPU_onFlag(cpu, 'i');
+    CPU_tick(cpu, 7);
 }

@@ -32,7 +32,13 @@ void CPU_init(CPU* cpu, const char* name);
 void CPU_execute(CPU* cpu, Memory* memory);
 void CPU_reset(CPU* cpu, Memory* memory);
 void CPU_tick(CPU* cpu, size_t amount);
+
+// in 6502 it is gust NOP 
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
+
+// not for now
+void CPU_generate_irq(CPU* cpu, Memory* memory);
+void CPU_generate_nmi(CPU* cpu, Memory* memory);
 
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -163,7 +169,7 @@ typedef enum{
     sei = 0x78,
 
     // System Functions:
-    brk = 0xff, // TODO: in reality it is 0x00...modified for dubbing!  
+    brk = 0x00,  
     nop = 0xea,
     rti = 0x40,
 
@@ -175,7 +181,9 @@ typedef enum{
     nopfa = 0xfa,
 
     // My operations:
-    // (There are none at the moment...)
+    
+    // for dubbing
+    hlt = 0xff,
     
 } Opcode;
 
@@ -319,7 +327,9 @@ void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory);
 void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory);
 
 // My operations:
-// (There are none at the moment...)
+
+// for dubbing
+void operation_New_HLT(CPU* cpu, Memory* memory);
 
 static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     
@@ -459,7 +469,9 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [nopfa] = operation_Unofficial_NOP_FA,
 
     // My operations:
-    // (There are none at the moment...)
+    
+    // for dubbing
+    [hlt] = operation_New_HLT,
     
 };
 

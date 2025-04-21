@@ -67,26 +67,6 @@ void Memory_dump_stack(Memory *memory, byte sp,FILE *stream)
     }
 }
 
-void Memory_program_init(Program* program, 
-                        const char* label, 
-                        word entry_point, 
-                        byte* code, 
-                        size_t size){
-
-    program->label = label;
-    program->entry_point = entry_point;
-    program->code = code;
-    program->size = size;
-}
-
-void Memory_load_program(Memory* memory, Program* program){
-    word start = program->entry_point;
-    for(size_t curr = 0; curr < program->size; curr++){
-        memory->data[start + curr] = program->code[curr];
-    }
-    memory->label_table[start] = program->label;
-}
-
 void Memory_load_code(Memory* memory, const char* label, word entry_point, byte* code, size_t size){
     word start = entry_point;
     for(size_t curr = 0; curr < size; curr++){

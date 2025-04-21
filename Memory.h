@@ -49,15 +49,6 @@ typedef struct memory{
     const char* label_table[MEMORY_SIZE]; // for debug  
 } Memory;
 
-typedef struct program{
-    const char* label;
-    word entry_point;
-    byte* code;
-    size_t size;
-} Program;
-
-void Memory_program_init(Program* program, const char* label, word entry_point, byte* code, size_t size);
-void Memory_load_program(Memory* memory, Program* program);
 void Memory_load_code(Memory* memory, const char* label, word entry_point, byte* code, size_t size);
 
 void Memory_init(Memory* memory);

@@ -1030,7 +1030,12 @@ void operation_Unofficial_NOP_7A(CPU* cpu, Memory* memory){ (void) memory; CPU_t
 
 void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cpu, 4); }
 
-
-
 // My operations:
-// (There are none at the moment...)
+
+void operation_New_HLT(CPU *cpu, Memory *memory)
+{
+    cpu->hlt = true;
+    CPU_tick(cpu, 1); // for dubbing
+}
+
+
