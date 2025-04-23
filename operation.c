@@ -15,7 +15,6 @@ typedef enum{
     IndirectY,
 } Addresing_mod;
 
-
 void assignment_flag_control(CPU *cpu, char reg){
     switch (reg)
     {

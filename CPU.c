@@ -173,7 +173,7 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode){
     cpu->run = false;
 }
 
-void CPU_generate_irq(CPU *cpu, Memory *memory)
+void CPU_irq(CPU *cpu, Memory *memory)
 {
     // if interrupt flag disable return
     if(CPU_getFlag(cpu, 'i') == 1){
@@ -203,7 +203,7 @@ void CPU_generate_irq(CPU *cpu, Memory *memory)
 
 }
 
-void CPU_generate_nmi(CPU *cpu, Memory *memory)
+void CPU_nmi(CPU *cpu, Memory *memory)
 {
 
     // pull nmi handler addres from the nmi vector 

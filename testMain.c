@@ -20,13 +20,13 @@
 int trigger_interrupt(){
     if (_kbhit()) {
         char c = _getch();
-        if(c == 'q'){
+        if(c == 'n'){
             return NMI;
         }
         else if(c == 'r'){
             return RESET;
         }
-        else{
+        else if(c == 'i'){
             return IRQ;
         }
     }
@@ -115,8 +115,8 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
     {
         CPU_execute(cpu, memory);
         int interrupt_status = trigger_interrupt();
-        if(interrupt_status == IRQ) CPU_generate_irq(cpu, memory);
-        else if(interrupt_status == NMI) CPU_generate_nmi(cpu, memory);
+        if(interrupt_status == IRQ) CPU_irq(cpu, memory);
+        else if(interrupt_status == NMI) CPU_nmi(cpu, memory);
         else if(interrupt_status == RESET) CPU_reset(cpu, memory);
     } 
     
