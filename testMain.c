@@ -76,7 +76,7 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
     
     Memory_init(memory);
     
-    word foo_addr = 0x4000;
+    word foo_addr = 0x9000;
     word res = 0x2000;
     byte foo[] = {
         ldai, 0x01, 
