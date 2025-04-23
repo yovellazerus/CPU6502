@@ -609,13 +609,13 @@ void operation_TXS_Implied(CPU* cpu, Memory* memory){
 
 void operation_PHA_Implied(CPU* cpu, Memory* memory)
 {
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->A;
+    memory->data[cpu->SP + STACK_START] = cpu->A;
     cpu->SP--;
     CPU_tick(cpu, 3);
 }
 
 void operation_PHP_Implied(CPU* cpu, Memory* memory){
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    memory->data[cpu->SP + STACK_START] = cpu->P;
     cpu->SP--;
     CPU_tick(cpu, 3);
 }
@@ -623,7 +623,7 @@ void operation_PHP_Implied(CPU* cpu, Memory* memory){
 void operation_PLA_Implied(CPU* cpu, Memory* memory)
 {
     cpu->SP++;
-    cpu->A = memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    cpu->A = memory->data[cpu->SP + STACK_START];
     assignment_flag_control(cpu, 'A');
     CPU_tick(cpu, 4);
 
@@ -631,7 +631,7 @@ void operation_PLA_Implied(CPU* cpu, Memory* memory)
 
 void operation_PLP_Implied(CPU* cpu, Memory* memory){
     cpu->SP++;
-    cpu->P = memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    cpu->P = memory->data[cpu->SP + STACK_START];
     CPU_onFlag(cpu, 'u'); // always on
     CPU_tick(cpu, 4);
 }
@@ -901,9 +901,9 @@ void operation_JSR_Absolute(CPU *cpu, Memory *memory)
     cpu->PC++;
 
     // TODO: not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC / 0x0100;
     cpu->SP--;
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC % 0x0100;
     cpu->SP--;
 
     cpu->PC = addr;
@@ -915,9 +915,9 @@ void operation_RTS_Implied(CPU *cpu, Memory *memory)
 {
     word addr = 0;
     cpu->SP++;
-    addr += memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    addr += memory->data[cpu->SP + STACK_START];
     cpu->SP++;
-    addr += memory->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
+    addr += memory->data[cpu->SP + STACK_START] * 0x0100;
     
     cpu->PC = addr;
     CPU_tick(cpu, 6);
@@ -976,17 +976,17 @@ void operation_SEI_Implied(CPU* cpu, Memory* memory){ (void) memory; CPU_tick(cp
 void operation_BRK_Implied(CPU *cpu, Memory *memory)
 {
     word addr = 0;
-    addr += memory->data[INTERRUPT_VECTOR_LOW_BYTE];
-    addr += memory->data[INTERRUPT_VECTOR_HIGH_BYTE] * 0x0100;
+    addr += memory->data[IRQ_VECTOR_LOW_ADDER];
+    addr += memory->data[IRQ_VECTOR_HIGH_ADDER] * 0x0100;
 
     // not pushing (PC - 1) dow to CPU implementation, maybe need to modify...
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC / 0x0100;
     cpu->SP--;
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC % 0x0100;
     cpu->SP--;
 
     // push P(flags on the stack)
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    memory->data[cpu->SP + STACK_START] = cpu->P;
     cpu->SP--;
 
     cpu->PC = addr;
@@ -1005,14 +1005,14 @@ void operation_NOP_Implied(CPU *cpu, Memory *memory)
 void operation_RTI_Implied(CPU *cpu, Memory *memory)
 {
     cpu->SP++;
-    cpu->P = memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    cpu->P = memory->data[cpu->SP + STACK_START];
     CPU_onFlag(cpu, 'u'); // always on
 
     word addr = 0;
     cpu->SP++;
-    addr += memory->data[cpu->SP + STACK_HIGH_ADDRES];
+    addr += memory->data[cpu->SP + STACK_START];
     cpu->SP++;
-    addr += memory->data[cpu->SP + STACK_HIGH_ADDRES] * 0x0100;
+    addr += memory->data[cpu->SP + STACK_START] * 0x0100;
 
     cpu->PC = addr;
 
@@ -1032,10 +1032,5 @@ void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory){ (void) memory; CPU_t
 
 // My operations:
 
-void operation_New_HLT(CPU *cpu, Memory *memory)
-{
-    cpu->hlt = true;
-    CPU_tick(cpu, 1); // for dubbing
-}
 
 

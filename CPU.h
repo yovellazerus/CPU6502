@@ -3,12 +3,8 @@
 
 #include "Memory.h"
 
-#define IS_SIGN_BYTE(ARG) ((ARG & 0x80) != 0)
-#define IS_6BIT_ON_BYTE(ARG) ((ARG & 0x40 != 0))
-
 #define RESET_P_REGISTER 0x34 // 0b00110100
-
-#define UNDEFINED_BYTE() (rand() / 256)
+#define SP_INIT_VALUE 0xfd
 
 typedef struct cpu{
     byte A;
@@ -20,7 +16,7 @@ typedef struct cpu{
     
     size_t 	cycles;
     const char* name; 
-    bool hlt;
+    bool run;
 } CPU;
 
 void CPU_dump(CPU* cpu, FILE* stream);
@@ -37,8 +33,8 @@ void CPU_tick(CPU* cpu, size_t amount);
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
 // not for now
-void CPU_generate_irq(CPU* cpu, Memory* memory);
-void CPU_generate_nmi(CPU* cpu, Memory* memory);
+void CPU_irq(CPU* cpu, Memory* memory);
+void CPU_nmi(CPU* cpu, Memory* memory);
 
 // operations:
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -181,9 +177,6 @@ typedef enum{
     nopfa = 0xfa,
 
     // My operations:
-    
-    // for dubbing
-    hlt = 0xff,
     
 } Opcode;
 
@@ -328,9 +321,6 @@ void operation_Unofficial_NOP_FA(CPU* cpu, Memory* memory);
 
 // My operations:
 
-// for dubbing
-void operation_New_HLT(CPU* cpu, Memory* memory);
-
 static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     
     // Load Operations:
@@ -469,9 +459,6 @@ static operation operation_table[NUMBER_OF_POSSIBLE_OPERATIONS] = {
     [nopfa] = operation_Unofficial_NOP_FA,
 
     // My operations:
-    
-    // for dubbing
-    [hlt] = operation_New_HLT,
     
 };
 

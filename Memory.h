@@ -7,39 +7,34 @@
 #include <string.h>
 #include <assert.h>
 
-#define MEMORY_SIZE (64*1024)
+#define MEMORY_SIZE (65536)
 #define ARRAY_SIZE(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 #define HIGH_BYTE(WORD) (WORD / 0x0100)
 #define LOW_BYTE(WORD) (WORD % 0x0100)
+#define IS_SIGN_BYTE(ARG) ((ARG & 0x80) != 0)
+#define IS_6BIT_ON_BYTE(ARG) ((ARG & 0x40 != 0))
+#define UNDEFINED_BYTE() 0
 
 #define LOAD_LABEL(MEMORY, LABEL) (MEMORY->label_table[LABEL] = #LABEL)
 #define NAME(ARG) (#ARG)
 
 #define ZERO_PAGE_START 0x0000
 #define ZERO_PAGE_END 0x00ff
+#define STACK_START 0x0100
+#define STACK_END 0x01ff
 #define PAGE_SIZE 0x0100
 
-#define RESET_VECTOR_HIGH_BYTE 0xfffd
-#define RESET_VECTOR_LOW_BYTE 0xfffc
-#define GLOBAL_PROGRAM_ENTRY_HIGH_BYTE 0x80 /*program start at 0x8000 for now,There is no operating system yet, 
+#define RESET_VECTOR_HIGH_ADDER 0xfffd
+#define RESET_VECTOR_LOW_ADDER 0xfffc
+#define ENTRY_POINT_ADDERS 0x8000 /*program start at 0x8000 for now,There is no operating system yet, 
                                             so the program starts here without any special preparations.*/
-#define GLOBAL_PROGRAM_ENTRY_LOW_BYTE 0x00
-#define GLOBAL_START ((GLOBAL_PROGRAM_ENTRY_HIGH_BYTE * 0x0100) + GLOBAL_PROGRAM_ENTRY_LOW_BYTE)
+#define IRQ_VECTOR_HIGH_ADDER 0xffff
+#define IRQ_VECTOR_LOW_ADDER 0xfffe
+#define IRQ_HANDLER_ADDRES 0xff80
 
-#define INTERRUPT_VECTOR_HIGH_BYTE 0xffff
-#define INTERRUPT_VECTOR_LOW_BYTE 0xfffe
-#define INTERRUPT_HANDLER_HIGH_BYTE 0xff
-#define INTERRUPT_HANDLER_LOW_BYTE 0x80
-
-#define NMI_VECTOR_HIGH_BYTE 0xfffb
-#define NMI_VECTOR_LOW_BYTE 0xfffa
-#define NMI_HANDLER_HIGH_BYTE 0xff
-#define NMI_HANDLER_LOW_BYTE 0x00
-
-#define SP_INIT_VALUE 0xfd
-#define SP_HIGH_VALUE 0xff
-#define SP_LOW_VALUE 0x00
-#define STACK_HIGH_ADDRES 0x0100
+#define NMI_VECTOR_HIGH_ADDER 0xfffb
+#define NMI_VECTOR_LOW_ADDER 0xfffa
+#define NMI_HANDLER_ADDRES 0xff00
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -52,7 +47,6 @@ typedef struct memory{
 void Memory_load_code(Memory* memory, const char* label, word entry_point, byte* code, size_t size);
 
 void Memory_init(Memory* memory);
-void Memory_set_entry_point(Memory* memory, word entry_point);
 void Memory_dump_all(Memory* memory, FILE* stream);
 void Memory_dump_stack(Memory* memory, byte sp, FILE* stream);
 

@@ -74,10 +74,8 @@ int main()
 
 void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file){
     
-    CPU_init(cpu, NULL);
     Memory_init(memory);
-    CPU_reset(cpu, memory);
-
+    
     word foo_addr = 0x4000;
     word res = 0x2000;
     byte foo[] = {
@@ -103,16 +101,17 @@ void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
         ldai, 0x42, 
         ldai, 0xfe, 
         brk,
-        hlt, // not in real cpu
+        0xff, // to stop the cpu
     };
     
 
-    Memory_load_code(memory, NAME(code), GLOBAL_START, code, ARRAY_SIZE(code));
+    Memory_load_code(memory, NAME(code), ENTRY_POINT_ADDERS, code, ARRAY_SIZE(code));
     Memory_load_code(memory, NAME(foo), foo_addr, foo, ARRAY_SIZE(foo));
     LOAD_LABEL(memory, res);
     LOAD_LABEL(memory, var);
 
-    while (!cpu->hlt)
+    CPU_reset(cpu, memory);
+    while (cpu->run)
     {
         CPU_execute(cpu, memory);
         int interrupt_status = trigger_interrupt();

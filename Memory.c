@@ -1,33 +1,23 @@
 
 #include "Memory.h"
 
-void Memory_set_entry_point(Memory* memory, word entry_point){
-    memory->data[RESET_VECTOR_HIGH_BYTE] = (byte)(entry_point / 0x0100);
-    memory->data[RESET_VECTOR_LOW_BYTE] = (byte)(entry_point % 0x0100);
-}
-
 void Memory_init(Memory* memory){
-    // This needs to be done at the software level!
-    // And actually it's the operating system's responsibility, if necessary...
-    // for(int i = 0; i < MEMORY_SIZE; i++){
-    //     memory->data[i] = 0x00;
-    // }
-    
+
     // for now ROM and RAM are the same memory component, this is not true in actual implementation...
     // this is ROM:
-    memory->data[RESET_VECTOR_HIGH_BYTE] = GLOBAL_PROGRAM_ENTRY_HIGH_BYTE;
-    memory->data[RESET_VECTOR_LOW_BYTE] = GLOBAL_PROGRAM_ENTRY_LOW_BYTE;
+    memory->data[RESET_VECTOR_HIGH_ADDER] = HIGH_BYTE(ENTRY_POINT_ADDERS);
+    memory->data[RESET_VECTOR_LOW_ADDER] = LOW_BYTE(ENTRY_POINT_ADDERS);
 
-    memory->data[INTERRUPT_VECTOR_HIGH_BYTE] = INTERRUPT_HANDLER_HIGH_BYTE;
-    memory->data[INTERRUPT_VECTOR_LOW_BYTE] = INTERRUPT_HANDLER_LOW_BYTE;
+    memory->data[IRQ_VECTOR_HIGH_ADDER] = HIGH_BYTE(IRQ_HANDLER_ADDRES);
+    memory->data[IRQ_VECTOR_LOW_ADDER] = LOW_BYTE(IRQ_HANDLER_ADDRES);
 
-    memory->data[NMI_VECTOR_HIGH_BYTE] = NMI_HANDLER_HIGH_BYTE;
-    memory->data[NMI_VECTOR_LOW_BYTE] = NMI_HANDLER_LOW_BYTE;
+    memory->data[NMI_VECTOR_HIGH_ADDER] = HIGH_BYTE(NMI_HANDLER_ADDRES);
+    memory->data[NMI_VECTOR_LOW_ADDER] = LOW_BYTE(NMI_HANDLER_ADDRES);
 
     // default NMI AND BRK/IRQ handler functions only return from the interrupt (opcode 0x40)
     // this is the OS for now :-) 
-    memory->data[INTERRUPT_HANDLER_HIGH_BYTE * 0x0100 + INTERRUPT_HANDLER_LOW_BYTE] = 0x40;
-    memory->data[NMI_HANDLER_HIGH_BYTE * 0x0100 + NMI_HANDLER_LOW_BYTE] = 0x40;
+    memory->data[IRQ_HANDLER_ADDRES] = 0x40;
+    memory->data[NMI_HANDLER_ADDRES] = 0x40;
 
     // debug:
     for(int i = 0; i < MEMORY_SIZE; i++){
@@ -53,12 +43,12 @@ void Memory_dump_all(Memory* memory, FILE* stream){
     }
 }
 
-void Memory_dump_stack(Memory *memory, byte sp,FILE *stream)
+void Memory_dump_stack(Memory *memory, byte sp, FILE *stream)
 {
-    for(int i = STACK_HIGH_ADDRES + SP_HIGH_VALUE; i >= STACK_HIGH_ADDRES; i--){
+    for(int i = STACK_END; i >= STACK_START; i--){
         fprintf(stream, "0x%.4x: ", i);
         fprintf(stream, " 0x%.2x", memory->data[i]);
-        if(i == sp + STACK_HIGH_ADDRES){
+        if(i == sp + STACK_START){
             fprintf(stream, " <--- sp\n");
         }
         else{

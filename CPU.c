@@ -146,14 +146,14 @@ void CPU_reset(CPU *cpu, Memory *memory)
     cpu->Y = UNDEFINED_BYTE();
     cpu->SP = SP_INIT_VALUE;
     cpu->P = RESET_P_REGISTER; 
-    cpu->hlt = false;
+    cpu->run = true;
 
     CPU_tick(cpu, 6);
 
     word bus;
-    bus = memory->data[RESET_VECTOR_LOW_BYTE];
+    bus = memory->data[RESET_VECTOR_LOW_ADDER];
     CPU_tick(cpu, 1);
-    bus += memory->data[RESET_VECTOR_HIGH_BYTE] * 0x0100;
+    bus += memory->data[RESET_VECTOR_HIGH_ADDER] * 0x0100;
     CPU_tick(cpu, 1);
     cpu->PC = bus;
     CPU_tick(cpu, 1); 
@@ -170,7 +170,7 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode){
     CPU_tick(cpu, 2);
     // for dubbing only!
     fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 1);
-    cpu->hlt = true;
+    cpu->run = false;
 }
 
 void CPU_generate_irq(CPU *cpu, Memory *memory)
@@ -182,17 +182,17 @@ void CPU_generate_irq(CPU *cpu, Memory *memory)
 
     // pull irq handler addres from the interrupt vector 
     word addr = 0;
-    addr += memory->data[INTERRUPT_VECTOR_LOW_BYTE];
-    addr += memory->data[INTERRUPT_VECTOR_HIGH_BYTE] * 0x0100;
+    addr += memory->data[IRQ_VECTOR_LOW_ADDER];
+    addr += memory->data[IRQ_VECTOR_HIGH_ADDER] * 0x0100;
 
     // push return addres to stack
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC / 0x0100;
     cpu->SP--;
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC % 0x0100;
     cpu->SP--;
 
     // push P(flags on the stack)
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    memory->data[cpu->SP + STACK_START] = cpu->P;
     cpu->SP--;
 
     // jump to handler
@@ -208,17 +208,17 @@ void CPU_generate_nmi(CPU *cpu, Memory *memory)
 
     // pull nmi handler addres from the nmi vector 
     word addr = 0;
-    addr += memory->data[NMI_VECTOR_LOW_BYTE];
-    addr += memory->data[NMI_VECTOR_HIGH_BYTE] * 0x0100;
+    addr += memory->data[NMI_VECTOR_LOW_ADDER];
+    addr += memory->data[NMI_VECTOR_HIGH_ADDER] * 0x0100;
 
     // push return addres to stack
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC / 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC / 0x0100;
     cpu->SP--;
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->PC % 0x0100;
+    memory->data[cpu->SP + STACK_START] = cpu->PC % 0x0100;
     cpu->SP--;
 
     // push P(flags on the stack)
-    memory->data[cpu->SP + STACK_HIGH_ADDRES] = cpu->P;
+    memory->data[cpu->SP + STACK_START] = cpu->P;
     cpu->SP--;
 
     // jump to handler
