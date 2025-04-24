@@ -6,7 +6,6 @@ void CPU_init(CPU* cpu, const char* name){
     cpu->cycles = 0;
 }
 
-// TODO: The order of the flags is probably reversed...
 bool CPU_getFlag(CPU* cpu, char flag){
     switch (flag){
         case 'n':
@@ -15,7 +14,7 @@ bool CPU_getFlag(CPU* cpu, char flag){
         case 'v':
             return (1 & (cpu->P >> 6));
             break;
-        case 'u':
+        case 'u': // undefine, on all the time
             return (1 & (cpu->P >> 5));
             break;
         case 'b':
@@ -125,7 +124,7 @@ void CPU_dump(CPU* cpu, FILE* stream){
 
 void CPU_execute(CPU* cpu, Memory* memory){
     byte opcode = memory->data[cpu->PC];
-    printf("0x%.4x: 0x%.2x\n", cpu->PC, opcode); // debug
+    fprintf(stdout, "addres: (0x%.4x) opcode: (0x%.2x)\n", cpu->PC, opcode); // debug
     cpu->PC++;
     operation op = operation_table[opcode];
     if(op){
@@ -136,6 +135,18 @@ void CPU_execute(CPU* cpu, Memory* memory){
     }
 }
 
+void CPU_tick(CPU* cpu, size_t amount){
+    cpu->cycles += amount;
+    // TODO: add sleep or something to simulate real cpu execution time
+}
+
+void CPU_invalid_opcode(CPU* cpu, byte opcode){
+    // 6502 invalid opcode is like NOP
+    CPU_tick(cpu, 2);
+    // for dubbing only!
+    fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 1);
+    cpu->run = false;
+}
 
 // done at the hardware level not using normal cpu instructions.
 // call wan the reset input is set low, not an interrupt!  
@@ -158,19 +169,6 @@ void CPU_reset(CPU *cpu, Memory *memory)
     cpu->PC = bus;
     CPU_tick(cpu, 1); 
 
-}
-
-void CPU_tick(CPU* cpu, size_t amount){
-    cpu->cycles += amount;
-    // TODO: add sleep or something to simulate real cpu execution time
-}
-
-void CPU_invalid_opcode(CPU* cpu, byte opcode){
-    // 6502 invalid opcode is like NOP
-    CPU_tick(cpu, 2);
-    // for dubbing only!
-    fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC - 1);
-    cpu->run = false;
 }
 
 void CPU_irq(CPU *cpu, Memory *memory)

@@ -11,13 +11,17 @@
 
 #include <conio.h>
 
-#define NO_INT 0
-#define NMI 1
-#define IRQ 2
-#define RESET 3
+static bool is_dubbing = false;
 
 // very basic input system for now and not portable....
-int trigger_interrupt(){
+typedef enum {
+    NO_INT = 0,
+    NMI,
+    RESET,
+    IRQ,
+} interrupt;
+
+interrupt trigger_interrupt(){
     if (_kbhit()) {
         char c = _getch();
         if(c == 'n'){
@@ -35,8 +39,28 @@ int trigger_interrupt(){
 
 void basic_test(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file);
 
-int main()
+int main(int argc, char* argv[])
 {
+
+    for(int i = 1; i < argc; i++){
+        if(strcmp(argv[i], "-dubbing") == 0){
+            is_dubbing = true;
+        }
+        else if(strcmp(argv[i], "-quiet") == 0){
+#ifdef _WIN32
+    freopen("nul", "w", stderr);
+    freopen("nul", "w", stdout);
+#else
+    freopen("/dev/null", "w", stderr);
+    freopen("/dev/null", "w", stdout);
+#endif
+        }
+        else{
+            fprintf(stderr, "Error: Invalid command line flag: %s\n", argv[i]);
+            return 1;
+        }
+    }
+
     srand(time(NULL));
     const char* memory_file_path = "./output/memory.txt";
     const char* cpu_file_path = "./output/cpu.txt";
@@ -133,8 +157,41 @@ void basic_test(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FIL
     CPU_reset(cpu, memory);
     while (cpu->run)
     {
+        // dubbing:
+        if(is_dubbing){
+            bool halt = true; 
+            char input = '\0';
+            while(halt){
+                fflush(stdin);
+                fprintf(stdout, "(dubbing) Tap a letter only to advance, for help tap `h`\n");
+                scanf("%c", &input);
+                switch (input)
+                {
+                case 's':
+                    halt = false;
+                    break;
+                
+                case 'c':
+                    is_dubbing = false;
+                    halt = false;
+                    break;
+
+                case 'h':
+                    fprintf(stdout, "(dubbing) instructions:\n");
+                    fprintf(stdout, "|  `s`: step the progrem to the next commend                   |\n");
+                    fprintf(stdout, "|  `h`: List the commands and their charters                   |\n");
+                    fprintf(stdout, "|  `c`: Continues program progress until the next breakpoint   |\n");
+                    break;
+                
+                default:
+                    fprintf(stdout, "(dubbing) Unknown instruction `%c` please try again\n", input);
+                    break;
+                }
+            }
+        }
+
         CPU_execute(cpu, memory);
-        int interrupt_status = trigger_interrupt();
+        interrupt interrupt_status = trigger_interrupt();
         if(interrupt_status == IRQ) CPU_irq(cpu, memory);
         else if(interrupt_status == NMI) CPU_nmi(cpu, memory);
         else if(interrupt_status == RESET) CPU_reset(cpu, memory);
