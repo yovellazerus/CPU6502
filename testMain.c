@@ -33,7 +33,7 @@ int trigger_interrupt(){
     return NO_INT;
 }
 
-void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file);
+void basic_test(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file);
 
 int main()
 {
@@ -63,7 +63,7 @@ int main()
     Memory memory;
     CPU cpu;
 
-    test_basic(&cpu, &memory, cpu_file, memory_file, stack_file);
+    basic_test(&cpu, &memory, cpu_file, memory_file, stack_file);
 
     fclose(cpu_file);
     fclose(memory_file);
@@ -72,43 +72,63 @@ int main()
     return 0;
 }
 
-void test_basic(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file){
+void basic_test(CPU* cpu, Memory* memory, FILE* cpu_file, FILE* memory_file, FILE* stack_file){
     
     Memory_init(memory);
-    
-    word foo_addr = 0x9000;
-    word res = 0x2000;
-    byte foo[] = {
-        ldai, 0x01, 
-        beq, 0x05, 
-        ldai, 0x01, 
-        staa, LOW_BYTE(res), HIGH_BYTE(res), 
-        rts,
+
+    word val1 = 0x1001;
+    word val2 = 0x1002;
+
+    word irq_handler_ep = IRQ_HANDLER_ADDRES;
+    byte irq_handler[] = {
+        rti,
     };
 
-    word var = 0x1000;
-    byte code[] = {
-        ldai, 0xfe, 
-        staa, LOW_BYTE(var), HIGH_BYTE(var),
-        tax, 
-        pha, 
-        ldai, 0x06, 
-        ldai, 0x48,
-        pha, 
-        pha, 
-        pha, 
-        jsr, LOW_BYTE(foo_addr), HIGH_BYTE(foo_addr), 
-        ldai, 0x42, 
-        ldai, 0xfe, 
-        brk,
-        0xff, // to stop the cpu
+    word nmi_handler_ep = NMI_HANDLER_ADDRES;
+    byte nmi_handler[] = {
+        rti,
+    };
+
+    word hlt_ep = ENTRY_POINT_ADDERS + 0x3000;
+    byte hlt[] = {
+        0xff, // to halt the cpu
+        jmpa, LOW_BYTE(hlt_ep), HIGH_BYTE(hlt_ep), 
+    };
+
+    word swap_ep = ENTRY_POINT_ADDERS + 0x2000;
+    byte swap[] = {
+        ldaa, LOW_BYTE(val1), HIGH_BYTE(val1),    
+        tax,         
+        ldaa, LOW_BYTE(val2), HIGH_BYTE(val2),   
+        staa, LOW_BYTE(val1), HIGH_BYTE(val1),  
+        txa,         
+        staa, LOW_BYTE(val2), HIGH_BYTE(val2),    
+        rts,         
+    };
+
+    word _main_ep = ENTRY_POINT_ADDERS + 0x1000;
+    byte _main[] = {
+        ldai, 0x11,
+        staa, LOW_BYTE(val1), HIGH_BYTE(val1),
+        ldai, 0x22,
+        staa, LOW_BYTE(val2), HIGH_BYTE(val2),
+        jsr, LOW_BYTE(swap_ep), HIGH_BYTE(swap_ep),
+        rts, 
+    };
+
+    word reset_ep = ENTRY_POINT_ADDERS;
+    byte reset[] = {
+        cli, 
+        jsr, LOW_BYTE(_main_ep), HIGH_BYTE(_main_ep),
+        jsr, LOW_BYTE(hlt_ep), HIGH_BYTE(hlt_ep),
     };
     
-
-    Memory_load_code(memory, NAME(code), ENTRY_POINT_ADDERS, code, ARRAY_SIZE(code));
-    Memory_load_code(memory, NAME(foo), foo_addr, foo, ARRAY_SIZE(foo));
-    LOAD_LABEL(memory, res);
-    LOAD_LABEL(memory, var);
+    Memory_load_code(memory, NULL, reset_ep, reset, ARRAY_SIZE(reset));
+    Memory_load_code(memory, NULL, _main_ep, _main, ARRAY_SIZE(_main));
+    Memory_load_code(memory, NULL, hlt_ep, hlt, ARRAY_SIZE(hlt));
+    Memory_load_code(memory, NULL, swap_ep, swap, ARRAY_SIZE(swap));
+    Memory_load_code(memory, NULL, nmi_handler_ep, nmi_handler, ARRAY_SIZE(nmi_handler));
+    Memory_load_code(memory, NULL, irq_handler_ep, irq_handler, ARRAY_SIZE(irq_handler));
 
     CPU_reset(cpu, memory);
     while (cpu->run)

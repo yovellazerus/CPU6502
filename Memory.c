@@ -14,11 +14,6 @@ void Memory_init(Memory* memory){
     memory->data[NMI_VECTOR_HIGH_ADDER] = HIGH_BYTE(NMI_HANDLER_ADDRES);
     memory->data[NMI_VECTOR_LOW_ADDER] = LOW_BYTE(NMI_HANDLER_ADDRES);
 
-    // default NMI AND BRK/IRQ handler functions only return from the interrupt (opcode 0x40)
-    // this is the OS for now :-) 
-    memory->data[IRQ_HANDLER_ADDRES] = 0x40;
-    memory->data[NMI_HANDLER_ADDRES] = 0x40;
-
     // debug:
     for(int i = 0; i < MEMORY_SIZE; i++){
         memory->label_table[i] = NULL;
