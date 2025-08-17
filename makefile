@@ -1,18 +1,24 @@
-
 CC = gcc
+CFLAGS = -Wall -Wextra -O2
+OBJ = main.o instruction.o cpu.o 
+TARGET = cpu6502
+RM = rm -f
 
-CFLAGS = -Wall -Wextra -std=c99 -g
+ifeq ($(OS),Windows_NT)
+    RM = del /Q
+    TARGET = cpu6502.exe
+endif
 
-SRC = testMain.c Memory.c CPU.c operation.c
-OBJ = $(SRC:.c=.o)
+.PHONY: all clean
 
-TARGET = mos6502
+all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+	$(RM) $(OBJ)
 
-%.o: %.c
+%.o: ./src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	del /Q testMain.o Memory.o CPU.o operation.o mos6502.exe 2>nul
+	$(RM) $(OBJ) $(TARGET)
