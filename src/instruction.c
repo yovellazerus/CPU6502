@@ -1,212 +1,206 @@
 
 #include "../include/instruction.h"
 
-Instruction Opcode_to_Instraction_table[0xff + 1] = {
+Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // Load/Store
     [Opcode_LDA_Immediate]   = instruction_LDA_Immediate,
-    [Opcode_LDA_ZeroPage]    = instruction_LDA_ZeroPage,
-    [Opcode_LDA_ZeroPageX]   = instruction_LDA_ZeroPageX,
-    [Opcode_LDA_Absolute]    = instruction_LDA_Absolute,
-    [Opcode_LDA_AbsoluteX]   = instruction_LDA_AbsoluteX,
-    [Opcode_LDA_AbsoluteY]   = instruction_LDA_AbsoluteY,
-    [Opcode_LDA_IndirectX]   = instruction_LDA_IndirectX,
-    [Opcode_LDA_IndirectY]   = instruction_LDA_IndirectY,
+    // [Opcode_LDA_ZeroPage]    = instruction_LDA_ZeroPage,
+    // [Opcode_LDA_ZeroPageX]   = instruction_LDA_ZeroPageX,
+    // [Opcode_LDA_Absolute]    = instruction_LDA_Absolute,
+    // [Opcode_LDA_AbsoluteX]   = instruction_LDA_AbsoluteX,
+    // [Opcode_LDA_AbsoluteY]   = instruction_LDA_AbsoluteY,
+    // [Opcode_LDA_IndirectX]   = instruction_LDA_IndirectX,
+    // [Opcode_LDA_IndirectY]   = instruction_LDA_IndirectY,
 
-    [Opcode_LDX_Immediate]   = instruction_LDX_Immediate,
-    [Opcode_LDX_ZeroPage]    = instruction_LDX_ZeroPage,
-    [Opcode_LDX_ZeroPageY]   = instruction_LDX_ZeroPageY,
-    [Opcode_LDX_Absolute]    = instruction_LDX_Absolute,
-    [Opcode_LDX_AbsoluteY]   = instruction_LDX_AbsoluteY,
+    // [Opcode_LDX_Immediate]   = instruction_LDX_Immediate,
+    // [Opcode_LDX_ZeroPage]    = instruction_LDX_ZeroPage,
+    // [Opcode_LDX_ZeroPageY]   = instruction_LDX_ZeroPageY,
+    // [Opcode_LDX_Absolute]    = instruction_LDX_Absolute,
+    // [Opcode_LDX_AbsoluteY]   = instruction_LDX_AbsoluteY,
 
-    [Opcode_LDY_Immediate]   = instruction_LDY_Immediate,
-    [Opcode_LDY_ZeroPage]    = instruction_LDY_ZeroPage,
-    [Opcode_LDY_ZeroPageX]   = instruction_LDY_ZeroPageX,
-    [Opcode_LDY_Absolute]    = instruction_LDY_Absolute,
-    [Opcode_LDY_AbsoluteX]   = instruction_LDY_AbsoluteX,
+    // [Opcode_LDY_Immediate]   = instruction_LDY_Immediate,
+    // [Opcode_LDY_ZeroPage]    = instruction_LDY_ZeroPage,
+    // [Opcode_LDY_ZeroPageX]   = instruction_LDY_ZeroPageX,
+    // [Opcode_LDY_Absolute]    = instruction_LDY_Absolute,
+    // [Opcode_LDY_AbsoluteX]   = instruction_LDY_AbsoluteX,
 
     [Opcode_STA_ZeroPage]    = instruction_STA_ZeroPage,
-    [Opcode_STA_ZeroPageX]   = instruction_STA_ZeroPageX,
-    [Opcode_STA_Absolute]    = instruction_STA_Absolute,
-    [Opcode_STA_AbsoluteX]   = instruction_STA_AbsoluteX,
-    [Opcode_STA_AbsoluteY]   = instruction_STA_AbsoluteY,
-    [Opcode_STA_IndirectX]   = instruction_STA_IndirectX,
-    [Opcode_STA_IndirectY]   = instruction_STA_IndirectY,
+    // [Opcode_STA_ZeroPageX]   = instruction_STA_ZeroPageX,
+    // [Opcode_STA_Absolute]    = instruction_STA_Absolute,
+    // [Opcode_STA_AbsoluteX]   = instruction_STA_AbsoluteX,
+    // [Opcode_STA_AbsoluteY]   = instruction_STA_AbsoluteY,
+    // [Opcode_STA_IndirectX]   = instruction_STA_IndirectX,
+    // [Opcode_STA_IndirectY]   = instruction_STA_IndirectY,
 
-    [Opcode_STX_ZeroPage]    = instruction_STX_ZeroPage,
-    [Opcode_STX_ZeroPageY]   = instruction_STX_ZeroPageY,
-    [Opcode_STX_Absolute]    = instruction_STX_Absolute,
+    // [Opcode_STX_ZeroPage]    = instruction_STX_ZeroPage,
+    // [Opcode_STX_ZeroPageY]   = instruction_STX_ZeroPageY,
+    // [Opcode_STX_Absolute]    = instruction_STX_Absolute,
 
-    [Opcode_STY_ZeroPage]    = instruction_STY_ZeroPage,
-    [Opcode_STY_ZeroPageX]   = instruction_STY_ZeroPageX,
-    [Opcode_STY_Absolute]    = instruction_STY_Absolute,
+    // [Opcode_STY_ZeroPage]    = instruction_STY_ZeroPage,
+    // [Opcode_STY_ZeroPageX]   = instruction_STY_ZeroPageX,
+    // [Opcode_STY_Absolute]    = instruction_STY_Absolute,
 
-    // Register Transfers
-    [Opcode_TAX]             = instruction_TAX,
-    [Opcode_TAY]             = instruction_TAY,
-    [Opcode_TSX]             = instruction_TSX,
-    [Opcode_TXA]             = instruction_TXA,
-    [Opcode_TXS]             = instruction_TXS,
-    [Opcode_TYA]             = instruction_TYA,
+    // // Register Transfers
+    // [Opcode_TAX]             = instruction_TAX,
+    // [Opcode_TAY]             = instruction_TAY,
+    // [Opcode_TSX]             = instruction_TSX,
+    // [Opcode_TXA]             = instruction_TXA,
+    // [Opcode_TXS]             = instruction_TXS,
+    // [Opcode_TYA]             = instruction_TYA,
 
-    // Stack
-    [Opcode_PHA]             = instruction_PHA,
-    [Opcode_PHP]             = instruction_PHP,
-    [Opcode_PLA]             = instruction_PLA,
-    [Opcode_PLP]             = instruction_PLP,
+    // // Stack
+    // [Opcode_PHA]             = instruction_PHA,
+    // [Opcode_PHP]             = instruction_PHP,
+    // [Opcode_PLA]             = instruction_PLA,
+    // [Opcode_PLP]             = instruction_PLP,
 
-    // Logical
-    [Opcode_AND_Immediate]   = instruction_AND_Immediate,
-    [Opcode_AND_ZeroPage]    = instruction_AND_ZeroPage,
-    [Opcode_AND_ZeroPageX]   = instruction_AND_ZeroPageX,
-    [Opcode_AND_Absolute]    = instruction_AND_Absolute,
-    [Opcode_AND_AbsoluteX]   = instruction_AND_AbsoluteX,
-    [Opcode_AND_AbsoluteY]   = instruction_AND_AbsoluteY,
-    [Opcode_AND_IndirectX]   = instruction_AND_IndirectX,
-    [Opcode_AND_IndirectY]   = instruction_AND_IndirectY,
+    // // Logical
+    // [Opcode_AND_Immediate]   = instruction_AND_Immediate,
+    // [Opcode_AND_ZeroPage]    = instruction_AND_ZeroPage,
+    // [Opcode_AND_ZeroPageX]   = instruction_AND_ZeroPageX,
+    // [Opcode_AND_Absolute]    = instruction_AND_Absolute,
+    // [Opcode_AND_AbsoluteX]   = instruction_AND_AbsoluteX,
+    // [Opcode_AND_AbsoluteY]   = instruction_AND_AbsoluteY,
+    // [Opcode_AND_IndirectX]   = instruction_AND_IndirectX,
+    // [Opcode_AND_IndirectY]   = instruction_AND_IndirectY,
 
-    [Opcode_EOR_Immediate]   = instruction_EOR_Immediate,
-    [Opcode_EOR_ZeroPage]    = instruction_EOR_ZeroPage,
-    [Opcode_EOR_ZeroPageX]   = instruction_EOR_ZeroPageX,
-    [Opcode_EOR_Absolute]    = instruction_EOR_Absolute,
-    [Opcode_EOR_AbsoluteX]   = instruction_EOR_AbsoluteX,
-    [Opcode_EOR_AbsoluteY]   = instruction_EOR_AbsoluteY,
-    [Opcode_EOR_IndirectX]   = instruction_EOR_IndirectX,
-    [Opcode_EOR_IndirectY]   = instruction_EOR_IndirectY,
+    // [Opcode_EOR_Immediate]   = instruction_EOR_Immediate,
+    // [Opcode_EOR_ZeroPage]    = instruction_EOR_ZeroPage,
+    // [Opcode_EOR_ZeroPageX]   = instruction_EOR_ZeroPageX,
+    // [Opcode_EOR_Absolute]    = instruction_EOR_Absolute,
+    // [Opcode_EOR_AbsoluteX]   = instruction_EOR_AbsoluteX,
+    // [Opcode_EOR_AbsoluteY]   = instruction_EOR_AbsoluteY,
+    // [Opcode_EOR_IndirectX]   = instruction_EOR_IndirectX,
+    // [Opcode_EOR_IndirectY]   = instruction_EOR_IndirectY,
 
-    [Opcode_ORA_Immediate]   = instruction_ORA_Immediate,
-    [Opcode_ORA_ZeroPage]    = instruction_ORA_ZeroPage,
-    [Opcode_ORA_ZeroPageX]   = instruction_ORA_ZeroPageX,
-    [Opcode_ORA_Absolute]    = instruction_ORA_Absolute,
-    [Opcode_ORA_AbsoluteX]   = instruction_ORA_AbsoluteX,
-    [Opcode_ORA_AbsoluteY]   = instruction_ORA_AbsoluteY,
-    [Opcode_ORA_IndirectX]   = instruction_ORA_IndirectX,
-    [Opcode_ORA_IndirectY]   = instruction_ORA_IndirectY,
+    // [Opcode_ORA_Immediate]   = instruction_ORA_Immediate,
+    // [Opcode_ORA_ZeroPage]    = instruction_ORA_ZeroPage,
+    // [Opcode_ORA_ZeroPageX]   = instruction_ORA_ZeroPageX,
+    // [Opcode_ORA_Absolute]    = instruction_ORA_Absolute,
+    // [Opcode_ORA_AbsoluteX]   = instruction_ORA_AbsoluteX,
+    // [Opcode_ORA_AbsoluteY]   = instruction_ORA_AbsoluteY,
+    // [Opcode_ORA_IndirectX]   = instruction_ORA_IndirectX,
+    // [Opcode_ORA_IndirectY]   = instruction_ORA_IndirectY,
 
-    [Opcode_BIT_ZeroPage]    = instruction_BIT_ZeroPage,
-    [Opcode_BIT_Absolute]    = instruction_BIT_Absolute,
+    // [Opcode_BIT_ZeroPage]    = instruction_BIT_ZeroPage,
+    // [Opcode_BIT_Absolute]    = instruction_BIT_Absolute,
 
     // Arithmetic
-    [Opcode_ADC_Immediate]   = instruction_ADC_Immediate,
+    // [Opcode_ADC_Immediate]   = instruction_ADC_Immediate,
     [Opcode_ADC_ZeroPage]    = instruction_ADC_ZeroPage,
-    [Opcode_ADC_ZeroPageX]   = instruction_ADC_ZeroPageX,
-    [Opcode_ADC_Absolute]    = instruction_ADC_Absolute,
-    [Opcode_ADC_AbsoluteX]   = instruction_ADC_AbsoluteX,
-    [Opcode_ADC_AbsoluteY]   = instruction_ADC_AbsoluteY,
-    [Opcode_ADC_IndirectX]   = instruction_ADC_IndirectX,
-    [Opcode_ADC_IndirectY]   = instruction_ADC_IndirectY,
+    // [Opcode_ADC_ZeroPageX]   = instruction_ADC_ZeroPageX,
+    // [Opcode_ADC_Absolute]    = instruction_ADC_Absolute,
+    // [Opcode_ADC_AbsoluteX]   = instruction_ADC_AbsoluteX,
+    // [Opcode_ADC_AbsoluteY]   = instruction_ADC_AbsoluteY,
+    // [Opcode_ADC_IndirectX]   = instruction_ADC_IndirectX,
+    // [Opcode_ADC_IndirectY]   = instruction_ADC_IndirectY,
 
-    [Opcode_SBC_Immediate]   = instruction_SBC_Immediate,
-    [Opcode_SBC_ZeroPage]    = instruction_SBC_ZeroPage,
-    [Opcode_SBC_ZeroPageX]   = instruction_SBC_ZeroPageX,
-    [Opcode_SBC_Absolute]    = instruction_SBC_Absolute,
-    [Opcode_SBC_AbsoluteX]   = instruction_SBC_AbsoluteX,
-    [Opcode_SBC_AbsoluteY]   = instruction_SBC_AbsoluteY,
-    [Opcode_SBC_IndirectX]   = instruction_SBC_IndirectX,
-    [Opcode_SBC_IndirectY]   = instruction_SBC_IndirectY,
+    // [Opcode_SBC_Immediate]   = instruction_SBC_Immediate,
+    // [Opcode_SBC_ZeroPage]    = instruction_SBC_ZeroPage,
+    // [Opcode_SBC_ZeroPageX]   = instruction_SBC_ZeroPageX,
+    // [Opcode_SBC_Absolute]    = instruction_SBC_Absolute,
+    // [Opcode_SBC_AbsoluteX]   = instruction_SBC_AbsoluteX,
+    // [Opcode_SBC_AbsoluteY]   = instruction_SBC_AbsoluteY,
+    // [Opcode_SBC_IndirectX]   = instruction_SBC_IndirectX,
+    // [Opcode_SBC_IndirectY]   = instruction_SBC_IndirectY,
 
-    [Opcode_CMP_Immediate]   = instruction_CMP_Immediate,
-    [Opcode_CMP_ZeroPage]    = instruction_CMP_ZeroPage,
-    [Opcode_CMP_ZeroPageX]   = instruction_CMP_ZeroPageX,
-    [Opcode_CMP_Absolute]    = instruction_CMP_Absolute,
-    [Opcode_CMP_AbsoluteX]   = instruction_CMP_AbsoluteX,
-    [Opcode_CMP_AbsoluteY]   = instruction_CMP_AbsoluteY,
-    [Opcode_CMP_IndirectX]   = instruction_CMP_IndirectX,
-    [Opcode_CMP_IndirectY]   = instruction_CMP_IndirectY,
+    // [Opcode_CMP_Immediate]   = instruction_CMP_Immediate,
+    // [Opcode_CMP_ZeroPage]    = instruction_CMP_ZeroPage,
+    // [Opcode_CMP_ZeroPageX]   = instruction_CMP_ZeroPageX,
+    // [Opcode_CMP_Absolute]    = instruction_CMP_Absolute,
+    // [Opcode_CMP_AbsoluteX]   = instruction_CMP_AbsoluteX,
+    // [Opcode_CMP_AbsoluteY]   = instruction_CMP_AbsoluteY,
+    // [Opcode_CMP_IndirectX]   = instruction_CMP_IndirectX,
+    // [Opcode_CMP_IndirectY]   = instruction_CMP_IndirectY,
 
-    [Opcode_CPX_Immediate]   = instruction_CPX_Immediate,
-    [Opcode_CPX_ZeroPage]    = instruction_CPX_ZeroPage,
-    [Opcode_CPX_Absolute]    = instruction_CPX_Absolute,
+    // [Opcode_CPX_Immediate]   = instruction_CPX_Immediate,
+    // [Opcode_CPX_ZeroPage]    = instruction_CPX_ZeroPage,
+    // [Opcode_CPX_Absolute]    = instruction_CPX_Absolute,
 
-    [Opcode_CPY_Immediate]   = instruction_CPY_Immediate,
-    [Opcode_CPY_ZeroPage]    = instruction_CPY_ZeroPage,
-    [Opcode_CPY_Absolute]    = instruction_CPY_Absolute,
+    // [Opcode_CPY_Immediate]   = instruction_CPY_Immediate,
+    // [Opcode_CPY_ZeroPage]    = instruction_CPY_ZeroPage,
+    // [Opcode_CPY_Absolute]    = instruction_CPY_Absolute,
 
-    // Increments / Decrements
-    [Opcode_INC_ZeroPage]    = instruction_INC_ZeroPage,
-    [Opcode_INC_ZeroPageX]   = instruction_INC_ZeroPageX,
-    [Opcode_INC_Absolute]    = instruction_INC_Absolute,
-    [Opcode_INC_AbsoluteX]   = instruction_INC_AbsoluteX,
+    // // Increments / Decrements
+    // [Opcode_INC_ZeroPage]    = instruction_INC_ZeroPage,
+    // [Opcode_INC_ZeroPageX]   = instruction_INC_ZeroPageX,
+    // [Opcode_INC_Absolute]    = instruction_INC_Absolute,
+    // [Opcode_INC_AbsoluteX]   = instruction_INC_AbsoluteX,
 
-    [Opcode_INX]             = instruction_INX,
-    [Opcode_INY]             = instruction_INY,
+    // [Opcode_INX]             = instruction_INX,
+    // [Opcode_INY]             = instruction_INY,
 
-    [Opcode_DEC_ZeroPage]    = instruction_DEC_ZeroPage,
-    [Opcode_DEC_ZeroPageX]   = instruction_DEC_ZeroPageX,
-    [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
-    [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
+    // [Opcode_DEC_ZeroPage]    = instruction_DEC_ZeroPage,
+    // [Opcode_DEC_ZeroPageX]   = instruction_DEC_ZeroPageX,
+    // [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
+    // [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
 
     [Opcode_DEX]             = instruction_DEX,
-    [Opcode_DEY]             = instruction_DEY,
+    // [Opcode_DEY]             = instruction_DEY,
 
-    // Shifts / Rotates
-    [Opcode_ASL_Accumulator] = instruction_ASL_Accumulator,
-    [Opcode_ASL_ZeroPage]    = instruction_ASL_ZeroPage,
-    [Opcode_ASL_ZeroPageX]   = instruction_ASL_ZeroPageX,
-    [Opcode_ASL_Absolute]    = instruction_ASL_Absolute,
-    [Opcode_ASL_AbsoluteX]   = instruction_ASL_AbsoluteX,
+    // // Shifts / Rotates
+    // [Opcode_ASL_Accumulator] = instruction_ASL_Accumulator,
+    // [Opcode_ASL_ZeroPage]    = instruction_ASL_ZeroPage,
+    // [Opcode_ASL_ZeroPageX]   = instruction_ASL_ZeroPageX,
+    // [Opcode_ASL_Absolute]    = instruction_ASL_Absolute,
+    // [Opcode_ASL_AbsoluteX]   = instruction_ASL_AbsoluteX,
 
-    [Opcode_LSR_Accumulator] = instruction_LSR_Accumulator,
-    [Opcode_LSR_ZeroPage]    = instruction_LSR_ZeroPage,
-    [Opcode_LSR_ZeroPageX]   = instruction_LSR_ZeroPageX,
-    [Opcode_LSR_Absolute]    = instruction_LSR_Absolute,
-    [Opcode_LSR_AbsoluteX]   = instruction_LSR_AbsoluteX,
+    // [Opcode_LSR_Accumulator] = instruction_LSR_Accumulator,
+    // [Opcode_LSR_ZeroPage]    = instruction_LSR_ZeroPage,
+    // [Opcode_LSR_ZeroPageX]   = instruction_LSR_ZeroPageX,
+    // [Opcode_LSR_Absolute]    = instruction_LSR_Absolute,
+    // [Opcode_LSR_AbsoluteX]   = instruction_LSR_AbsoluteX,
 
-    [Opcode_ROL_Accumulator] = instruction_ROL_Accumulator,
-    [Opcode_ROL_ZeroPage]    = instruction_ROL_ZeroPage,
-    [Opcode_ROL_ZeroPageX]   = instruction_ROL_ZeroPageX,
-    [Opcode_ROL_Absolute]    = instruction_ROL_Absolute,
-    [Opcode_ROL_AbsoluteX]   = instruction_ROL_AbsoluteX,
+    // [Opcode_ROL_Accumulator] = instruction_ROL_Accumulator,
+    // [Opcode_ROL_ZeroPage]    = instruction_ROL_ZeroPage,
+    // [Opcode_ROL_ZeroPageX]   = instruction_ROL_ZeroPageX,
+    // [Opcode_ROL_Absolute]    = instruction_ROL_Absolute,
+    // [Opcode_ROL_AbsoluteX]   = instruction_ROL_AbsoluteX,
 
-    [Opcode_ROR_Accumulator] = instruction_ROR_Accumulator,
-    [Opcode_ROR_ZeroPage]    = instruction_ROR_ZeroPage,
-    [Opcode_ROR_ZeroPageX]   = instruction_ROR_ZeroPageX,
-    [Opcode_ROR_Absolute]    = instruction_ROR_Absolute,
-    [Opcode_ROR_AbsoluteX]   = instruction_ROR_AbsoluteX,
+    // [Opcode_ROR_Accumulator] = instruction_ROR_Accumulator,
+    // [Opcode_ROR_ZeroPage]    = instruction_ROR_ZeroPage,
+    // [Opcode_ROR_ZeroPageX]   = instruction_ROR_ZeroPageX,
+    // [Opcode_ROR_Absolute]    = instruction_ROR_Absolute,
+    // [Opcode_ROR_AbsoluteX]   = instruction_ROR_AbsoluteX,
 
-    // Jumps & Calls
-    [Opcode_JMP_Absolute]    = instruction_JMP_Absolute,
-    [Opcode_JMP_Indirect]    = instruction_JMP_Indirect,
-    [Opcode_JSR]             = instruction_JSR,
-    [Opcode_RTS]             = instruction_RTS,
+    // // Jumps & Calls
+    // [Opcode_JMP_Absolute]    = instruction_JMP_Absolute,
+    // [Opcode_JMP_Indirect]    = instruction_JMP_Indirect,
+    // [Opcode_JSR]             = instruction_JSR,
+    // [Opcode_RTS]             = instruction_RTS,
 
-    // Branches
-    [Opcode_BCC]             = instruction_BCC,
-    [Opcode_BCS]             = instruction_BCS,
-    [Opcode_BEQ]             = instruction_BEQ,
-    [Opcode_BMI]             = instruction_BMI,
+    // // Branches
+    // [Opcode_BCC]             = instruction_BCC,
+    // [Opcode_BCS]             = instruction_BCS,
+    // [Opcode_BEQ]             = instruction_BEQ,
+    // [Opcode_BMI]             = instruction_BMI,
     [Opcode_BNE]             = instruction_BNE,
-    [Opcode_BPL]             = instruction_BPL,
-    [Opcode_BVC]             = instruction_BVC,
-    [Opcode_BVS]             = instruction_BVS,
+    // [Opcode_BPL]             = instruction_BPL,
+    // [Opcode_BVC]             = instruction_BVC,
+    // [Opcode_BVS]             = instruction_BVS,
 
-    // Flags
-    [Opcode_CLC]             = instruction_CLC,
-    [Opcode_CLD]             = instruction_CLD,
-    [Opcode_CLI]             = instruction_CLI,
-    [Opcode_CLV]             = instruction_CLV,
-    [Opcode_SEC]             = instruction_SEC,
-    [Opcode_SED]             = instruction_SED,
-    [Opcode_SEI]             = instruction_SEI,
+    // // Flags
+    // [Opcode_CLC]             = instruction_CLC,
+    // [Opcode_CLD]             = instruction_CLD,
+    // [Opcode_CLI]             = instruction_CLI,
+    // [Opcode_CLV]             = instruction_CLV,
+    // [Opcode_SEC]             = instruction_SEC,
+    // [Opcode_SED]             = instruction_SED,
+    // [Opcode_SEI]             = instruction_SEI,
 
-    // System
+    // // System
     [Opcode_BRK]             = instruction_BRK,
     [Opcode_NOP]             = instruction_NOP,
     [Opcode_RTI]             = instruction_RTI,
 
-    // // debug
-    // [Opcode_HLT_debug]       = instruction_HLT_debug,
 };
 
 void instruction_LDA_Immediate(CPU* cpu) 
 {
     byte immediate = cpu->memory[cpu->PC++];
     cpu->A = immediate;
-    if(immediate == 0){
-        CPU_onFlag(cpu, 'z');
-    }
-    if(IS_SIGN_BYTE(immediate)){
-        CPU_onFlag(cpu, 'n');
-    }
+    if(cpu->A == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
+    if(IS_NEGATIVE(cpu->A)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
     CPU_tick(cpu, 2); 
 }
 void instruction_LDA_ZeroPage(CPU* cpu) 
@@ -282,7 +276,9 @@ void instruction_LDY_AbsoluteX(CPU* cpu)
 
 void instruction_STA_ZeroPage(CPU* cpu)
 {
-
+    byte zero_page_low_byte = cpu->memory[cpu->PC++];
+    cpu->memory[ZERO_PAGE_START + zero_page_low_byte] = cpu->A;
+    CPU_tick(cpu, 3);
 }
 void instruction_STA_ZeroPageX(CPU* cpu) 
 {
@@ -495,7 +491,22 @@ void instruction_ADC_Immediate(CPU* cpu)
 }
 void instruction_ADC_ZeroPage(CPU* cpu)
 {
+    byte zero_page_low_byte = cpu->memory[cpu->PC++];
+    word addr = ZERO_PAGE_START + zero_page_low_byte;
 
+    byte old_A = cpu->A;
+    byte operand = cpu->memory[addr];
+    byte carry_in = CPU_getFlag(cpu, 'c');
+
+    word sum = (word)old_A + (word)operand + (word)carry_in;
+    cpu->A = (byte)sum;
+
+    if (cpu->A == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
+    if (IS_NEGATIVE(cpu->A)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
+    if (sum > 0xFF) CPU_onFlag(cpu, 'c'); else CPU_offFlag(cpu, 'c');
+    if (IS_OVERFLOW(old_A, cpu->A, operand + carry_in)) CPU_onFlag(cpu, 'v'); else CPU_offFlag(cpu, 'v');
+
+    CPU_tick(cpu, 3);
 }
 void instruction_ADC_ZeroPageX(CPU* cpu)
 {
@@ -649,7 +660,10 @@ void instruction_DEC_AbsoluteX(CPU* cpu)
 
 void instruction_DEX(CPU* cpu)
 {
-
+    cpu->X--;
+    if(cpu->X == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
+    if(IS_NEGATIVE(cpu->X)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
+    CPU_tick(cpu, 2);
 }
 void instruction_DEY(CPU* cpu)
 {
@@ -778,7 +792,16 @@ void instruction_BMI(CPU* cpu)
 }
 void instruction_BNE(CPU* cpu)
 {
-
+    byte disp = cpu->memory[cpu->PC++];
+    word old_pc = cpu->PC;
+    if(!CPU_getFlag(cpu, 'z')){
+        cpu->PC += (int8_t) disp;
+        CPU_tick(cpu, 1);
+        if(IS_CROSS_PAGES(old_pc, cpu->PC)){
+            CPU_tick(cpu, 1);
+        }
+    }
+    CPU_tick(cpu, 2);
 }
 void instruction_BPL(CPU* cpu)
 {
@@ -824,16 +847,37 @@ void instruction_SEI(CPU* cpu)
 }
 
 // System
-void instruction_BRK(CPU* cpu){
-    
-}
-void instruction_NOP(CPU* cpu){
-    
-}
-void instruction_RTI(CPU* cpu){
-}
-
-void instruction_HLT_debug(CPU *cpu)
+void instruction_BRK(CPU* cpu)
 {
-    cpu->halt = true;
+    word addr = 0;
+    addr += cpu->memory[IRQ_VECTOR_LOW_ADDER];
+    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] * 0x0100;
+
+    word pc_to_push = cpu->PC; // TODO: in the real machine this is PC - 1  
+    cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(pc_to_push);
+    cpu->memory[STACK_START + cpu->SP--] = HIGH_BYTE(pc_to_push);
+    cpu->memory[STACK_START + cpu->SP--] = cpu->P | 0x10; // P if 'b' on is push on the stack
+
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 7);
+}
+void instruction_NOP(CPU* cpu)
+{
+    CPU_tick(cpu, 2);
+}
+void instruction_RTI(CPU* cpu)
+{
+    cpu->SP++;
+    cpu->P = cpu->memory[cpu->SP + STACK_START];
+    CPU_onFlag(cpu, 'u'); // always on
+
+    word addr = 0;
+    byte low = cpu->memory[STACK_START + ++cpu->SP];
+    byte high = cpu->memory[STACK_START + ++cpu->SP];
+    addr = (low << 8) | high;
+
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 6);
 }

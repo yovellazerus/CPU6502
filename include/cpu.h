@@ -3,6 +3,9 @@
 
 #include "utilities.h"
 
+#define RESET_P_REGISTER 0x34 // 0b00110100
+#define SP_INIT_VALUE 0xfd
+
 typedef enum {
     // Load/Store Operations
     Opcode_LDA_Immediate   = 0xA9,
@@ -195,8 +198,6 @@ typedef enum {
     Opcode_NOP             = 0xEA,
     Opcode_RTI             = 0x40,
 
-    Opcode_HLT_debug       = 0xFF,
-
 } Opcode;
 
 typedef struct CPU_t {
@@ -210,9 +211,6 @@ typedef struct CPU_t {
     byte A;
     byte X;
     byte Y;
-
-    // debug
-    bool halt;
 
 } CPU;
 

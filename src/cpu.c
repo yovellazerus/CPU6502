@@ -166,3 +166,24 @@ void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_
         cpu->memory[start + curr] = program[curr];
     }
 }
+
+// done at the hardware level not using normal cpu instructions.
+// call wan the reset input is set low, not an interrupt!  
+void CPU_reset(CPU *cpu)
+{
+    cpu->A = UNDEFINED_BYTE();
+    cpu->X = UNDEFINED_BYTE();
+    cpu->Y = UNDEFINED_BYTE();
+    cpu->SP = SP_INIT_VALUE;
+    cpu->P = RESET_P_REGISTER; 
+
+    CPU_tick(cpu, 6);
+
+    word bus;
+    bus = cpu->memory[RESET_VECTOR_LOW_ADDER];
+    CPU_tick(cpu, 1);
+    bus += cpu->memory[RESET_VECTOR_HIGH_ADDER] * 0x0100;
+    CPU_tick(cpu, 1);
+    cpu->PC = bus;
+    CPU_tick(cpu, 1); 
+}
