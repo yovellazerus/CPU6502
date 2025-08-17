@@ -193,8 +193,8 @@ Instruction Opcode_to_Instraction_table[0xff + 1] = {
     [Opcode_NOP]             = instruction_NOP,
     [Opcode_RTI]             = instruction_RTI,
 
-    // debug
-    [Opcode_HLT_debug]       = instruction_HLT_debug,
+    // // debug
+    // [Opcode_HLT_debug]       = instruction_HLT_debug,
 };
 
 void instruction_LDA_Immediate(CPU* cpu) 
@@ -204,7 +204,7 @@ void instruction_LDA_Immediate(CPU* cpu)
     if(immediate == 0){
         CPU_onFlag(cpu, 'z');
     }
-    if(immediate < 0){
+    if(IS_SIGN_BYTE(immediate)){
         CPU_onFlag(cpu, 'n');
     }
     CPU_tick(cpu, 2); 

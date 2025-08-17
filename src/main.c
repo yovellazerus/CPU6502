@@ -28,12 +28,12 @@ int main(int argc, char* argv[]){
 
     CPU cpu = {0};
     byte program[] = {
-        Opcode_LDA_Immediate, 0x42,
+        Opcode_LDA_Immediate, 0xff,
         Opcode_HLT_debug,
     };
     CPU_load_program_from_carr(&cpu, 0, program, ARRAY_SIZE(program));
 
-    while(!cpu.halt){
+    while(true){
         // fetch:
         Opcode opcode = cpu.memory[cpu.PC++];
 
@@ -41,6 +41,7 @@ int main(int argc, char* argv[]){
         Instruction instruction = Opcode_to_Instraction_table[opcode];
         if(!instruction){
             CPU_invalid_opcode(&cpu, opcode);
+            break; // for now!
         }
         
         // execute:

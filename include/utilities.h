@@ -8,6 +8,8 @@
 #include <assert.h>
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#define IS_SIGN_BYTE(ARG) ((ARG & 0x80) != 0)
+
 
 #define MEMORY_SIZE (256*256)
 
