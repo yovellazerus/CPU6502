@@ -5,7 +5,7 @@
 
 typedef void (*Instruction)(CPU*);
 
-Instruction Opcode_to_Instruction_table[0xff + 1];
+extern Instruction Opcode_to_Instraction_table[0xff + 1];
 
 // Load/Store
 void instruction_LDA_Immediate(CPU* cpu);
@@ -197,5 +197,8 @@ void instruction_SEI(CPU* cpu);
 void instruction_BRK(CPU* cpu);
 void instruction_NOP(CPU* cpu);
 void instruction_RTI(CPU* cpu);
+
+// debug
+void instruction_HLT_debug(CPU* cpu);
 
 #endif // INSTRACTION_H_

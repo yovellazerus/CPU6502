@@ -191,12 +191,23 @@ Instruction Opcode_to_Instraction_table[0xff + 1] = {
     // System
     [Opcode_BRK]             = instruction_BRK,
     [Opcode_NOP]             = instruction_NOP,
-    [Opcode_RTI]             = instruction_RTI
+    [Opcode_RTI]             = instruction_RTI,
+
+    // debug
+    [Opcode_HLT_debug]       = instruction_HLT_debug,
 };
 
 void instruction_LDA_Immediate(CPU* cpu) 
 {
-
+    byte immediate = cpu->memory[cpu->PC++];
+    cpu->A = immediate;
+    if(immediate == 0){
+        CPU_onFlag(cpu, 'z');
+    }
+    if(immediate < 0){
+        CPU_onFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 2); 
 }
 void instruction_LDA_ZeroPage(CPU* cpu) 
 {
@@ -820,5 +831,9 @@ void instruction_NOP(CPU* cpu){
     
 }
 void instruction_RTI(CPU* cpu){
-    
+}
+
+void instruction_HLT_debug(CPU *cpu)
+{
+    cpu->halt = true;
 }

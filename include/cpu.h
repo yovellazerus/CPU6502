@@ -195,11 +195,13 @@ typedef enum {
     Opcode_NOP             = 0xEA,
     Opcode_RTI             = 0x40,
 
+    Opcode_HLT_debug       = 0xFF,
+
 } Opcode;
 
 typedef struct CPU_t {
 
-    byte memory[MAX_MEMORY_SIZE];
+    byte memory[MEMORY_SIZE];
 
     word PC;
     byte SP;
@@ -209,9 +211,15 @@ typedef struct CPU_t {
     byte X;
     byte Y;
 
+    // debug
+    bool halt;
+
 } CPU;
 
-void CPU_dump(CPU* cpu, FILE* stream);
+void CPU_dump_cpu(CPU* cpu, FILE* file);
+void CPU_dump_memory(CPU* cpu, FILE* file);
+void CPU_dump_stack(CPU* cpu, FILE* file);
+
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);
@@ -228,5 +236,6 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode);
 void CPU_irq(CPU* cpu);
 void CPU_nmi(CPU* cpu);
 
+void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_t program_size);
 
 #endif // CPU_H_

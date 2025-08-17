@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
-OBJ = main.o instruction.o cpu.o 
+OBJ = main.o instruction.o cpu.o utilities.o
 TARGET = cpu6502
 RM = rm -f
 
