@@ -55,11 +55,37 @@ typedef struct CPU_t {
 
 } CPU;
 
-typedef void (*Instruction)(CPU*);
+typedef enum {
+    Add_non = 0,
+    Add_Brk,
+    Add_Relative,
+    Add_Implied,
+    Add_Immediate,
+    Add_Accumulator,
+
+    Add_Absolute,
+    Add_AbsoluteX,
+    Add_AbsoluteY,
+
+    Add_ZeroPage,
+    Add_ZeroPageX,
+    Add_ZeroPageY,
+
+    Add_Indirect,
+    Add_IndirectX,
+    Add_IndirectY,
+
+    
+    count_Add,
+} Addressing_mode;
+
+extern Addressing_mode opcode_to_Addressing_mode[0xff + 1];
 
 extern const char* opcode_to_cstr[0xff + 1];
 
 extern size_t opcode_to_numberOperands[0xff + 1];
+
+typedef void (*Instruction)(CPU*);
 
 extern Instruction Opcode_to_Instruction_table[0xff + 1];
 
