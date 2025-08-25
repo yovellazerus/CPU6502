@@ -514,17 +514,17 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
         switch (opcode_to_Addressing_mode[cpu->memory[addr]])
         {
         case Add_non: // unknown opcode
-            fprintf(file, "0x%.4x:\t???\tcode: 0x%.2x\n", addr, cpu->memory[addr]);
+            fprintf(file, "0x%.4x:\t???\t\t <byte: 0x%.2x>\n", addr, cpu->memory[addr]);
             break;
         case Add_Brk: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t%.2x\n", cpu->memory[addr]);
+            fprintf(file, "\t$%.2x\n", cpu->memory[addr]);
             break;
         case Add_Relative: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t%d\n", cpu->memory[addr]);  // signed
+            fprintf(file, "\t$%.2x\t <sign: %d>\n", cpu->memory[addr], cpu->memory[addr]);  // signed
             break;
         case Add_Implied: // 0 operand
             fprintf(file, "0x%.4x:\t%s\n", addr, opcode_to_cstr[cpu->memory[addr]]);
@@ -532,7 +532,7 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
         case Add_Immediate: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t#$%.2x\n", cpu->memory[addr]);
+            fprintf(file, "\t#$%.2x\t <deci: %u, sign: %d>\n", cpu->memory[addr], cpu->memory[addr], cpu->memory[addr]);
             break;
         case Add_Accumulator: // 0 operand
             fprintf(file, "0x%.4x:\t%s\n", addr, opcode_to_cstr[cpu->memory[addr]]);
@@ -827,7 +827,7 @@ void CPU_reset(CPU *cpu)
 void CPU_run(CPU* cpu, bool is_debug){
     while(true){
 
-        if (is_debug) fprintf(stdout, "0x%.4x: 0x%.2x (%s)\n", 
+        if (is_debug) fprintf(stdout, "0x%.4x: 0x%.2x %s\n", 
             cpu->PC, 
             cpu->memory[cpu->PC], 
             opcode_to_cstr[cpu->memory[cpu->PC]] ? opcode_to_cstr[cpu->memory[cpu->PC]] : "???");
