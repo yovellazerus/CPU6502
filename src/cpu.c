@@ -514,12 +514,12 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
         switch (opcode_to_Addressing_mode[cpu->memory[addr]])
         {
         case Add_non: // unknown opcode
-            fprintf(file, "0x%.4x:\t<0x%.2x>\n", addr, cpu->memory[addr]);
+            fprintf(file, "0x%.4x:\t???\tcode: 0x%.2x\n", addr, cpu->memory[addr]);
             break;
         case Add_Brk: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t%u\n", cpu->memory[addr]);
+            fprintf(file, "\t%.2x\n", cpu->memory[addr]);
             break;
         case Add_Relative: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
@@ -532,7 +532,7 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
         case Add_Immediate: // 1 operand
             fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t%u\n", cpu->memory[addr]);
+            fprintf(file, "\t#$%.2x\n", cpu->memory[addr]);
             break;
         case Add_Accumulator: // 0 operand
             fprintf(file, "0x%.4x:\t%s\n", addr, opcode_to_cstr[cpu->memory[addr]]);

@@ -49,6 +49,8 @@ int main(int argc, char* argv[]){
         Opcode_LDA_Immediate,  0x11,                // LDA #$11
         Opcode_ADC_ZeroPage,   0x00,                // ADC $00
         Opcode_STA_Absolute,   0x00,    0x10,       // STA $1000
+        Opcode_ADC_IndirectY,  0x00,    0x20,       // ADC ($2000),Y
+        Opcode_ADC_IndirectX,  0x00,    0x30,       // ADC ($2000,X)
 
         0xff,                                       // HLT
     };
