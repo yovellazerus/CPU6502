@@ -1,11 +1,8 @@
 #ifndef INSTRACTION_H_
 #define INSTRACTION_H_
 
+#include "utilities.h"
 #include "cpu.h"
-
-typedef void (*Instruction)(CPU*);
-
-extern Instruction Opcode_to_Instruction_table[0xff + 1];
 
 // Load/Store
 void instruction_LDA_Immediate(CPU* cpu);

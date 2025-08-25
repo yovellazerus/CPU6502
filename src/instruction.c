@@ -199,78 +199,95 @@ void instruction_LDA_Immediate(CPU* cpu)
 {
     byte immediate = cpu->memory[cpu->PC++];
     cpu->A = immediate;
-    if(cpu->A == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
-    if(IS_NEGATIVE(cpu->A)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
+    CPU_updateFlags(cpu, 'A', 'z', 0);
+    CPU_updateFlags(cpu, 'A', 'n', 0);
     CPU_tick(cpu, 2); 
 }
 void instruction_LDA_ZeroPage(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_ZeroPageX(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_Absolute(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_AbsoluteX(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_AbsoluteY(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_IndirectX(CPU* cpu) 
 {
+    UNUSED;
 
 }
 void instruction_LDA_IndirectY(CPU* cpu) 
 {
+    UNUSED;
 
 }
 
 void instruction_LDX_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDX_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDX_ZeroPageY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDX_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDX_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_LDY_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDY_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDY_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDY_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LDY_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
@@ -282,211 +299,259 @@ void instruction_STA_ZeroPage(CPU* cpu)
 }
 void instruction_STA_ZeroPageX(CPU* cpu) 
 {
-
+    UNUSED;
 }
 void instruction_STA_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STA_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STA_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STA_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STA_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_STX_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STX_ZeroPageY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STX_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_STY_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STY_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_STY_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Register Transfers
 void instruction_TAX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_TAY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_TSX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_TXA(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_TXS(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_TYA(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Stack
 void instruction_PHA(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_PHP(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_PLA(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_PLP(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Logical
 void instruction_AND_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_AND_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_EOR_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_EOR_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_ORA_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ORA_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_BIT_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BIT_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Arithmetic
 void instruction_ADC_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_ZeroPage(CPU* cpu)
@@ -494,167 +559,205 @@ void instruction_ADC_ZeroPage(CPU* cpu)
     byte zero_page_low_byte = cpu->memory[cpu->PC++];
     word addr = ZERO_PAGE_START + zero_page_low_byte;
 
-    byte old_A = cpu->A;
     byte operand = cpu->memory[addr];
     byte carry_in = CPU_getFlag(cpu, 'c');
 
-    word sum = (word)old_A + (word)operand + (word)carry_in;
-    cpu->A = (byte)sum;
+    operand = (byte)operand + (byte)carry_in;
 
-    if (cpu->A == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
-    if (IS_NEGATIVE(cpu->A)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
-    if (sum > 0xFF) CPU_onFlag(cpu, 'c'); else CPU_offFlag(cpu, 'c');
-    if (IS_OVERFLOW(old_A, cpu->A, operand + carry_in)) CPU_onFlag(cpu, 'v'); else CPU_offFlag(cpu, 'v');
+    CPU_updateFlags(cpu, 'A', 'z', operand);
+    CPU_updateFlags(cpu, 'A', 'n', operand);
+    CPU_updateFlags(cpu, 'A', 'c', operand);
+    CPU_updateFlags(cpu, 'A', 'v', operand);
+
+    cpu->A += operand;
 
     CPU_tick(cpu, 3);
 }
 void instruction_ADC_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ADC_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_SBC_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_AbsoluteY(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_IndirectX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SBC_IndirectY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_CMP_Immediate(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_ZeroPage(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_ZeroPageX(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_Absolute(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_AbsoluteX(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_AbsoluteY(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_IndirectX(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_CMP_IndirectY(CPU* cpu){
+    UNUSED;
 
 }
 
 void instruction_CPX_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CPX_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CPX_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CPY_Immediate(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CPY_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CPY_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Increments / Decrements
 void instruction_INC_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_INC_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_INC_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_INC_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_INX(CPU* cpu){
+    UNUSED;
 
 }
 void instruction_INY(CPU* cpu){
+    UNUSED;
 
 }
 
 void instruction_DEC_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_DEC_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_DEC_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_DEC_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
@@ -667,127 +770,156 @@ void instruction_DEX(CPU* cpu)
 }
 void instruction_DEY(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Shifts / Rotates
 void instruction_ASL_Accumulator(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ASL_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ASL_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ASL_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ASL_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_LSR_Accumulator(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LSR_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LSR_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LSR_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_LSR_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_ROL_Accumulator(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROL_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROL_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROL_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROL_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 void instruction_ROR_Accumulator(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROR_ZeroPage(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROR_ZeroPageX(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROR_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_ROR_AbsoluteX(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Jumps / Calls
 void instruction_JMP_Absolute(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_JMP_Indirect(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_JSR(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_RTS(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Branches
 void instruction_BCC(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BCS(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BEQ(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BMI(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BNE(CPU* cpu)
@@ -805,44 +937,54 @@ void instruction_BNE(CPU* cpu)
 }
 void instruction_BPL(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BVC(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_BVS(CPU* cpu)
 {
+    UNUSED;
 
 }
 
 // Flags
 void instruction_CLC(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CLD(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CLI(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_CLV(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SEC(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SED(CPU* cpu)
 {
+    UNUSED;
 
 }
 void instruction_SEI(CPU* cpu)
 {
+    UNUSED;
 
 }
 
@@ -851,12 +993,15 @@ void instruction_BRK(CPU* cpu)
 {
     word addr = 0;
     addr += cpu->memory[IRQ_VECTOR_LOW_ADDER];
-    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] * 0x0100;
-
-    word pc_to_push = cpu->PC; // TODO: in the real machine this is PC - 1  
-    cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(pc_to_push);
-    cpu->memory[STACK_START + cpu->SP--] = HIGH_BYTE(pc_to_push);
-    cpu->memory[STACK_START + cpu->SP--] = cpu->P | 0x10; // P if 'b' on is push on the stack
+    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] << 8;
+ 
+    CPU_onFlag(cpu, 'i');
+    cpu->PC += 2;
+    CPU_push(cpu, 'C');
+    byte old_P = cpu->P;
+    cpu->P |= 0x10;
+    CPU_push(cpu, 'P');
+    cpu->P = old_P;
 
     cpu->PC = addr;
 
@@ -864,20 +1009,12 @@ void instruction_BRK(CPU* cpu)
 }
 void instruction_NOP(CPU* cpu)
 {
+    UNUSED;
     CPU_tick(cpu, 2);
 }
 void instruction_RTI(CPU* cpu)
 {
-    cpu->SP++;
-    cpu->P = cpu->memory[cpu->SP + STACK_START];
-    CPU_onFlag(cpu, 'u'); // always on
-
-    word addr = 0;
-    byte low = cpu->memory[STACK_START + ++cpu->SP];
-    byte high = cpu->memory[STACK_START + ++cpu->SP];
-    addr = (low << 8) | high;
-
-    cpu->PC = addr;
-
+    CPU_pop(cpu, 'P');
+    CPU_pop(cpu, 'C');
     CPU_tick(cpu, 6);
 }

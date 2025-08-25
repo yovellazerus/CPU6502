@@ -3,8 +3,7 @@
 
 #include "utilities.h"
 
-#define RESET_P_REGISTER 0x34 // 0b00110100
-#define SP_INIT_VALUE 0xfd
+#define RESET_SP_REGISTER 0xfd
 
 typedef enum {
     // Load/Store Operations
@@ -200,40 +199,33 @@ typedef enum {
 
 } Opcode;
 
-typedef struct CPU_t {
-
-    byte memory[MEMORY_SIZE];
-
-    word PC;
-    byte SP;
-    byte P;
-
-    byte A;
-    byte X;
-    byte Y;
-
-} CPU;
-
+// dump's for debug
 void CPU_dump_cpu(CPU* cpu, FILE* file);
 void CPU_dump_memory(CPU* cpu, FILE* file);
 void CPU_dump_stack(CPU* cpu, FILE* file);
+void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file);
 
+// helpers for cpu operations
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);
-void CPU_init(CPU* cpu, const char* name);
+void CPU_updateFlags(CPU* cpu, char reg, char flag, byte operand);
+void CPU_push(CPU* cpu, char reg);
+void CPU_pop(CPU* cpu, char reg);
 
 void CPU_run(CPU* cpu);
-void CPU_reset(CPU* cpu);
 void CPU_tick(CPU* cpu, size_t amount);
 
-// in 6502 it is gust NOP 
+// in 6502 it is gust NOP (for now print err msg for debug) 
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
-// not for now
-void CPU_irq(CPU* cpu);
+// hardware input
+void CPU_reset(CPU* cpu);
 void CPU_nmi(CPU* cpu);
+void CPU_irq(CPU* cpu);
 
+// memory management
 void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_t program_size);
 
 #endif // CPU_H_
+
