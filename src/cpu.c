@@ -1,39 +1,201 @@
 
 #include "../include\cpu.h"
 
+/*
+
+Saves the table with the address modes for debugging.
+
+*/
+
+
+// const char* opcode_to_cstr[0xff + 1] = {
+
+//     [Opcode_LDA_Immediate]   = "LDA_I",
+//     [Opcode_LDA_ZeroPage ]   = "LDA_Z",
+//     [Opcode_LDA_ZeroPageX]   = "LDA_ZX",
+//     [Opcode_LDA_Absolute ]   = "LDA_A",
+//     [Opcode_LDA_AbsoluteX]   = "LDA_AX",
+//     [Opcode_LDA_AbsoluteY]   = "LDA_AY",
+//     [Opcode_LDA_IndirectX]   = "LDA_IX",
+//     [Opcode_LDA_IndirectY]   = "LDA_IY",
+//     [Opcode_LDX_Immediate]   = "LDX_I",
+//     [Opcode_LDX_ZeroPage ]   = "LDX_Z",
+//     [Opcode_LDX_ZeroPageY]   = "LDX_ZY",
+//     [Opcode_LDX_Absolute ]   = "LDX_A",
+//     [Opcode_LDX_AbsoluteY]   = "LDX_AY",
+//     [Opcode_LDY_Immediate]   = "LDY_I",
+//     [Opcode_LDY_ZeroPage ]   = "LDY_Z",
+//     [Opcode_LDY_ZeroPageX]   = "LDY_ZX",
+//     [Opcode_LDY_Absolute ]   = "LDY_A",
+//     [Opcode_LDY_AbsoluteX]   = "LDY_AX",
+//     [Opcode_STA_ZeroPage ]   = "STA_Z",
+//     [Opcode_STA_ZeroPageX]   = "STA_ZX",
+//     [Opcode_STA_Absolute ]   = "STA_A",
+//     [Opcode_STA_AbsoluteX]   = "STA_AX",
+//     [Opcode_STA_AbsoluteY]   = "STA_AY",
+//     [Opcode_STA_IndirectX]   = "STA_IX",
+//     [Opcode_STA_IndirectY]   = "STA_IY",
+//     [Opcode_STX_ZeroPage ]   = "STX_Z",
+//     [Opcode_STX_ZeroPageY]   = "STX_ZY",
+//     [Opcode_STX_Absolute ]   = "STX_A",
+//     [Opcode_STY_ZeroPage ]   = "STY_Z",
+//     [Opcode_STY_ZeroPageX]   = "STY_ZX",
+//     [Opcode_STY_Absolute ]   = "STY_A",
+//     [Opcode_TAX]             = "TAX",
+//     [Opcode_TAY]             = "TAY",
+//     [Opcode_TSX]             = "TSX",
+//     [Opcode_TXA]             = "TXA",
+//     [Opcode_TXS]             = "TXS",
+//     [Opcode_TYA]             = "TYA",
+//     [Opcode_PHA]             = "PHA",
+//     [Opcode_PHP]             = "PHP",
+//     [Opcode_PLA]             = "PLA",
+//     [Opcode_PLP]             = "PLP",
+//     [Opcode_AND_Immediate]   = "AND_I",
+//     [Opcode_AND_ZeroPage ]   = "AND_Z",
+//     [Opcode_AND_ZeroPageX]   = "AND_ZX",
+//     [Opcode_AND_Absolute ]   = "AND_A",
+//     [Opcode_AND_AbsoluteX]   = "AND_AX",
+//     [Opcode_AND_AbsoluteY]   = "AND_AY",
+//     [Opcode_AND_IndirectX]   = "AND_IX",
+//     [Opcode_AND_IndirectY]   = "AND_IY",
+//     [Opcode_EOR_Immediate]   = "EOR_I",
+//     [Opcode_EOR_ZeroPage ]   = "EOR_Z",
+//     [Opcode_EOR_ZeroPageX]   = "EOR_ZX",
+//     [Opcode_EOR_Absolute ]   = "EOR_A",
+//     [Opcode_EOR_AbsoluteX]   = "EOR_AX",
+//     [Opcode_EOR_AbsoluteY]   = "EOR_AY",
+//     [Opcode_EOR_IndirectX]   = "EOR_IX",
+//     [Opcode_EOR_IndirectY]   = "EOR_IY",
+//     [Opcode_ORA_Immediate]   = "ORA_I",
+//     [Opcode_ORA_ZeroPage ]   = "ORA_Z",
+//     [Opcode_ORA_ZeroPageX]   = "ORA_ZX",
+//     [Opcode_ORA_Absolute ]   = "ORA_A",
+//     [Opcode_ORA_AbsoluteX]   = "ORA_AX",
+//     [Opcode_ORA_AbsoluteY]   = "ORA_AY",
+//     [Opcode_ORA_IndirectX]   = "ORA_IX",
+//     [Opcode_ORA_IndirectY]   = "ORA_IY",
+//     [Opcode_BIT_ZeroPage ]   = "BIT_Z",
+//     [Opcode_BIT_Absolute ]   = "BIT_A",
+//     [Opcode_ADC_Immediate]   = "ADC_I",
+//     [Opcode_ADC_ZeroPage ]   = "ADC_Z",
+//     [Opcode_ADC_ZeroPageX]   = "ADC_ZX",
+//     [Opcode_ADC_Absolute ]   = "ADC_A",
+//     [Opcode_ADC_AbsoluteX]   = "ADC_AX",
+//     [Opcode_ADC_AbsoluteY]   = "ADC_AY",
+//     [Opcode_ADC_IndirectX]   = "ADC_IX",
+//     [Opcode_ADC_IndirectY]   = "ADC_IY",
+//     [Opcode_SBC_Immediate]   = "SBC_I",
+//     [Opcode_SBC_ZeroPage ]   = "SBC_Z",
+//     [Opcode_SBC_ZeroPageX]   = "SBC_ZX",
+//     [Opcode_SBC_Absolute ]   = "SBC_A",
+//     [Opcode_SBC_AbsoluteX]   = "SBC_AX",
+//     [Opcode_SBC_AbsoluteY]   = "SBC_AY",
+//     [Opcode_SBC_IndirectX]   = "SBC_IX",
+//     [Opcode_SBC_IndirectY]   = "SBC_IY",
+//     [Opcode_CMP_Immediate]   = "CMP_I",
+//     [Opcode_CMP_ZeroPage ]   = "CMP_Z",
+//     [Opcode_CMP_ZeroPageX]   = "CMP_ZX",
+//     [Opcode_CMP_Absolute ]   = "CMP_A",
+//     [Opcode_CMP_AbsoluteX]   = "CMP_AX",
+//     [Opcode_CMP_AbsoluteY]   = "CMP_AY",
+//     [Opcode_CMP_IndirectX]   = "CMP_IX",
+//     [Opcode_CMP_IndirectY]   = "CMP_I",
+//     [Opcode_CPX_Immediate]   = "CPX_I",
+//     [Opcode_CPX_ZeroPage ]   = "CPX_Z",
+//     [Opcode_CPX_Absolute ]   = "CPX_A",
+//     [Opcode_CPY_Immediate]   = "CPY_I",
+//     [Opcode_CPY_ZeroPage ]   = "CPY_Z",
+//     [Opcode_CPY_Absolute ]   = "CPY_A",
+//     [Opcode_INC_ZeroPage ]   = "INC_Z",
+//     [Opcode_INC_ZeroPageX]   = "INC_ZX",
+//     [Opcode_INC_Absolute ]   = "INC_A",
+//     [Opcode_INC_AbsoluteX]   = "INC_A",
+//     [Opcode_INX            ] = "INX",
+//     [Opcode_INY            ] = "INY",
+//     [Opcode_DEC_ZeroPage   ] = "DEC_Z",
+//     [Opcode_DEC_ZeroPageX  ] = "DEC_ZX",
+//     [Opcode_DEC_Absolute   ] = "DEC_A",
+//     [Opcode_DEC_AbsoluteX  ] = "DEC_AX",
+//     [Opcode_DEX            ] = "DEX",
+//     [Opcode_DEY            ] = "DEY",
+//     [Opcode_ASL_Accumulator] = "ASL_A",
+//     [Opcode_ASL_ZeroPage   ] = "ASL_Z",
+//     [Opcode_ASL_ZeroPageX  ] = "ASL_ZX",
+//     [Opcode_ASL_Absolute   ] = "ASL_A",
+//     [Opcode_ASL_AbsoluteX  ] = "ASL_A",
+//     [Opcode_LSR_Accumulator] = "LSR_A",
+//     [Opcode_LSR_ZeroPage   ] = "LSR_Z",
+//     [Opcode_LSR_ZeroPageX  ] = "LSR_ZX",
+//     [Opcode_LSR_Absolute   ] = "LSR_A",
+//     [Opcode_LSR_AbsoluteX  ] = "LSR_AX",
+//     [Opcode_ROL_Accumulator] = "ROL_A",
+//     [Opcode_ROL_ZeroPage   ] = "ROL_Z",
+//     [Opcode_ROL_ZeroPageX  ] = "ROL_ZX",
+//     [Opcode_ROL_Absolute   ] = "ROL_A",
+//     [Opcode_ROL_AbsoluteX  ] = "ROL_AX",
+//     [Opcode_ROR_Accumulator] = "ROR_A",
+//     [Opcode_ROR_ZeroPage   ] = "ROR_Z",
+//     [Opcode_ROR_ZeroPageX  ] = "ROR_ZX",
+//     [Opcode_ROR_Absolute   ] = "ROR_A",
+//     [Opcode_ROR_AbsoluteX  ] = "ROR_AX",
+//     [Opcode_JMP_Absolute   ] = "JMP_A",
+//     [Opcode_JMP_Indirect   ] = "JMP_I",
+//     [Opcode_JSR            ] = "JSR",
+//     [Opcode_RTS            ] = "RTS",
+//     [Opcode_BCC            ] = "BCC",
+//     [Opcode_BCS            ] = "BCS",
+//     [Opcode_BEQ            ] = "BEQ",
+//     [Opcode_BMI            ] = "BMI",
+//     [Opcode_BNE            ] = "BNE",
+//     [Opcode_BPL            ] = "BPL",
+//     [Opcode_BVC            ] = "BVC",
+//     [Opcode_BVS            ] = "BVS",
+//     [Opcode_CLC            ] = "CLC",
+//     [Opcode_CLD            ] = "CLD",
+//     [Opcode_CLI            ] = "CLI",
+//     [Opcode_CLV            ] = "CLV",
+//     [Opcode_SEC            ] = "SEC",
+//     [Opcode_SED            ] = "SED",
+//     [Opcode_SEI            ] = "SEI",
+//     [Opcode_BRK            ] = "BRK",
+//     [Opcode_NOP            ] = "NOP",
+//     [Opcode_RTI            ] = "RTI",
+// };
+
 const char* opcode_to_cstr[0xff + 1] = {
 
-    [Opcode_LDA_Immediate]   = "LDA_I",
-    [Opcode_LDA_ZeroPage ]   = "LDA_Z",
-    [Opcode_LDA_ZeroPageX]   = "LDA_ZX",
-    [Opcode_LDA_Absolute ]   = "LDA_A",
-    [Opcode_LDA_AbsoluteX]   = "LDA_AX",
-    [Opcode_LDA_AbsoluteY]   = "LDA_AY",
-    [Opcode_LDA_IndirectX]   = "LDA_IX",
-    [Opcode_LDA_IndirectY]   = "LDA_IY",
-    [Opcode_LDX_Immediate]   = "LDX_I",
-    [Opcode_LDX_ZeroPage ]   = "LDX_Z",
-    [Opcode_LDX_ZeroPageY]   = "LDX_ZY",
-    [Opcode_LDX_Absolute ]   = "LDX_A",
-    [Opcode_LDX_AbsoluteY]   = "LDX_AY",
-    [Opcode_LDY_Immediate]   = "LDY_I",
-    [Opcode_LDY_ZeroPage ]   = "LDY_Z",
-    [Opcode_LDY_ZeroPageX]   = "LDY_ZX",
-    [Opcode_LDY_Absolute ]   = "LDY_A",
-    [Opcode_LDY_AbsoluteX]   = "LDY_AX",
-    [Opcode_STA_ZeroPage ]   = "STA_Z",
-    [Opcode_STA_ZeroPageX]   = "STA_ZX",
-    [Opcode_STA_Absolute ]   = "STA_A",
-    [Opcode_STA_AbsoluteX]   = "STA_AX",
-    [Opcode_STA_AbsoluteY]   = "STA_AY",
-    [Opcode_STA_IndirectX]   = "STA_IX",
-    [Opcode_STA_IndirectY]   = "STA_IY",
-    [Opcode_STX_ZeroPage ]   = "STX_Z",
-    [Opcode_STX_ZeroPageY]   = "STX_ZY",
-    [Opcode_STX_Absolute ]   = "STX_A",
-    [Opcode_STY_ZeroPage ]   = "STY_Z",
-    [Opcode_STY_ZeroPageX]   = "STY_ZX",
-    [Opcode_STY_Absolute ]   = "STY_A",
+    [Opcode_LDA_Immediate]   = "LDA",
+    [Opcode_LDA_ZeroPage ]   = "LDA",
+    [Opcode_LDA_ZeroPageX]   = "LDA",
+    [Opcode_LDA_Absolute ]   = "LDA",
+    [Opcode_LDA_AbsoluteX]   = "LDA",
+    [Opcode_LDA_AbsoluteY]   = "LDA",
+    [Opcode_LDA_IndirectX]   = "LDA",
+    [Opcode_LDA_IndirectY]   = "LDA",
+    [Opcode_LDX_Immediate]   = "LDX",
+    [Opcode_LDX_ZeroPage ]   = "LDX",
+    [Opcode_LDX_ZeroPageY]   = "LDX",
+    [Opcode_LDX_Absolute ]   = "LDX",
+    [Opcode_LDX_AbsoluteY]   = "LDX",
+    [Opcode_LDY_Immediate]   = "LDY",
+    [Opcode_LDY_ZeroPage ]   = "LDY",
+    [Opcode_LDY_ZeroPageX]   = "LDY",
+    [Opcode_LDY_Absolute ]   = "LDY",
+    [Opcode_LDY_AbsoluteX]   = "LDY",
+    [Opcode_STA_ZeroPage ]   = "STA",
+    [Opcode_STA_ZeroPageX]   = "STA",
+    [Opcode_STA_Absolute ]   = "STA",
+    [Opcode_STA_AbsoluteX]   = "STA",
+    [Opcode_STA_AbsoluteY]   = "STA",
+    [Opcode_STA_IndirectX]   = "STA",
+    [Opcode_STA_IndirectY]   = "STA",
+    [Opcode_STX_ZeroPage ]   = "STX",
+    [Opcode_STX_ZeroPageY]   = "STX",
+    [Opcode_STX_Absolute ]   = "STX",
+    [Opcode_STY_ZeroPage ]   = "STY",
+    [Opcode_STY_ZeroPageX]   = "STY",
+    [Opcode_STY_Absolute ]   = "STY",
     [Opcode_TAX]             = "TAX",
     [Opcode_TAY]             = "TAY",
     [Opcode_TSX]             = "TSX",
@@ -44,96 +206,96 @@ const char* opcode_to_cstr[0xff + 1] = {
     [Opcode_PHP]             = "PHP",
     [Opcode_PLA]             = "PLA",
     [Opcode_PLP]             = "PLP",
-    [Opcode_AND_Immediate]   = "AND_I",
-    [Opcode_AND_ZeroPage ]   = "AND_Z",
-    [Opcode_AND_ZeroPageX]   = "AND_ZX",
-    [Opcode_AND_Absolute ]   = "AND_A",
-    [Opcode_AND_AbsoluteX]   = "AND_AX",
-    [Opcode_AND_AbsoluteY]   = "AND_AY",
-    [Opcode_AND_IndirectX]   = "AND_IX",
-    [Opcode_AND_IndirectY]   = "AND_IY",
-    [Opcode_EOR_Immediate]   = "EOR_I",
-    [Opcode_EOR_ZeroPage ]   = "EOR_Z",
-    [Opcode_EOR_ZeroPageX]   = "EOR_ZX",
-    [Opcode_EOR_Absolute ]   = "EOR_A",
-    [Opcode_EOR_AbsoluteX]   = "EOR_AX",
-    [Opcode_EOR_AbsoluteY]   = "EOR_AY",
-    [Opcode_EOR_IndirectX]   = "EOR_IX",
-    [Opcode_EOR_IndirectY]   = "EOR_IY",
-    [Opcode_ORA_Immediate]   = "ORA_I",
-    [Opcode_ORA_ZeroPage ]   = "ORA_Z",
-    [Opcode_ORA_ZeroPageX]   = "ORA_ZX",
-    [Opcode_ORA_Absolute ]   = "ORA_A",
-    [Opcode_ORA_AbsoluteX]   = "ORA_AX",
-    [Opcode_ORA_AbsoluteY]   = "ORA_AY",
-    [Opcode_ORA_IndirectX]   = "ORA_IX",
-    [Opcode_ORA_IndirectY]   = "ORA_IY",
-    [Opcode_BIT_ZeroPage ]   = "BIT_Z",
-    [Opcode_BIT_Absolute ]   = "BIT_A",
-    [Opcode_ADC_Immediate]   = "ADC_I",
-    [Opcode_ADC_ZeroPage ]   = "ADC_Z",
-    [Opcode_ADC_ZeroPageX]   = "ADC_ZX",
-    [Opcode_ADC_Absolute ]   = "ADC_A",
-    [Opcode_ADC_AbsoluteX]   = "ADC_AX",
-    [Opcode_ADC_AbsoluteY]   = "ADC_AY",
-    [Opcode_ADC_IndirectX]   = "ADC_IX",
-    [Opcode_ADC_IndirectY]   = "ADC_IY",
-    [Opcode_SBC_Immediate]   = "SBC_I",
-    [Opcode_SBC_ZeroPage ]   = "SBC_Z",
-    [Opcode_SBC_ZeroPageX]   = "SBC_ZX",
-    [Opcode_SBC_Absolute ]   = "SBC_A",
-    [Opcode_SBC_AbsoluteX]   = "SBC_AX",
-    [Opcode_SBC_AbsoluteY]   = "SBC_AY",
-    [Opcode_SBC_IndirectX]   = "SBC_IX",
-    [Opcode_SBC_IndirectY]   = "SBC_IY",
-    [Opcode_CMP_Immediate]   = "CMP_I",
-    [Opcode_CMP_ZeroPage ]   = "CMP_Z",
-    [Opcode_CMP_ZeroPageX]   = "CMP_ZX",
-    [Opcode_CMP_Absolute ]   = "CMP_A",
-    [Opcode_CMP_AbsoluteX]   = "CMP_AX",
-    [Opcode_CMP_AbsoluteY]   = "CMP_AY",
-    [Opcode_CMP_IndirectX]   = "CMP_IX",
-    [Opcode_CMP_IndirectY]   = "CMP_I",
-    [Opcode_CPX_Immediate]   = "CPX_I",
-    [Opcode_CPX_ZeroPage ]   = "CPX_Z",
-    [Opcode_CPX_Absolute ]   = "CPX_A",
-    [Opcode_CPY_Immediate]   = "CPY_I",
-    [Opcode_CPY_ZeroPage ]   = "CPY_Z",
-    [Opcode_CPY_Absolute ]   = "CPY_A",
-    [Opcode_INC_ZeroPage ]   = "INC_Z",
-    [Opcode_INC_ZeroPageX]   = "INC_ZX",
-    [Opcode_INC_Absolute ]   = "INC_A",
-    [Opcode_INC_AbsoluteX]   = "INC_A",
+    [Opcode_AND_Immediate]   = "AND",
+    [Opcode_AND_ZeroPage ]   = "AND",
+    [Opcode_AND_ZeroPageX]   = "AND",
+    [Opcode_AND_Absolute ]   = "AND",
+    [Opcode_AND_AbsoluteX]   = "AND",
+    [Opcode_AND_AbsoluteY]   = "AND",
+    [Opcode_AND_IndirectX]   = "AND",
+    [Opcode_AND_IndirectY]   = "AND",
+    [Opcode_EOR_Immediate]   = "EOR",
+    [Opcode_EOR_ZeroPage ]   = "EOR",
+    [Opcode_EOR_ZeroPageX]   = "EOR",
+    [Opcode_EOR_Absolute ]   = "EOR",
+    [Opcode_EOR_AbsoluteX]   = "EOR",
+    [Opcode_EOR_AbsoluteY]   = "EOR",
+    [Opcode_EOR_IndirectX]   = "EOR",
+    [Opcode_EOR_IndirectY]   = "EOR",
+    [Opcode_ORA_Immediate]   = "ORA",
+    [Opcode_ORA_ZeroPage ]   = "ORA",
+    [Opcode_ORA_ZeroPageX]   = "ORA",
+    [Opcode_ORA_Absolute ]   = "ORA",
+    [Opcode_ORA_AbsoluteX]   = "ORA",
+    [Opcode_ORA_AbsoluteY]   = "ORA",
+    [Opcode_ORA_IndirectX]   = "ORA",
+    [Opcode_ORA_IndirectY]   = "ORA",
+    [Opcode_BIT_ZeroPage ]   = "BIT",
+    [Opcode_BIT_Absolute ]   = "BIT",
+    [Opcode_ADC_Immediate]   = "ADC",
+    [Opcode_ADC_ZeroPage ]   = "ADC",
+    [Opcode_ADC_ZeroPageX]   = "ADC",
+    [Opcode_ADC_Absolute ]   = "ADC",
+    [Opcode_ADC_AbsoluteX]   = "ADC",
+    [Opcode_ADC_AbsoluteY]   = "ADC",
+    [Opcode_ADC_IndirectX]   = "ADC",
+    [Opcode_ADC_IndirectY]   = "ADC",
+    [Opcode_SBC_Immediate]   = "SBC",
+    [Opcode_SBC_ZeroPage ]   = "SBC",
+    [Opcode_SBC_ZeroPageX]   = "SBC",
+    [Opcode_SBC_Absolute ]   = "SBC",
+    [Opcode_SBC_AbsoluteX]   = "SBC",
+    [Opcode_SBC_AbsoluteY]   = "SBC",
+    [Opcode_SBC_IndirectX]   = "SBC",
+    [Opcode_SBC_IndirectY]   = "SBC",
+    [Opcode_CMP_Immediate]   = "CMP",
+    [Opcode_CMP_ZeroPage ]   = "CMP",
+    [Opcode_CMP_ZeroPageX]   = "CMP",
+    [Opcode_CMP_Absolute ]   = "CMP",
+    [Opcode_CMP_AbsoluteX]   = "CMP",
+    [Opcode_CMP_AbsoluteY]   = "CMP",
+    [Opcode_CMP_IndirectX]   = "CMP",
+    [Opcode_CMP_IndirectY]   = "CMP",
+    [Opcode_CPX_Immediate]   = "CPX",
+    [Opcode_CPX_ZeroPage ]   = "CPX",
+    [Opcode_CPX_Absolute ]   = "CPX",
+    [Opcode_CPY_Immediate]   = "CPY",
+    [Opcode_CPY_ZeroPage ]   = "CPY",
+    [Opcode_CPY_Absolute ]   = "CPY",
+    [Opcode_INC_ZeroPage ]   = "INC",
+    [Opcode_INC_ZeroPageX]   = "INC",
+    [Opcode_INC_Absolute ]   = "INC",
+    [Opcode_INC_AbsoluteX]   = "INC",
     [Opcode_INX            ] = "INX",
-    [Opcode_INY            ] = "INY",
-    [Opcode_DEC_ZeroPage   ] = "DEC_Z",
-    [Opcode_DEC_ZeroPageX  ] = "DEC_ZX",
-    [Opcode_DEC_Absolute   ] = "DEC_A",
-    [Opcode_DEC_AbsoluteX  ] = "DEC_AX",
-    [Opcode_DEX            ] = "DEX",
-    [Opcode_DEY            ] = "DEY",
-    [Opcode_ASL_Accumulator] = "ASL_A",
-    [Opcode_ASL_ZeroPage   ] = "ASL_Z",
-    [Opcode_ASL_ZeroPageX  ] = "ASL_ZX",
-    [Opcode_ASL_Absolute   ] = "ASL_A",
-    [Opcode_ASL_AbsoluteX  ] = "ASL_A",
-    [Opcode_LSR_Accumulator] = "LSR_A",
-    [Opcode_LSR_ZeroPage   ] = "LSR_Z",
-    [Opcode_LSR_ZeroPageX  ] = "LSR_ZX",
-    [Opcode_LSR_Absolute   ] = "LSR_A",
-    [Opcode_LSR_AbsoluteX  ] = "LSR_AX",
-    [Opcode_ROL_Accumulator] = "ROL_A",
-    [Opcode_ROL_ZeroPage   ] = "ROL_Z",
-    [Opcode_ROL_ZeroPageX  ] = "ROL_ZX",
-    [Opcode_ROL_Absolute   ] = "ROL_A",
-    [Opcode_ROL_AbsoluteX  ] = "ROL_AX",
-    [Opcode_ROR_Accumulator] = "ROR_A",
-    [Opcode_ROR_ZeroPage   ] = "ROR_Z",
-    [Opcode_ROR_ZeroPageX  ] = "ROR_ZX",
-    [Opcode_ROR_Absolute   ] = "ROR_A",
-    [Opcode_ROR_AbsoluteX  ] = "ROR_AX",
-    [Opcode_JMP_Absolute   ] = "JMP_A",
-    [Opcode_JMP_Indirect   ] = "JMP_I",
+    [Opcode_INY            ] = "INY",    
+    [Opcode_DEC_ZeroPage   ] = "DEC",
+    [Opcode_DEC_ZeroPageX  ] = "DEC",
+    [Opcode_DEC_Absolute   ] = "DEC",
+    [Opcode_DEC_AbsoluteX  ] = "DEC",
+    [Opcode_DEX            ] = "DEX",    
+    [Opcode_DEY            ] = "DEY",    
+    [Opcode_ASL_Accumulator] = "ASL",
+    [Opcode_ASL_ZeroPage   ] = "ASL",
+    [Opcode_ASL_ZeroPageX  ] = "ASL",
+    [Opcode_ASL_Absolute   ] = "ASL",
+    [Opcode_ASL_AbsoluteX  ] = "ASL",
+    [Opcode_LSR_Accumulator] = "LSR",
+    [Opcode_LSR_ZeroPage   ] = "LSR",
+    [Opcode_LSR_ZeroPageX  ] = "LSR",
+    [Opcode_LSR_Absolute   ] = "LSR",
+    [Opcode_LSR_AbsoluteX  ] = "LSR",
+    [Opcode_ROL_Accumulator] = "ROL",
+    [Opcode_ROL_ZeroPage   ] = "ROL",
+    [Opcode_ROL_ZeroPageX  ] = "ROL",
+    [Opcode_ROL_Absolute   ] = "ROL",
+    [Opcode_ROL_AbsoluteX  ] = "ROL",
+    [Opcode_ROR_Accumulator] = "ROR",
+    [Opcode_ROR_ZeroPage   ] = "ROR",
+    [Opcode_ROR_ZeroPageX  ] = "ROR",
+    [Opcode_ROR_Absolute   ] = "ROR",
+    [Opcode_ROR_AbsoluteX  ] = "ROR",
+    [Opcode_JMP_Absolute   ] = "JMP",
+    [Opcode_JMP_Indirect   ] = "JMP",
     [Opcode_JSR            ] = "JSR",
     [Opcode_RTS            ] = "RTS",
     [Opcode_BCC            ] = "BCC",
@@ -154,201 +316,6 @@ const char* opcode_to_cstr[0xff + 1] = {
     [Opcode_BRK            ] = "BRK",
     [Opcode_NOP            ] = "NOP",
     [Opcode_RTI            ] = "RTI",
-};
-
-size_t opcode_to_numberOperands[0xff + 1] = {
-    // LDA
-    [Opcode_LDA_Immediate]   = 1,
-    [Opcode_LDA_ZeroPage]    = 1,
-    [Opcode_LDA_ZeroPageX]   = 1,
-    [Opcode_LDA_Absolute]    = 2,
-    [Opcode_LDA_AbsoluteX]   = 2,
-    [Opcode_LDA_AbsoluteY]   = 2,
-    [Opcode_LDA_IndirectX]   = 1,
-    [Opcode_LDA_IndirectY]   = 1,
-
-    // LDX
-    [Opcode_LDX_Immediate]   = 1,
-    [Opcode_LDX_ZeroPage]    = 1,
-    [Opcode_LDX_ZeroPageY]   = 1,
-    [Opcode_LDX_Absolute]    = 2,
-    [Opcode_LDX_AbsoluteY]   = 2,
-
-    // LDY
-    [Opcode_LDY_Immediate]   = 1,
-    [Opcode_LDY_ZeroPage]    = 1,
-    [Opcode_LDY_ZeroPageX]   = 1,
-    [Opcode_LDY_Absolute]    = 2,
-    [Opcode_LDY_AbsoluteX]   = 2,
-
-    // STA
-    [Opcode_STA_ZeroPage]    = 1,
-    [Opcode_STA_ZeroPageX]   = 1,
-    [Opcode_STA_Absolute]    = 2,
-    [Opcode_STA_AbsoluteX]   = 2,
-    [Opcode_STA_AbsoluteY]   = 2,
-    [Opcode_STA_IndirectX]   = 1,
-    [Opcode_STA_IndirectY]   = 1,
-
-    // STX
-    [Opcode_STX_ZeroPage]    = 1,
-    [Opcode_STX_ZeroPageY]   = 1,
-    [Opcode_STX_Absolute]    = 2,
-
-    // STY
-    [Opcode_STY_ZeroPage]    = 1,
-    [Opcode_STY_ZeroPageX]   = 1,
-    [Opcode_STY_Absolute]    = 2,
-
-    // Transfer / stack / implied
-    [Opcode_TAX]             = 0,
-    [Opcode_TAY]             = 0,
-    [Opcode_TSX]             = 0,
-    [Opcode_TXA]             = 0,
-    [Opcode_TXS]             = 0,
-    [Opcode_TYA]             = 0,
-    [Opcode_PHA]             = 0,
-    [Opcode_PHP]             = 0,
-    [Opcode_PLA]             = 0,
-    [Opcode_PLP]             = 0,
-    [Opcode_CLC]             = 0,
-    [Opcode_CLD]             = 0,
-    [Opcode_CLI]             = 0,
-    [Opcode_CLV]             = 0,
-    [Opcode_SEC]             = 0,
-    [Opcode_SED]             = 0,
-    [Opcode_SEI]             = 0,
-    [Opcode_NOP]             = 0,
-    [Opcode_BRK]             = 0,
-    [Opcode_RTS]             = 0,
-    [Opcode_RTI]             = 0,
-
-    // JMP / JSR
-    [Opcode_JMP_Absolute]    = 2,
-    [Opcode_JMP_Indirect]    = 2,
-    [Opcode_JSR]             = 2,
-
-    // Branches (relative)
-    [Opcode_BCC]             = 1,
-    [Opcode_BCS]             = 1,
-    [Opcode_BEQ]             = 1,
-    [Opcode_BMI]             = 1,
-    [Opcode_BNE]             = 1,
-    [Opcode_BPL]             = 1,
-    [Opcode_BVC]             = 1,
-    [Opcode_BVS]             = 1,
-
-    // AND
-    [Opcode_AND_Immediate]   = 1,
-    [Opcode_AND_ZeroPage]    = 1,
-    [Opcode_AND_ZeroPageX]   = 1,
-    [Opcode_AND_Absolute]    = 2,
-    [Opcode_AND_AbsoluteX]   = 2,
-    [Opcode_AND_AbsoluteY]   = 2,
-    [Opcode_AND_IndirectX]   = 1,
-    [Opcode_AND_IndirectY]   = 1,
-
-    // ORA
-    [Opcode_ORA_Immediate]   = 1,
-    [Opcode_ORA_ZeroPage]    = 1,
-    [Opcode_ORA_ZeroPageX]   = 1,
-    [Opcode_ORA_Absolute]    = 2,
-    [Opcode_ORA_AbsoluteX]   = 2,
-    [Opcode_ORA_AbsoluteY]   = 2,
-    [Opcode_ORA_IndirectX]   = 1,
-    [Opcode_ORA_IndirectY]   = 1,
-
-    // EOR
-    [Opcode_EOR_Immediate]   = 1,
-    [Opcode_EOR_ZeroPage]    = 1,
-    [Opcode_EOR_ZeroPageX]   = 1,
-    [Opcode_EOR_Absolute]    = 2,
-    [Opcode_EOR_AbsoluteX]   = 2,
-    [Opcode_EOR_AbsoluteY]   = 2,
-    [Opcode_EOR_IndirectX]   = 1,
-    [Opcode_EOR_IndirectY]   = 1,
-
-    // ADC
-    [Opcode_ADC_Immediate]   = 1,
-    [Opcode_ADC_ZeroPage]    = 1,
-    [Opcode_ADC_ZeroPageX]   = 1,
-    [Opcode_ADC_Absolute]    = 2,
-    [Opcode_ADC_AbsoluteX]   = 2,
-    [Opcode_ADC_AbsoluteY]   = 2,
-    [Opcode_ADC_IndirectX]   = 1,
-    [Opcode_ADC_IndirectY]   = 1,
-
-    // SBC
-    [Opcode_SBC_Immediate]   = 1,
-    [Opcode_SBC_ZeroPage]    = 1,
-    [Opcode_SBC_ZeroPageX]   = 1,
-    [Opcode_SBC_Absolute]    = 2,
-    [Opcode_SBC_AbsoluteX]   = 2,
-    [Opcode_SBC_AbsoluteY]   = 2,
-    [Opcode_SBC_IndirectX]   = 1,
-    [Opcode_SBC_IndirectY]   = 1,
-
-    // CMP
-    [Opcode_CMP_Immediate]   = 1,
-    [Opcode_CMP_ZeroPage]    = 1,
-    [Opcode_CMP_ZeroPageX]   = 1,
-    [Opcode_CMP_Absolute]    = 2,
-    [Opcode_CMP_AbsoluteX]   = 2,
-    [Opcode_CMP_AbsoluteY]   = 2,
-    [Opcode_CMP_IndirectX]   = 1,
-    [Opcode_CMP_IndirectY]   = 1,
-
-    // CPX
-    [Opcode_CPX_Immediate]   = 1,
-    [Opcode_CPX_ZeroPage]    = 1,
-    [Opcode_CPX_Absolute]    = 2,
-
-    // CPY
-    [Opcode_CPY_Immediate]   = 1,
-    [Opcode_CPY_ZeroPage]    = 1,
-    [Opcode_CPY_Absolute]    = 2,
-
-    // INC / INX / INY
-    [Opcode_INC_ZeroPage]    = 1,
-    [Opcode_INC_ZeroPageX]   = 1,
-    [Opcode_INC_Absolute]    = 2,
-    [Opcode_INC_AbsoluteX]   = 2,
-    [Opcode_INX]             = 0,
-    [Opcode_INY]             = 0,
-
-    // DEC / DEX / DEY
-    [Opcode_DEC_ZeroPage]    = 1,
-    [Opcode_DEC_ZeroPageX]   = 1,
-    [Opcode_DEC_Absolute]    = 2,
-    [Opcode_DEC_AbsoluteX]   = 2,
-    [Opcode_DEX]             = 0,
-    [Opcode_DEY]             = 0,
-
-    // Shift / Rotate
-    [Opcode_ASL_Accumulator] = 0,
-    [Opcode_ASL_ZeroPage]    = 1,
-    [Opcode_ASL_ZeroPageX]   = 1,
-    [Opcode_ASL_Absolute]    = 2,
-    [Opcode_ASL_AbsoluteX]   = 2,
-    [Opcode_LSR_Accumulator] = 0,
-    [Opcode_LSR_ZeroPage]    = 1,
-    [Opcode_LSR_ZeroPageX]   = 1,
-    [Opcode_LSR_Absolute]    = 2,
-    [Opcode_LSR_AbsoluteX]   = 2,
-    [Opcode_ROL_Accumulator] = 0,
-    [Opcode_ROL_ZeroPage]    = 1,
-    [Opcode_ROL_ZeroPageX]   = 1,
-    [Opcode_ROL_Absolute]    = 2,
-    [Opcode_ROL_AbsoluteX]   = 2,
-    [Opcode_ROR_Accumulator] = 0,
-    [Opcode_ROR_ZeroPage]    = 1,
-    [Opcode_ROR_ZeroPageX]   = 1,
-    [Opcode_ROR_Absolute]    = 2,
-    [Opcode_ROR_AbsoluteX]   = 2,
-
-    // BIT
-    [Opcode_BIT_ZeroPage]    = 1,
-    [Opcode_BIT_Absolute]    = 2,
 };
 
 Addressing_mode opcode_to_Addressing_mode[0xff + 1] = {
@@ -484,28 +451,27 @@ Addressing_mode opcode_to_Addressing_mode[0xff + 1] = {
     [Opcode_ROR_AbsoluteX  ] = Add_AbsoluteX,
     [Opcode_JMP_Absolute   ] = Add_Absolute,
     [Opcode_JMP_Indirect   ] = Add_Indirect,
-    [Opcode_JSR            ] = Add_Implied    ,       
-    [Opcode_RTS            ] = Add_Implied    ,       
-    [Opcode_BCC            ] = Add_Relative   ,        
-    [Opcode_BCS            ] = Add_Relative   ,        
-    [Opcode_BEQ            ] = Add_Relative   ,        
-    [Opcode_BMI            ] = Add_Relative   ,        
-    [Opcode_BNE            ] = Add_Relative   ,        
-    [Opcode_BPL            ] = Add_Relative   ,        
-    [Opcode_BVC            ] = Add_Relative   ,        
-    [Opcode_BVS            ] = Add_Relative   ,        
-    [Opcode_CLC            ] = Add_Implied    ,       
-    [Opcode_CLD            ] = Add_Implied    ,       
-    [Opcode_CLI            ] = Add_Implied    ,       
-    [Opcode_CLV            ] = Add_Implied    ,       
-    [Opcode_SEC            ] = Add_Implied    ,       
-    [Opcode_SED            ] = Add_Implied    ,       
-    [Opcode_SEI            ] = Add_Implied    ,       
-    [Opcode_BRK            ] = Add_Brk        ,   
-    [Opcode_NOP            ] = Add_Implied    ,       
-    [Opcode_RTI            ] = Add_Implied    ,       
+    [Opcode_JSR            ] = Add_Implied ,       
+    [Opcode_RTS            ] = Add_Implied ,       
+    [Opcode_BCC            ] = Add_Relative,        
+    [Opcode_BCS            ] = Add_Relative,        
+    [Opcode_BEQ            ] = Add_Relative,        
+    [Opcode_BMI            ] = Add_Relative,        
+    [Opcode_BNE            ] = Add_Relative,        
+    [Opcode_BPL            ] = Add_Relative,        
+    [Opcode_BVC            ] = Add_Relative,        
+    [Opcode_BVS            ] = Add_Relative,        
+    [Opcode_CLC            ] = Add_Implied ,       
+    [Opcode_CLD            ] = Add_Implied ,       
+    [Opcode_CLI            ] = Add_Implied ,       
+    [Opcode_CLV            ] = Add_Implied ,       
+    [Opcode_SEC            ] = Add_Implied ,       
+    [Opcode_SED            ] = Add_Implied ,       
+    [Opcode_SEI            ] = Add_Implied ,       
+    [Opcode_BRK            ] = Add_Brk     ,   
+    [Opcode_NOP            ] = Add_Implied ,       
+    [Opcode_RTI            ] = Add_Implied ,       
 };
-
 
 void CPU_dump_cpu(CPU * cpu, FILE * file)
 {
@@ -544,32 +510,105 @@ void CPU_dump_memory(CPU * cpu, FILE * file)
 void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file){
     if(!file) file = stdout;
     for(word addr = entry_point; addr <  program_size + entry_point; addr++){
-        if(opcode_to_numberOperands[cpu->memory[addr]] == 0){
-            fprintf(file, "0x%.4x:\t%s\n", addr, 
-                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
-        }
-        else if(opcode_to_numberOperands[cpu->memory[addr]] == 1){
-            fprintf(file, "0x%.4x:\t%s", addr, 
-                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
+
+        switch (opcode_to_Addressing_mode[cpu->memory[addr]])
+        {
+        case Add_non: // unknown opcode
+            fprintf(file, "0x%.4x:\t<0x%.2x>\n", addr, cpu->memory[addr]);
+            break;
+        case Add_Brk: // 1 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr++;
-            fprintf(file, "\t%d ($%.2x)\n", cpu->memory[addr], cpu->memory[addr]);
-        }
-        else if(opcode_to_numberOperands[cpu->memory[addr]] == 2){
-            fprintf(file, "0x%.4x:\t%s", addr, 
-                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
+            fprintf(file, "\t%u\n", cpu->memory[addr]);
+            break;
+        case Add_Relative: // 1 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr++;
+            fprintf(file, "\t%d\n", cpu->memory[addr]);  // signed
+            break;
+        case Add_Implied: // 0 operand
+            fprintf(file, "0x%.4x:\t%s\n", addr, opcode_to_cstr[cpu->memory[addr]]);
+            break;
+        case Add_Immediate: // 1 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr++;
+            fprintf(file, "\t%u\n", cpu->memory[addr]);
+            break;
+        case Add_Accumulator: // 0 operand
+            fprintf(file, "0x%.4x:\t%s\n", addr, opcode_to_cstr[cpu->memory[addr]]);
+            break;
+        case Add_Absolute: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
             addr += 2;
             fprintf(file, "\t$%.2x", cpu->memory[addr]);
             addr--;
             fprintf(file, "%.2x\n", cpu->memory[addr]);
             addr++;
-        }
-        else{
+            break;
+        case Add_AbsoluteX: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr += 2;
+            fprintf(file, "\t$%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x,X\n", cpu->memory[addr]);
+            addr++;
+            break;
+        case Add_AbsoluteY: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr += 2;
+            fprintf(file, "\t$%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x,Y\n", cpu->memory[addr]);
+            addr++;
+            break;
+        case Add_ZeroPage: // 1 operand
+        fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr++;
+            fprintf(file, "\t$%.2x\n", cpu->memory[addr]);
+            break;
+        case Add_ZeroPageX: // 1 operand
+        fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr++;
+            fprintf(file, "\t$%.2x,X\n", cpu->memory[addr]);
+            break;
+        case Add_ZeroPageY: // 1 operand
+        fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr++;
+            fprintf(file, "\t$%.2x,Y\n", cpu->memory[addr]);
+            break;
+        case Add_Indirect: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr += 2;
+            fprintf(file, "\t($%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x)\n", cpu->memory[addr]);
+            addr++;
+            break;
+        case Add_IndirectX: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr += 2;
+            fprintf(file, "\t($%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x,X)\n", cpu->memory[addr]);
+            addr++;
+            break;
+        case Add_IndirectY: // 2 operand
+            fprintf(file, "0x%.4x:\t%s", addr, opcode_to_cstr[cpu->memory[addr]]);
+            addr += 2;
+            fprintf(file, "\t($%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x),Y\n", cpu->memory[addr]);
+            addr++;
+            break;
+        
+        default: // error
             set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: operand number (%zx) more than 2 for opcode: %s\n",
-                opcode_to_numberOperands[cpu->memory[addr]],
-                opcode_to_cstr[cpu->memory[addr]]
+            fprintf(stderr, "ERROR: unkown Addressing mode number: %d for opcode: 0x%.2x\n",
+                opcode_to_Addressing_mode[cpu->memory[addr]],
+                cpu->memory[addr]
             );
             set_color(COLOR_RESET, stderr);
+            break;
         }
     }
 }
@@ -754,10 +793,11 @@ void CPU_tick(CPU* cpu, size_t amount){
 
 void CPU_invalid_opcode(CPU * cpu, byte opcode)
 {
-    // for debug
+    // for debug:
     set_color(COLOR_RED, stderr);
-    fprintf(stderr, "ERROR: invalid opcode: `%s` code: $%.2x\n", opcode_to_cstr[opcode], opcode);
+    fprintf(stderr, "ERROR: unknown opcod: 0x%.2x in address: 0x%.4x\n", cpu->memory[cpu->PC-1], cpu->PC-1);
     set_color(COLOR_RESET, stderr);
+
     CPU_tick(cpu, 2);
 }
 

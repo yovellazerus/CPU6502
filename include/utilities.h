@@ -83,8 +83,6 @@ extern Addressing_mode opcode_to_Addressing_mode[0xff + 1];
 
 extern const char* opcode_to_cstr[0xff + 1];
 
-extern size_t opcode_to_numberOperands[0xff + 1];
-
 typedef void (*Instruction)(CPU*);
 
 extern Instruction Opcode_to_Instruction_table[0xff + 1];
