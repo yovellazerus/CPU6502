@@ -213,7 +213,7 @@ void CPU_updateFlags(CPU* cpu, char reg, char flag, byte operand);
 void CPU_push(CPU* cpu, char reg);
 void CPU_pop(CPU* cpu, char reg);
 
-void CPU_run(CPU* cpu);
+void CPU_run(CPU* cpu, bool is_debug);
 void CPU_tick(CPU* cpu, size_t amount);
 
 // in 6502 it is gust NOP (for now print err msg for debug) 

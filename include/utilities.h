@@ -10,8 +10,8 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 #define UNUSED ((void)cpu)
 
-#define HIGH_BYTE(WORD) (WORD >> 8)
-#define LOW_BYTE(WORD) (WORD << 8)
+#define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
+#define LOW_BYTE(WORD) ((byte)(WORD << 8))
 #define IS_CROSS_PAGES(old, _new) ((old & 0xFF00) != (_new & 0xFF00))
 
 #define IS_ZERO(reg) (reg == 0)
@@ -58,6 +58,8 @@ typedef struct CPU_t {
 typedef void (*Instruction)(CPU*);
 
 extern const char* opcode_to_cstr[0xff + 1];
+
+extern size_t opcode_to_numberOperands[0xff + 1];
 
 extern Instruction Opcode_to_Instruction_table[0xff + 1];
 

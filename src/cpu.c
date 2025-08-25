@@ -156,6 +156,202 @@ const char* opcode_to_cstr[0xff + 1] = {
     [Opcode_RTI            ] = "RTI",
 };
 
+size_t opcode_to_numberOperands[0xff + 1] = {
+    // LDA
+    [Opcode_LDA_Immediate]   = 1,
+    [Opcode_LDA_ZeroPage]    = 1,
+    [Opcode_LDA_ZeroPageX]   = 1,
+    [Opcode_LDA_Absolute]    = 2,
+    [Opcode_LDA_AbsoluteX]   = 2,
+    [Opcode_LDA_AbsoluteY]   = 2,
+    [Opcode_LDA_IndirectX]   = 1,
+    [Opcode_LDA_IndirectY]   = 1,
+
+    // LDX
+    [Opcode_LDX_Immediate]   = 1,
+    [Opcode_LDX_ZeroPage]    = 1,
+    [Opcode_LDX_ZeroPageY]   = 1,
+    [Opcode_LDX_Absolute]    = 2,
+    [Opcode_LDX_AbsoluteY]   = 2,
+
+    // LDY
+    [Opcode_LDY_Immediate]   = 1,
+    [Opcode_LDY_ZeroPage]    = 1,
+    [Opcode_LDY_ZeroPageX]   = 1,
+    [Opcode_LDY_Absolute]    = 2,
+    [Opcode_LDY_AbsoluteX]   = 2,
+
+    // STA
+    [Opcode_STA_ZeroPage]    = 1,
+    [Opcode_STA_ZeroPageX]   = 1,
+    [Opcode_STA_Absolute]    = 2,
+    [Opcode_STA_AbsoluteX]   = 2,
+    [Opcode_STA_AbsoluteY]   = 2,
+    [Opcode_STA_IndirectX]   = 1,
+    [Opcode_STA_IndirectY]   = 1,
+
+    // STX
+    [Opcode_STX_ZeroPage]    = 1,
+    [Opcode_STX_ZeroPageY]   = 1,
+    [Opcode_STX_Absolute]    = 2,
+
+    // STY
+    [Opcode_STY_ZeroPage]    = 1,
+    [Opcode_STY_ZeroPageX]   = 1,
+    [Opcode_STY_Absolute]    = 2,
+
+    // Transfer / stack / implied
+    [Opcode_TAX]             = 0,
+    [Opcode_TAY]             = 0,
+    [Opcode_TSX]             = 0,
+    [Opcode_TXA]             = 0,
+    [Opcode_TXS]             = 0,
+    [Opcode_TYA]             = 0,
+    [Opcode_PHA]             = 0,
+    [Opcode_PHP]             = 0,
+    [Opcode_PLA]             = 0,
+    [Opcode_PLP]             = 0,
+    [Opcode_CLC]             = 0,
+    [Opcode_CLD]             = 0,
+    [Opcode_CLI]             = 0,
+    [Opcode_CLV]             = 0,
+    [Opcode_SEC]             = 0,
+    [Opcode_SED]             = 0,
+    [Opcode_SEI]             = 0,
+    [Opcode_NOP]             = 0,
+    [Opcode_BRK]             = 0,
+    [Opcode_RTS]             = 0,
+    [Opcode_RTI]             = 0,
+
+    // JMP / JSR
+    [Opcode_JMP_Absolute]    = 2,
+    [Opcode_JMP_Indirect]    = 2,
+    [Opcode_JSR]             = 2,
+
+    // Branches (relative)
+    [Opcode_BCC]             = 1,
+    [Opcode_BCS]             = 1,
+    [Opcode_BEQ]             = 1,
+    [Opcode_BMI]             = 1,
+    [Opcode_BNE]             = 1,
+    [Opcode_BPL]             = 1,
+    [Opcode_BVC]             = 1,
+    [Opcode_BVS]             = 1,
+
+    // AND
+    [Opcode_AND_Immediate]   = 1,
+    [Opcode_AND_ZeroPage]    = 1,
+    [Opcode_AND_ZeroPageX]   = 1,
+    [Opcode_AND_Absolute]    = 2,
+    [Opcode_AND_AbsoluteX]   = 2,
+    [Opcode_AND_AbsoluteY]   = 2,
+    [Opcode_AND_IndirectX]   = 1,
+    [Opcode_AND_IndirectY]   = 1,
+
+    // ORA
+    [Opcode_ORA_Immediate]   = 1,
+    [Opcode_ORA_ZeroPage]    = 1,
+    [Opcode_ORA_ZeroPageX]   = 1,
+    [Opcode_ORA_Absolute]    = 2,
+    [Opcode_ORA_AbsoluteX]   = 2,
+    [Opcode_ORA_AbsoluteY]   = 2,
+    [Opcode_ORA_IndirectX]   = 1,
+    [Opcode_ORA_IndirectY]   = 1,
+
+    // EOR
+    [Opcode_EOR_Immediate]   = 1,
+    [Opcode_EOR_ZeroPage]    = 1,
+    [Opcode_EOR_ZeroPageX]   = 1,
+    [Opcode_EOR_Absolute]    = 2,
+    [Opcode_EOR_AbsoluteX]   = 2,
+    [Opcode_EOR_AbsoluteY]   = 2,
+    [Opcode_EOR_IndirectX]   = 1,
+    [Opcode_EOR_IndirectY]   = 1,
+
+    // ADC
+    [Opcode_ADC_Immediate]   = 1,
+    [Opcode_ADC_ZeroPage]    = 1,
+    [Opcode_ADC_ZeroPageX]   = 1,
+    [Opcode_ADC_Absolute]    = 2,
+    [Opcode_ADC_AbsoluteX]   = 2,
+    [Opcode_ADC_AbsoluteY]   = 2,
+    [Opcode_ADC_IndirectX]   = 1,
+    [Opcode_ADC_IndirectY]   = 1,
+
+    // SBC
+    [Opcode_SBC_Immediate]   = 1,
+    [Opcode_SBC_ZeroPage]    = 1,
+    [Opcode_SBC_ZeroPageX]   = 1,
+    [Opcode_SBC_Absolute]    = 2,
+    [Opcode_SBC_AbsoluteX]   = 2,
+    [Opcode_SBC_AbsoluteY]   = 2,
+    [Opcode_SBC_IndirectX]   = 1,
+    [Opcode_SBC_IndirectY]   = 1,
+
+    // CMP
+    [Opcode_CMP_Immediate]   = 1,
+    [Opcode_CMP_ZeroPage]    = 1,
+    [Opcode_CMP_ZeroPageX]   = 1,
+    [Opcode_CMP_Absolute]    = 2,
+    [Opcode_CMP_AbsoluteX]   = 2,
+    [Opcode_CMP_AbsoluteY]   = 2,
+    [Opcode_CMP_IndirectX]   = 1,
+    [Opcode_CMP_IndirectY]   = 1,
+
+    // CPX
+    [Opcode_CPX_Immediate]   = 1,
+    [Opcode_CPX_ZeroPage]    = 1,
+    [Opcode_CPX_Absolute]    = 2,
+
+    // CPY
+    [Opcode_CPY_Immediate]   = 1,
+    [Opcode_CPY_ZeroPage]    = 1,
+    [Opcode_CPY_Absolute]    = 2,
+
+    // INC / INX / INY
+    [Opcode_INC_ZeroPage]    = 1,
+    [Opcode_INC_ZeroPageX]   = 1,
+    [Opcode_INC_Absolute]    = 2,
+    [Opcode_INC_AbsoluteX]   = 2,
+    [Opcode_INX]             = 0,
+    [Opcode_INY]             = 0,
+
+    // DEC / DEX / DEY
+    [Opcode_DEC_ZeroPage]    = 1,
+    [Opcode_DEC_ZeroPageX]   = 1,
+    [Opcode_DEC_Absolute]    = 2,
+    [Opcode_DEC_AbsoluteX]   = 2,
+    [Opcode_DEX]             = 0,
+    [Opcode_DEY]             = 0,
+
+    // Shift / Rotate
+    [Opcode_ASL_Accumulator] = 0,
+    [Opcode_ASL_ZeroPage]    = 1,
+    [Opcode_ASL_ZeroPageX]   = 1,
+    [Opcode_ASL_Absolute]    = 2,
+    [Opcode_ASL_AbsoluteX]   = 2,
+    [Opcode_LSR_Accumulator] = 0,
+    [Opcode_LSR_ZeroPage]    = 1,
+    [Opcode_LSR_ZeroPageX]   = 1,
+    [Opcode_LSR_Absolute]    = 2,
+    [Opcode_LSR_AbsoluteX]   = 2,
+    [Opcode_ROL_Accumulator] = 0,
+    [Opcode_ROL_ZeroPage]    = 1,
+    [Opcode_ROL_ZeroPageX]   = 1,
+    [Opcode_ROL_Absolute]    = 2,
+    [Opcode_ROL_AbsoluteX]   = 2,
+    [Opcode_ROR_Accumulator] = 0,
+    [Opcode_ROR_ZeroPage]    = 1,
+    [Opcode_ROR_ZeroPageX]   = 1,
+    [Opcode_ROR_Absolute]    = 2,
+    [Opcode_ROR_AbsoluteX]   = 2,
+
+    // BIT
+    [Opcode_BIT_ZeroPage]    = 1,
+    [Opcode_BIT_Absolute]    = 2,
+};
+
+
 void CPU_dump_cpu(CPU * cpu, FILE * file)
 {
     fprintf(file, "CPU: {\n");
@@ -193,7 +389,33 @@ void CPU_dump_memory(CPU * cpu, FILE * file)
 void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file){
     if(!file) file = stdout;
     for(word addr = entry_point; addr <  program_size + entry_point; addr++){
-        fprintf(file, "0x%.4x: 0x%.2x (%d)\n", addr, cpu->memory[addr], cpu->memory[addr]);
+        if(opcode_to_numberOperands[cpu->memory[addr]] == 0){
+            fprintf(file, "0x%.4x:\t%s\n", addr, 
+                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
+        }
+        else if(opcode_to_numberOperands[cpu->memory[addr]] == 1){
+            fprintf(file, "0x%.4x:\t%s", addr, 
+                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
+            addr++;
+            fprintf(file, "\t%d ($%.2x)\n", cpu->memory[addr], cpu->memory[addr]);
+        }
+        else if(opcode_to_numberOperands[cpu->memory[addr]] == 2){
+            fprintf(file, "0x%.4x:\t%s", addr, 
+                opcode_to_cstr[cpu->memory[addr]] ? opcode_to_cstr[cpu->memory[addr]] : "???");
+            addr += 2;
+            fprintf(file, "\t$%.2x", cpu->memory[addr]);
+            addr--;
+            fprintf(file, "%.2x\n", cpu->memory[addr]);
+            addr++;
+        }
+        else{
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: operand number (%zx) more than 2 for opcode: %s\n",
+                opcode_to_numberOperands[cpu->memory[addr]],
+                opcode_to_cstr[cpu->memory[addr]]
+            );
+            set_color(COLOR_RESET, stderr);
+        }
     }
 }
 
@@ -377,9 +599,10 @@ void CPU_tick(CPU* cpu, size_t amount){
 
 void CPU_invalid_opcode(CPU * cpu, byte opcode)
 {
-    // set_color(COLOR_RED, stderr);
-    // fprintf(stderr, "ERROR: unknown opcode (0x%.2x) in addres (0x%.4x)\n", opcode, cpu->PC);
-    // set_color(COLOR_RESET, stderr);
+    // for debug
+    set_color(COLOR_RED, stderr);
+    fprintf(stderr, "ERROR: invalid opcode: `%s` code: $%.2x\n", opcode_to_cstr[opcode], opcode);
+    set_color(COLOR_RESET, stderr);
     CPU_tick(cpu, 2);
 }
 
@@ -406,14 +629,14 @@ void CPU_reset(CPU *cpu)
     cpu->PC = bus;
 }
 
-void CPU_run(CPU* cpu){
+void CPU_run(CPU* cpu, bool is_debug){
     while(true){
 
-        fprintf(stdout, "0x%.4x: 0x%.2x (%s)\n", 
+        if (is_debug) fprintf(stdout, "0x%.4x: 0x%.2x (%s)\n", 
             cpu->PC, 
             cpu->memory[cpu->PC], 
-            opcode_to_cstr[cpu->memory[cpu->PC]] ? opcode_to_cstr[cpu->memory[cpu->PC]] : "INVALID OPCODE");
-            
+            opcode_to_cstr[cpu->memory[cpu->PC]] ? opcode_to_cstr[cpu->memory[cpu->PC]] : "???");
+
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
 

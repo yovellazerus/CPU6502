@@ -44,23 +44,25 @@ int main(int argc, char* argv[]){
     cpu.memory[NMI_HANDLER] = Opcode_RTI;
 
     byte program[] = {
-        Opcode_LDA_Immediate,  0x22,   // LDA #$22
-        Opcode_STA_ZeroPage,   0x00,   // STA $00
-        Opcode_LDA_Immediate,  0x11,   // LDA #$11
-        Opcode_ADC_ZeroPage,   0x00,   // ADC $00
+        Opcode_LDA_Immediate,  0x22,                // LDA #$22
+        Opcode_STA_ZeroPage,   0x00,                // STA $00
+        Opcode_LDA_Immediate,  0x11,                // LDA #$11
+        Opcode_ADC_ZeroPage,   0x00,                // ADC $00
+        Opcode_STA_Absolute,   0x00,    0x10,       // STA $1000
 
-        0xff,                               // HLT
+        0xff,                                       // HLT
     };
 
     CPU_load_program_from_carr(&cpu, RESET_HANDLER, program, ARRAY_SIZE(program));
 
     CPU_reset(&cpu); // hard coded for now
     
-    CPU_run(&cpu);
+    CPU_run(&cpu, false);
 
     CPU_dump_cpu(&cpu, cpu_file);
     CPU_dump_memory(&cpu, memory_file);
     CPU_dump_stack(&cpu, stack_file);
+    CPU_dumpProgram(&cpu, RESET_HANDLER, ARRAY_SIZE(program), stdout);
 
     fclose(stack_file);
     fclose(memory_file);
