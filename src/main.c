@@ -43,28 +43,49 @@ int main(int argc, char* argv[]){
     cpu.memory[IRQ_HANDLER] = Opcode_RTI;
     cpu.memory[NMI_HANDLER] = Opcode_RTI;
 
+    byte foo[] = {
+        Opcode_LDA_Immediate, 0x12,
+        Opcode_STA_Absolute, 0x00, 0x20,
+        Opcode_LDA_Immediate, 0x42,
+        Opcode_SEC,
+        Opcode_RTS,
+    };
+    word foo_entry = 0x9000;
+
     byte program[] = {
         Opcode_LDA_Immediate,  0x22,                // LDA #$22
         Opcode_STA_ZeroPage,   0x00,                // STA $00
-        Opcode_LDA_Immediate,  0x11,                // LDA #$11
-        Opcode_ADC_ZeroPage,   0x00,                // ADC $00
-        Opcode_STA_Absolute,   0x00,    0x10,       // STA $1000
-        Opcode_ADC_IndirectY,  0x00,    0x20,       // ADC ($2000),Y
-        Opcode_ADC_IndirectX,  0x00,    0x30,       // ADC ($2000,X)
+
+        Opcode_TAX,
+        Opcode_TAY,
+        
+        Opcode_PHP,
+        Opcode_PHP,
+
+        Opcode_JSR,  LOW_BYTE(foo_entry), HIGH_BYTE(foo_entry),
+
+        Opcode_BRK, 0x01,
+
+        Opcode_NOP,
+
+        Opcode_NOP,
 
         0xff,                                       // HLT
     };
 
     CPU_load_program_from_carr(&cpu, RESET_HANDLER, program, ARRAY_SIZE(program));
+    CPU_load_program_from_carr(&cpu, foo_entry, foo, ARRAY_SIZE(foo));
+    CPU_dumpProgram(&cpu, RESET_HANDLER, ARRAY_SIZE(program), stdout);
+    CPU_dumpProgram(&cpu, foo_entry, ARRAY_SIZE(foo), stdout);
+    printf("\n");
 
     CPU_reset(&cpu); // hard coded for now
     
-    CPU_run(&cpu, false);
+    CPU_run(&cpu, true);
 
     CPU_dump_cpu(&cpu, cpu_file);
     CPU_dump_memory(&cpu, memory_file);
     CPU_dump_stack(&cpu, stack_file);
-    CPU_dumpProgram(&cpu, RESET_HANDLER, ARRAY_SIZE(program), stdout);
 
     fclose(stack_file);
     fclose(memory_file);

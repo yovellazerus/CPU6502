@@ -1,58 +1,347 @@
 
 #include "../include/instruction.h"
 
+// TODO: fix bugs in zero page mods
+static void helper_load(CPU* cpu, char reg, Addressing_mode amod){
+    byte imm = 0;
+    word addr = 0;
+    byte old_cpu = 0;
+    byte indirect = 0;
+    if(reg == 'A'){
+        old_cpu = cpu->A;
+        switch (amod)
+        {
+        case Add_Immediate:
+            imm = cpu->memory[cpu->PC++];
+            cpu->A = imm;
+            CPU_tick(cpu, 2); 
+            break;
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->A = cpu->memory[addr];
+            CPU_tick(cpu, 4);
+            break;
+        case Add_AbsoluteX:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->A = cpu->memory[addr + cpu->X];
+            CPU_tick(cpu, 4);
+            if(HIGH_BYTE(cpu->X + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+            break;
+        case Add_AbsoluteY:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->A = cpu->memory[addr + cpu->Y];
+            CPU_tick(cpu, 4);
+            if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->A = cpu->memory[addr];
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageX:
+            addr = cpu->memory[cpu->PC++];
+            cpu->A = cpu->memory[(addr + cpu->X) & 0xFF];
+            CPU_tick(cpu, 4);
+            break;
+        case Add_IndirectX:
+            indirect = cpu->memory[cpu->PC++];
+            indirect += cpu->X;
+            addr = cpu->memory[indirect];
+            addr += cpu->memory[indirect + 1] << 8;
+            cpu->A = cpu->memory[addr];
+            CPU_tick(cpu, 6);
+            break;
+        case Add_IndirectY:
+            indirect = cpu->memory[cpu->PC++];
+            addr = cpu->memory[indirect];
+            addr += cpu->memory[indirect + 1] << 8;
+            cpu->A = cpu->memory[addr + cpu->Y];
+            CPU_tick(cpu, 5);
+            if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+            break;
+        
+        default:
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for lda instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+        CPU_updateFlags(cpu, 'A', 'z', old_cpu, 0);
+        CPU_updateFlags(cpu, 'A', 'n', old_cpu, 0);
+    }
+    else if(reg == 'X'){
+        old_cpu = cpu->X;
+        switch (amod)
+        {
+        case Add_Immediate:
+            imm = cpu->memory[cpu->PC++];
+            cpu->X = imm;
+            CPU_tick(cpu, 2); 
+            break;
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->X = cpu->memory[addr];
+            CPU_tick(cpu, 4);
+            break;
+        case Add_AbsoluteY:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->X = cpu->memory[addr + cpu->Y];
+            CPU_tick(cpu, 4);
+            if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->X = cpu->memory[addr];
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageY:
+            addr = cpu->memory[cpu->PC++];
+            cpu->X = cpu->memory[(addr + cpu->Y) & 0xFF];
+            CPU_tick(cpu, 4);
+            break;
+    
+        default: // error
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ldx instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+        CPU_updateFlags(cpu, 'X', 'z', old_cpu, 0);
+        CPU_updateFlags(cpu, 'X', 'n', old_cpu, 0);
+    }
+    else if(reg == 'Y'){
+        old_cpu = cpu->Y;
+        switch (amod)
+        {
+        case Add_Immediate:
+            imm = cpu->memory[cpu->PC++];
+            cpu->Y = imm;
+            CPU_tick(cpu, 2); 
+            break;
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->Y = cpu->memory[addr];
+            CPU_tick(cpu, 4);
+            break;
+        case Add_AbsoluteX:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->Y = cpu->memory[addr + cpu->X];
+            CPU_tick(cpu, 4);
+            if(HIGH_BYTE(cpu->X + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->Y = cpu->memory[addr];;
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageX:
+            addr = cpu->memory[cpu->PC++];
+            cpu->Y = cpu->memory[(addr + cpu->X) & 0xFF];
+            CPU_tick(cpu, 4);
+            break;
+    
+        default: // error
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ldy instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+        CPU_updateFlags(cpu, 'Y', 'z', old_cpu, 0);
+        CPU_updateFlags(cpu, 'Y', 'n', old_cpu, 0);
+    }
+    else{
+        set_color(COLOR_RED, stderr);
+        fprintf(stderr, "ERROR: invalid register: `%c` for load operation\n", reg);
+        set_color(COLOR_RESET, stderr);
+    }
+}
+// TODO: fix bugs in zero page mods
+static void helper_store(CPU* cpu, char reg, Addressing_mode amod){
+    byte imm = 0;
+    word addr = 0;
+    byte old_cpu = 0;
+    byte indirect = 0;
+    if(reg == 'A'){
+        old_cpu = cpu->A;
+        switch (amod)
+        {
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->memory[addr] = cpu->A;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_AbsoluteX:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->memory[addr + cpu->X] = cpu->A;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_AbsoluteY:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->memory[addr + cpu->Y] = cpu->A;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->memory[addr] = cpu->A;
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageX:
+            cpu->memory[cpu->X + cpu->PC++] = cpu->A;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_IndirectX:
+            indirect = cpu->memory[cpu->PC++];
+            indirect += cpu->X;
+            addr = cpu->memory[indirect];
+            addr += cpu->memory[indirect + 1] << 8;
+            cpu->memory[addr] = cpu->A;
+            CPU_tick(cpu, 6);
+            break;
+        case Add_IndirectY:
+            indirect = cpu->memory[cpu->PC++];
+            addr = cpu->memory[indirect];
+            addr += cpu->memory[indirect + 1] << 8;
+            cpu->memory[addr + cpu->Y] = cpu->A;
+            CPU_tick(cpu, 5);
+            break;
+        
+        default:
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for sta instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+    }
+    else if(reg == 'X'){
+        old_cpu = cpu->X;
+        switch (amod)
+        {
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->memory[addr] = cpu->X;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->memory[addr] = cpu->X;
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageY:
+            cpu->memory[cpu->Y + cpu->PC++] = cpu->X;
+            CPU_tick(cpu, 4);
+            break;
+    
+        default: // error
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for stx instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+    }
+    else if(reg == 'Y'){
+        old_cpu = cpu->Y;
+        switch (amod)
+        {
+        case Add_Absolute:
+            addr = cpu->memory[cpu->PC++];
+            addr += cpu->memory[cpu->PC++] << 8;
+            cpu->memory[addr] = cpu->Y;
+            CPU_tick(cpu, 4);
+            break;
+        case Add_ZeroPage:
+            addr = cpu->memory[cpu->PC++];
+            cpu->memory[addr] = cpu->Y;
+            CPU_tick(cpu, 3);
+            break;
+        case Add_ZeroPageX:
+            cpu->memory[cpu->X + cpu->PC++] = cpu->Y;
+            CPU_tick(cpu, 4);
+            break;
+    
+        default: // error
+            set_color(COLOR_RED, stderr);
+            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for sty instraction\n", 
+                    amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+            set_color(COLOR_RESET, stderr);
+            break;
+        }
+
+    }
+    else{
+        set_color(COLOR_RED, stderr);
+        fprintf(stderr, "ERROR: invalid register: `%c` for store operation\n", reg);
+        set_color(COLOR_RESET, stderr);
+    }
+}
+
 Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // Load/Store
     [Opcode_LDA_Immediate]   = instruction_LDA_Immediate,
-    // [Opcode_LDA_ZeroPage]    = instruction_LDA_ZeroPage,
-    // [Opcode_LDA_ZeroPageX]   = instruction_LDA_ZeroPageX,
-    // [Opcode_LDA_Absolute]    = instruction_LDA_Absolute,
-    // [Opcode_LDA_AbsoluteX]   = instruction_LDA_AbsoluteX,
-    // [Opcode_LDA_AbsoluteY]   = instruction_LDA_AbsoluteY,
-    // [Opcode_LDA_IndirectX]   = instruction_LDA_IndirectX,
-    // [Opcode_LDA_IndirectY]   = instruction_LDA_IndirectY,
+    [Opcode_LDA_ZeroPage]    = instruction_LDA_ZeroPage,
+    [Opcode_LDA_ZeroPageX]   = instruction_LDA_ZeroPageX,
+    [Opcode_LDA_Absolute]    = instruction_LDA_Absolute,
+    [Opcode_LDA_AbsoluteX]   = instruction_LDA_AbsoluteX,
+    [Opcode_LDA_AbsoluteY]   = instruction_LDA_AbsoluteY,
+    [Opcode_LDA_IndirectX]   = instruction_LDA_IndirectX,
+    [Opcode_LDA_IndirectY]   = instruction_LDA_IndirectY,
 
-    // [Opcode_LDX_Immediate]   = instruction_LDX_Immediate,
-    // [Opcode_LDX_ZeroPage]    = instruction_LDX_ZeroPage,
-    // [Opcode_LDX_ZeroPageY]   = instruction_LDX_ZeroPageY,
-    // [Opcode_LDX_Absolute]    = instruction_LDX_Absolute,
-    // [Opcode_LDX_AbsoluteY]   = instruction_LDX_AbsoluteY,
+    [Opcode_LDX_Immediate]   = instruction_LDX_Immediate,
+    [Opcode_LDX_ZeroPage]    = instruction_LDX_ZeroPage,
+    [Opcode_LDX_ZeroPageY]   = instruction_LDX_ZeroPageY,
+    [Opcode_LDX_Absolute]    = instruction_LDX_Absolute,
+    [Opcode_LDX_AbsoluteY]   = instruction_LDX_AbsoluteY,
 
-    // [Opcode_LDY_Immediate]   = instruction_LDY_Immediate,
-    // [Opcode_LDY_ZeroPage]    = instruction_LDY_ZeroPage,
-    // [Opcode_LDY_ZeroPageX]   = instruction_LDY_ZeroPageX,
-    // [Opcode_LDY_Absolute]    = instruction_LDY_Absolute,
-    // [Opcode_LDY_AbsoluteX]   = instruction_LDY_AbsoluteX,
+    [Opcode_LDY_Immediate]   = instruction_LDY_Immediate,
+    [Opcode_LDY_ZeroPage]    = instruction_LDY_ZeroPage,
+    [Opcode_LDY_ZeroPageX]   = instruction_LDY_ZeroPageX,
+    [Opcode_LDY_Absolute]    = instruction_LDY_Absolute,
+    [Opcode_LDY_AbsoluteX]   = instruction_LDY_AbsoluteX,
 
     [Opcode_STA_ZeroPage]    = instruction_STA_ZeroPage,
-    // [Opcode_STA_ZeroPageX]   = instruction_STA_ZeroPageX,
-    // [Opcode_STA_Absolute]    = instruction_STA_Absolute,
-    // [Opcode_STA_AbsoluteX]   = instruction_STA_AbsoluteX,
-    // [Opcode_STA_AbsoluteY]   = instruction_STA_AbsoluteY,
-    // [Opcode_STA_IndirectX]   = instruction_STA_IndirectX,
-    // [Opcode_STA_IndirectY]   = instruction_STA_IndirectY,
+    [Opcode_STA_ZeroPageX]   = instruction_STA_ZeroPageX,
+    [Opcode_STA_Absolute]    = instruction_STA_Absolute,
+    [Opcode_STA_AbsoluteX]   = instruction_STA_AbsoluteX,
+    [Opcode_STA_AbsoluteY]   = instruction_STA_AbsoluteY,
+    [Opcode_STA_IndirectX]   = instruction_STA_IndirectX,
+    [Opcode_STA_IndirectY]   = instruction_STA_IndirectY,
 
-    // [Opcode_STX_ZeroPage]    = instruction_STX_ZeroPage,
-    // [Opcode_STX_ZeroPageY]   = instruction_STX_ZeroPageY,
-    // [Opcode_STX_Absolute]    = instruction_STX_Absolute,
+    [Opcode_STX_ZeroPage]    = instruction_STX_ZeroPage,
+    [Opcode_STX_ZeroPageY]   = instruction_STX_ZeroPageY,
+    [Opcode_STX_Absolute]    = instruction_STX_Absolute,
 
-    // [Opcode_STY_ZeroPage]    = instruction_STY_ZeroPage,
-    // [Opcode_STY_ZeroPageX]   = instruction_STY_ZeroPageX,
-    // [Opcode_STY_Absolute]    = instruction_STY_Absolute,
+    [Opcode_STY_ZeroPage]    = instruction_STY_ZeroPage,
+    [Opcode_STY_ZeroPageX]   = instruction_STY_ZeroPageX,
+    [Opcode_STY_Absolute]    = instruction_STY_Absolute,
 
-    // // Register Transfers
-    // [Opcode_TAX]             = instruction_TAX,
-    // [Opcode_TAY]             = instruction_TAY,
-    // [Opcode_TSX]             = instruction_TSX,
-    // [Opcode_TXA]             = instruction_TXA,
-    // [Opcode_TXS]             = instruction_TXS,
-    // [Opcode_TYA]             = instruction_TYA,
+    // Register Transfers
+    [Opcode_TAX]             = instruction_TAX,
+    [Opcode_TAY]             = instruction_TAY,
+    [Opcode_TSX]             = instruction_TSX,
+    [Opcode_TXA]             = instruction_TXA,
+    [Opcode_TXS]             = instruction_TXS,
+    [Opcode_TYA]             = instruction_TYA,
 
     // // Stack
-    // [Opcode_PHA]             = instruction_PHA,
-    // [Opcode_PHP]             = instruction_PHP,
-    // [Opcode_PLA]             = instruction_PLA,
-    // [Opcode_PLP]             = instruction_PLP,
+    [Opcode_PHA]             = instruction_PHA,
+    [Opcode_PHP]             = instruction_PHP,
+    [Opcode_PLA]             = instruction_PLA,
+    [Opcode_PLP]             = instruction_PLP,
 
     // // Logical
     // [Opcode_AND_Immediate]   = instruction_AND_Immediate,
@@ -163,11 +452,11 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // [Opcode_ROR_Absolute]    = instruction_ROR_Absolute,
     // [Opcode_ROR_AbsoluteX]   = instruction_ROR_AbsoluteX,
 
-    // // Jumps & Calls
-    // [Opcode_JMP_Absolute]    = instruction_JMP_Absolute,
-    // [Opcode_JMP_Indirect]    = instruction_JMP_Indirect,
-    // [Opcode_JSR]             = instruction_JSR,
-    // [Opcode_RTS]             = instruction_RTS,
+    // Jumps & Calls
+    [Opcode_JMP_Absolute]    = instruction_JMP_Absolute,
+    [Opcode_JMP_Indirect]    = instruction_JMP_Indirect,
+    [Opcode_JSR]             = instruction_JSR,
+    [Opcode_RTS]             = instruction_RTS,
 
     // // Branches
     // [Opcode_BCC]             = instruction_BCC,
@@ -179,14 +468,14 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // [Opcode_BVC]             = instruction_BVC,
     // [Opcode_BVS]             = instruction_BVS,
 
-    // // Flags
-    // [Opcode_CLC]             = instruction_CLC,
-    // [Opcode_CLD]             = instruction_CLD,
-    // [Opcode_CLI]             = instruction_CLI,
-    // [Opcode_CLV]             = instruction_CLV,
-    // [Opcode_SEC]             = instruction_SEC,
-    // [Opcode_SED]             = instruction_SED,
-    // [Opcode_SEI]             = instruction_SEI,
+    // Flags
+    [Opcode_CLC]             = instruction_CLC,
+    [Opcode_CLD]             = instruction_CLD,
+    [Opcode_CLI]             = instruction_CLI,
+    [Opcode_CLV]             = instruction_CLV,
+    [Opcode_SEC]             = instruction_SEC,
+    [Opcode_SED]             = instruction_SED,
+    [Opcode_SEI]             = instruction_SEI,
 
     // // System
     [Opcode_BRK]             = instruction_BRK,
@@ -197,220 +486,235 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
 
 void instruction_LDA_Immediate(CPU* cpu) 
 {
-    byte immediate = cpu->memory[cpu->PC++];
-    cpu->A = immediate;
-    CPU_updateFlags(cpu, 'A', 'z', 0);
-    CPU_updateFlags(cpu, 'A', 'n', 0);
-    CPU_tick(cpu, 2); 
+    helper_load(cpu, 'A', Add_Immediate);
 }
 void instruction_LDA_ZeroPage(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_ZeroPage);
 
 }
 void instruction_LDA_ZeroPageX(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_ZeroPageX);
 
 }
 void instruction_LDA_Absolute(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_ZeroPageY);
 
 }
 void instruction_LDA_AbsoluteX(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_AbsoluteX);
 
 }
 void instruction_LDA_AbsoluteY(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_AbsoluteY);
 
 }
 void instruction_LDA_IndirectX(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_IndirectX);
 
 }
 void instruction_LDA_IndirectY(CPU* cpu) 
 {
-    UNUSED;
+    helper_load(cpu, 'A', Add_IndirectY);
 
 }
 
 void instruction_LDX_Immediate(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'X', Add_Immediate);
 
 }
 void instruction_LDX_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'X', Add_ZeroPage);
 
 }
 void instruction_LDX_ZeroPageY(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'X', Add_ZeroPageY);
 
 }
 void instruction_LDX_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'X', Add_Absolute);
 
 }
 void instruction_LDX_AbsoluteY(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'X', Add_AbsoluteY);
 
 }
 
 void instruction_LDY_Immediate(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'Y', Add_Immediate);
 
 }
 void instruction_LDY_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'Y', Add_ZeroPage);
 
 }
 void instruction_LDY_ZeroPageX(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'Y', Add_ZeroPageX);
 
 }
 void instruction_LDY_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'Y', Add_Absolute);
 
 }
 void instruction_LDY_AbsoluteX(CPU* cpu)
 {
-    UNUSED;
+    helper_load(cpu, 'Y', Add_Absolute);
 
 }
 
 void instruction_STA_ZeroPage(CPU* cpu)
 {
-    byte zero_page_low_byte = cpu->memory[cpu->PC++];
-    cpu->memory[ZERO_PAGE_START + zero_page_low_byte] = cpu->A;
-    CPU_tick(cpu, 3);
+    helper_store(cpu, 'A', Add_ZeroPage);
 }
 void instruction_STA_ZeroPageX(CPU* cpu) 
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_ZeroPageX);
 }
 void instruction_STA_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_Absolute);
 
 }
 void instruction_STA_AbsoluteX(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_AbsoluteX);
 
 }
 void instruction_STA_AbsoluteY(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_AbsoluteY);
 
 }
 void instruction_STA_IndirectX(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_IndirectX);
 
 }
 void instruction_STA_IndirectY(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'A', Add_IndirectY);
 
 }
 
 void instruction_STX_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'X', Add_ZeroPage);
 
 }
 void instruction_STX_ZeroPageY(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'X', Add_ZeroPageY);
 
 }
 void instruction_STX_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'X', Add_Absolute);
 
 }
 
 void instruction_STY_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'Y', Add_ZeroPage);
 
 }
 void instruction_STY_ZeroPageX(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'Y', Add_ZeroPageX);
 
 }
 void instruction_STY_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_store(cpu, 'Y', Add_Absolute);
 
 }
 
 // Register Transfers
 void instruction_TAX(CPU* cpu)
 {
-    UNUSED;
+    cpu->X = cpu->A;
+    CPU_tick(cpu, 2);
+    CPU_updateFlags(cpu, 'X', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'X', 'z', 0, 0);
 
 }
 void instruction_TAY(CPU* cpu)
 {
-    UNUSED;
+    cpu->Y = cpu->A;
+    CPU_tick(cpu, 2);
+    CPU_updateFlags(cpu, 'Y', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'Y', 'z', 0, 0);
 
 }
 void instruction_TSX(CPU* cpu)
 {
-    UNUSED;
+    cpu->X = cpu->SP;
+    CPU_tick(cpu, 2);
+    CPU_updateFlags(cpu, 'X', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'X', 'z', 0, 0);
 
 }
 void instruction_TXA(CPU* cpu)
 {
-    UNUSED;
-
+    cpu->A = cpu->X;
+    CPU_tick(cpu, 2);
+    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
 }
 void instruction_TXS(CPU* cpu)
 {
-    UNUSED;
+    cpu->SP = cpu->X;
+    CPU_tick(cpu, 2);
+    // not modify the flags register 
 
 }
 void instruction_TYA(CPU* cpu)
 {
-    UNUSED;
+    cpu->A = cpu->Y;
+    CPU_tick(cpu, 2);
+    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
 
 }
 
 // Stack
 void instruction_PHA(CPU* cpu)
 {
-    UNUSED;
+    CPU_push(cpu, 'A');
+    CPU_tick(cpu, 3);
 
 }
 void instruction_PHP(CPU* cpu)
 {
-    UNUSED;
+    CPU_push(cpu, 'P');
+    CPU_tick(cpu, 3);
 
 }
 void instruction_PLA(CPU* cpu)
 {
-    UNUSED;
+    CPU_pop(cpu, 'A');
+    CPU_tick(cpu, 4);
+    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
 
 }
 void instruction_PLP(CPU* cpu)
 {
-    UNUSED;
-
+    CPU_pop(cpu, 'P');
+    CPU_tick(cpu, 4);
 }
 
 // Logical
@@ -564,10 +868,10 @@ void instruction_ADC_ZeroPage(CPU* cpu)
 
     operand = (byte)operand + (byte)carry_in;
 
-    CPU_updateFlags(cpu, 'A', 'z', operand);
-    CPU_updateFlags(cpu, 'A', 'n', operand);
-    CPU_updateFlags(cpu, 'A', 'c', operand);
-    CPU_updateFlags(cpu, 'A', 'v', operand);
+    CPU_updateFlags(cpu, 'A', 'z', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'n', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'c', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'v', cpu->A, operand);
 
     cpu->A += operand;
 
@@ -882,23 +1186,50 @@ void instruction_ROR_AbsoluteX(CPU* cpu)
 // Jumps / Calls
 void instruction_JMP_Absolute(CPU* cpu)
 {
-    UNUSED;
+    word addr = cpu->memory[cpu->PC++];
+    addr += cpu->memory[cpu->PC++] << 8;
+    cpu->PC = addr;
+    CPU_tick(cpu, 3);
 
 }
 void instruction_JMP_Indirect(CPU* cpu)
 {
-    UNUSED;
+    /*
+    An original 6502 has does not correctly fetch the target address
+    if the indirect vector falls on a page boundary 
+    (e.g. $xxFF where xx is any value from $00 to $FF). 
+    In this case fetches the LSB from $xxFF as expected but takes the MSB from $xx00. 
+    This is fixed in some later chips like the 65SC02
+    so for compatibility always ensure the indirect vector is not at the end of the page.
+    */
+
+    word indirect = cpu->memory[cpu->PC++];
+    indirect += cpu->memory[cpu->PC++] << 8;
+
+    byte lo = cpu->memory[indirect];
+    byte hi = cpu->memory[(indirect & 0xFF00) | ((indirect + 1) & 0x00FF)] << 8;
+
+    cpu->PC = lo + hi;
+    CPU_tick(cpu, 5);
 
 }
 void instruction_JSR(CPU* cpu)
 {
-    UNUSED;
+    word addr = cpu->memory[cpu->PC++];
+    addr += cpu->memory[cpu->PC++] << 8;
+
+    cpu->PC -= 1; // emulate (PC - 1) push
+    CPU_push(cpu, 'C');
+    cpu->PC = addr;
+
+    CPU_tick(cpu, 6);
 
 }
 void instruction_RTS(CPU* cpu)
 {
-    UNUSED;
-
+    CPU_pop(cpu, 'C');
+    cpu->PC++;
+    CPU_tick(cpu, 6);
 }
 
 // Branches
@@ -954,37 +1285,44 @@ void instruction_BVS(CPU* cpu)
 // Flags
 void instruction_CLC(CPU* cpu)
 {
-    UNUSED;
+    CPU_offFlag(cpu, 'c');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_CLD(CPU* cpu)
 {
-    UNUSED;
+    CPU_offFlag(cpu, 'd');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_CLI(CPU* cpu)
 {
-    UNUSED;
+    CPU_offFlag(cpu, 'i');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_CLV(CPU* cpu)
 {
-    UNUSED;
+    CPU_offFlag(cpu, 'v');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_SEC(CPU* cpu)
 {
-    UNUSED;
+    CPU_onFlag(cpu, 'c');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_SED(CPU* cpu)
 {
-    UNUSED;
+    CPU_onFlag(cpu, 'd');
+    CPU_tick(cpu, 2);
 
 }
 void instruction_SEI(CPU* cpu)
 {
-    UNUSED;
+    CPU_onFlag(cpu, 'i');
+    CPU_tick(cpu, 2);
 
 }
 
@@ -996,10 +1334,10 @@ void instruction_BRK(CPU* cpu)
     addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] << 8;
  
     CPU_onFlag(cpu, 'i');
-    cpu->PC += 2;
+    cpu->PC += 1;
     CPU_push(cpu, 'C');
     byte old_P = cpu->P;
-    cpu->P |= 0x10;
+    CPU_onFlag(cpu, 'b');
     CPU_push(cpu, 'P');
     cpu->P = old_P;
 

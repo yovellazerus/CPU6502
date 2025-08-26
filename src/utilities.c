@@ -17,3 +17,23 @@ void set_color(Color color, FILE* file){
         default:            fprintf(file, "\033[0m");    break;
     }
 }
+
+const char* Addressing_mode_to_cstr[count_Add + 1] = {
+    [Add_non] = "Add_non",
+    [Add_Brk] = "Add_Brk",
+    [Add_Relative] = "Add_Relative",
+    [Add_Implied] = "Add_Implied",
+    [Add_Immediate] = "Add_Immediate",
+    [Add_Accumulator] = "Add_Accumulator",
+    [Add_Absolute] = "Add_Absolute",
+    [Add_AbsoluteX] = "Add_AbsoluteX",
+    [Add_AbsoluteY] = "Add_AbsoluteY",
+    [Add_ZeroPage] = "Add_ZeroPage",
+    [Add_ZeroPageX] = "Add_ZeroPageX",
+    [Add_ZeroPageY] = "Add_ZeroPageY",
+    [Add_Indirect] = "Add_Indirect",
+    [Add_IndirectX] = "Add_IndirectX",
+    [Add_IndirectY] = "Add_IndirectY",
+
+    [count_Add] = "Add_UNKNOWN",
+};

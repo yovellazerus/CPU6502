@@ -11,7 +11,7 @@
 #define UNUSED ((void)cpu)
 
 #define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
-#define LOW_BYTE(WORD) ((byte)(WORD << 8))
+#define LOW_BYTE(WORD) ((byte)(WORD))
 #define IS_CROSS_PAGES(old, _new) ((old & 0xFF00) != (_new & 0xFF00))
 
 #define IS_ZERO(reg) (reg == 0)
@@ -78,6 +78,8 @@ typedef enum {
     
     count_Add,
 } Addressing_mode;
+
+extern const char* Addressing_mode_to_cstr[count_Add + 1];
 
 extern Addressing_mode opcode_to_Addressing_mode[0xff + 1];
 

@@ -209,10 +209,11 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);
-void CPU_updateFlags(CPU* cpu, char reg, char flag, byte operand);
+void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand);
 void CPU_push(CPU* cpu, char reg);
 void CPU_pop(CPU* cpu, char reg);
 
+bool CPU_debug(CPU* cpu);
 void CPU_run(CPU* cpu, bool is_debug);
 void CPU_tick(CPU* cpu, size_t amount);
 

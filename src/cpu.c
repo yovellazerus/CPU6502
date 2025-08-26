@@ -451,7 +451,7 @@ Addressing_mode opcode_to_Addressing_mode[0xff + 1] = {
     [Opcode_ROR_AbsoluteX  ] = Add_AbsoluteX,
     [Opcode_JMP_Absolute   ] = Add_Absolute,
     [Opcode_JMP_Indirect   ] = Add_Indirect,
-    [Opcode_JSR            ] = Add_Implied ,       
+    [Opcode_JSR            ] = Add_Absolute ,       
     [Opcode_RTS            ] = Add_Implied ,       
     [Opcode_BCC            ] = Add_Relative,        
     [Opcode_BCS            ] = Add_Relative,        
@@ -475,6 +475,7 @@ Addressing_mode opcode_to_Addressing_mode[0xff + 1] = {
 
 void CPU_dump_cpu(CPU * cpu, FILE * file)
 {
+    if(!file) file = stdout;
     fprintf(file, "CPU: {\n");
     fprintf(file, "A: %d (0x%.2x)\n", cpu->A, cpu->A);
     fprintf(file, "X: %d (0x%.2x)\n", cpu->X, cpu->X);
@@ -671,8 +672,8 @@ void CPU_push(CPU * cpu, char reg)
         cpu->memory[STACK_START + cpu->SP--] = cpu->P;
         break;
     case 'C': // for PC
-        cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(cpu->PC);
         cpu->memory[STACK_START + cpu->SP--] = HIGH_BYTE(cpu->PC);
+        cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(cpu->PC);
         break;
     default:
         set_color(COLOR_RED, stderr);
@@ -700,15 +701,13 @@ void CPU_pop(CPU * cpu, char reg)
         cpu->Y = cpu->memory[++cpu->SP + STACK_START];
         break;
     case 'P':
-        cpu->A = cpu->memory[++cpu->SP + STACK_START];
+        cpu->P = cpu->memory[++cpu->SP + STACK_START];
         CPU_onFlag(cpu, 'u'); // always on
         break;
     case 'C': // for PC
-        addr = 0;
-        low = cpu->memory[STACK_START + ++cpu->SP];
+        low  = cpu->memory[STACK_START + ++cpu->SP];
         high = cpu->memory[STACK_START + ++cpu->SP];
-        addr = (low << 8) | high;
-        cpu->PC = addr;
+        cpu->PC = (high << 8) | low;
         break;
     default:
         set_color(COLOR_RED, stderr);
@@ -813,6 +812,7 @@ void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_
 void CPU_reset(CPU *cpu)
 {
     cpu->SP = RESET_SP_REGISTER;
+    CPU_onFlag(cpu, 'u');
     CPU_onFlag(cpu, 'i');
     CPU_offFlag(cpu, 'd');
 
@@ -827,10 +827,7 @@ void CPU_reset(CPU *cpu)
 void CPU_run(CPU* cpu, bool is_debug){
     while(true){
 
-        if (is_debug) fprintf(stdout, "0x%.4x: 0x%.2x %s\n", 
-            cpu->PC, 
-            cpu->memory[cpu->PC], 
-            opcode_to_cstr[cpu->memory[cpu->PC]] ? opcode_to_cstr[cpu->memory[cpu->PC]] : "???");
+        if (is_debug) is_debug = CPU_debug(cpu);
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
@@ -847,23 +844,23 @@ void CPU_run(CPU* cpu, bool is_debug){
     }
 }
 
-void CPU_updateFlags(CPU* cpu, char reg, char flag, byte operand){
-    byte value = 0;
+void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand){
+    byte new_value = 0;
     switch (reg)
     {
     case 'A':
-        value = cpu->A;
+        new_value = cpu->A;
         break;
     case 'X':
-        value = cpu->X;
+        new_value = cpu->X;
         break;
     case 'Y':
-        value = cpu->Y;
+        new_value = cpu->Y;
         break;
     
     default:
         set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal register for appdate flags `%c`\n", reg);
+        fprintf(stderr, "ERROR: non legal register: `%c` for appdate flags\n", reg);
         set_color(COLOR_RESET, stderr);
         return;
     }
@@ -871,18 +868,105 @@ void CPU_updateFlags(CPU* cpu, char reg, char flag, byte operand){
     switch (flag)
     {
     case 'z':
-        IS_ZERO(value) ? CPU_onFlag(cpu,'z') : CPU_offFlag(cpu,'z'); break;
+        IS_ZERO(new_value) ? CPU_onFlag(cpu,'z') : CPU_offFlag(cpu,'z'); break;
     case 'v':
-        IS_OVERFLOW(value, operand) ? CPU_onFlag(cpu,'v') : CPU_offFlag(cpu,'v'); break;
+        IS_OVERFLOW(old_value, operand) ? CPU_onFlag(cpu,'v') : CPU_offFlag(cpu,'v'); break;
     case 'c':
-        IS_CARRY(value, operand) ? CPU_onFlag(cpu,'c') : CPU_offFlag(cpu,'c'); break;
+        IS_CARRY(old_value, operand) ? CPU_onFlag(cpu,'c') : CPU_offFlag(cpu,'c'); break;
     case 'n':
-        IS_NEGATIVE(value) ? CPU_onFlag(cpu,'n') : CPU_offFlag(cpu,'n'); break;
+        IS_NEGATIVE(new_value) ? CPU_onFlag(cpu,'n') : CPU_offFlag(cpu,'n'); break;
     default:
         set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal flag for appdate flags `%c`\n", flag);
+        fprintf(stderr, "ERROR: non legal flag: `%c` for appdate flags\n", flag);
         set_color(COLOR_RESET, stderr);
         break;
     }
 }
 
+bool CPU_debug(CPU* cpu){
+    char input = 0;
+    printf("A = 0x%.2x, X = 0x%.2x, Y = 0x%.2x, SP = 0x%.2x, PC = ", cpu->A, cpu->X, cpu->Y, cpu->SP);
+    CPU_dumpProgram(cpu, cpu->PC, 1, stdout);
+    while(true){
+        fflush(stdin);
+        input = getchar();
+        switch (input)
+        {
+        case 's':
+            return true;
+        case 'p':
+            printf("P {");
+            printf("  n: %d", CPU_getFlag(cpu, 'n'));
+            printf("  v: %d", CPU_getFlag(cpu, 'v'));
+            printf("  u: %d", CPU_getFlag(cpu, 'u'));
+            printf("  b: %d", CPU_getFlag(cpu, 'b'));
+            printf("  d: %d", CPU_getFlag(cpu, 'd'));
+            printf("  i: %d", CPU_getFlag(cpu, 'i'));
+            printf("  z: %d", CPU_getFlag(cpu, 'z'));
+            printf("  c: %d", CPU_getFlag(cpu, 'c'));
+            printf("  }\n");
+            break;
+        case 'd':
+            CPU_dump_stack(cpu, 0);
+            break;
+        case 'q':
+            return false;
+            
+            
+        default:
+            set_color(COLOR_RED, NULL);
+            fprintf(stderr, "ERROR: unknown debug flag: `%c`\n", input);
+            set_color(0, NULL);
+            break;
+        }
+    }
+}
+
+void CPU_irq(CPU *cpu)
+{
+    // if interrupt flag disable return
+    if(CPU_getFlag(cpu, 'i') == 1){
+        return;
+    }
+
+    // pull irq handler addres from the interrupt vector 
+    word addr = 0;
+    addr += cpu->memory[IRQ_VECTOR_LOW_ADDER];
+    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] << 8;
+
+    // push return addres to stack
+    CPU_push(cpu, 'C');
+
+    // push P(flags on the stack)
+    CPU_offFlag(cpu, 'b');
+    CPU_push(cpu, 'P');
+
+    // jump to handler
+    cpu->PC = addr;
+
+    CPU_onFlag(cpu, 'i');
+    CPU_tick(cpu, 7);
+
+}
+
+void CPU_nmi(CPU *cpu)
+{
+
+    // pull nmi handler addres from the nmi vector 
+    word addr = 0;
+    addr += cpu->memory[NMI_VECTOR_LOW_ADDER];
+    addr += cpu->memory[NMI_VECTOR_HIGH_ADDER] << 8;
+
+    // push return addres to stack
+    CPU_push(cpu, 'C');
+
+    // push P(flags on the stack)
+    CPU_offFlag(cpu, 'b');
+    CPU_push(cpu, 'P');
+
+    // jump to handler
+    cpu->PC = addr;
+
+    CPU_onFlag(cpu, 'i');
+    CPU_tick(cpu, 7);
+}
