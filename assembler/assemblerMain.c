@@ -31,7 +31,7 @@ int main(int argc, char* argv[]){
     List_destroy(a);
 
     char source[MAX_FILE_SIZE] = {'\0'};
-    const char* path = "../input/basic.asm";
+    const char* path = "../input/test0.asm";
     FILE* input = fopen(path, "r");
     if(!input){
         perror(path);
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
     fread(source, 1, MAX_FILE_SIZE, input);
 
     Token tokens[MAX_TOKENS];
-    Lexer lexer = Lexer_init(source);
+    Lexer lexer = Lexer_init(source, path);
 
     lexer_lexAllContent(&lexer, tokens);
 
