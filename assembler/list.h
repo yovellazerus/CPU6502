@@ -53,7 +53,4 @@ int List_clear(List* list);
 // for debug
 void List_print(List* list);
 
-
-
-
 #endif // List_H

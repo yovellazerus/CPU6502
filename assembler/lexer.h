@@ -1,24 +1,20 @@
 #ifndef LEXER_H_
 #define LEXER_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
 #include <ctype.h>
 #include <string.h>
-#include <assert.h>
-#include <math.h>
 
 #include "list.h"
 #include "..\include\utilities.h"
 #include "..\include\cpu.h"
 
 #define MAX_TOKENS 256
-#define MAX_FUNCTION_VALUES 8
 
 typedef enum {
     Token_eof,
     Token_err,
+
+    Token_comment,
 
     Token_number,
     Token_char,
@@ -39,6 +35,7 @@ typedef enum {
 static const char* type_to_str_table[] = {
     [Token_eof] = "Token_eof",
     [Token_err] = "Token_err",
+    [Token_comment] = "Token_comment",
     [Token_number] = "Token_number",
     [Token_char] = "Token_char",
     [Token_str] = "Token_str",
@@ -70,8 +67,11 @@ typedef struct Token {
 } Token;
 
 Token Token_init(const char* identifier, size_t size, TokenType type, word value, Position pos);
-void Token_print(const Token* token, FILE* stream);
-void token_printAll(const Token tokenArr[MAX_TOKENS]);
+
+// for the list interface:
+void Token_print(void* token);
+void* Token_copy(void* token);
+void Token_destroy(void* token);
 
 typedef struct Lexer {
     const char* content;
@@ -83,13 +83,12 @@ typedef struct Lexer {
 
 Lexer Lexer_init(const char* content, const char* file_name);
 Token Lexer_nextToken(Lexer* lexer);
-int lexer_lexAllContent(Lexer* lexer, Token tokenArr[MAX_TOKENS]);
+List* lexer_lexAllContent(Lexer* lexer, List* label_list, List* alias_list);
 
-Token Lexer_lexNumber(Lexer* lexer);
+Token Lexer_lexNumber(Lexer* lexer, char base);
 Token Lexer_lexSymbol(Lexer* lexer);
 Token Lexer_lexNAME(Lexer* lexer);
-Token Lexer_lexAlias(Lexer* lexer);
+Token Lexer_lexComment(Lexer* lexer);
 Token Lexer_lexDirective(Lexer* lexer);
-Token Lexer_lexMnemonic(Lexer* lexer);
 
 #endif // LEXER_H_

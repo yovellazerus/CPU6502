@@ -1,19 +1,12 @@
+        .org = $8000        ; Start address of program in ROM
 
-ARG0 = 0x00
-RET0 = 0x08
+RESET:  LDX #$00         ; Load X with 0
+LOOP:   STX $0200        ; Store X into RAM address $0200
+        INX              ; Increment X
+        LDY %10010011
+        JMP LOOP         ; Jump back and repeat
 
-main:
-    PHA
-    JSR foo
-    JSR _halt
-
-_halt:
-    JMP _halt
-
-foo:
-    LDA #0x42
-    STA WPTR
-    BEQ end
-    INC WPTRH
-end:
-    RTS
+; Reset vector (tells CPU where to start)
+        .org = $FFFC
+        .word RESET      ; Low byte, high byte of RESET address
+        .word $0000      ; IRQ/BRK vector (not used here)
