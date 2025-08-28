@@ -290,6 +290,210 @@ static void helper_store(CPU* cpu, char reg, Addressing_mode amod){
     }
 }
 
+static void helper_and(CPU* cpu, Addressing_mode amod){
+    byte imm = 0;
+    word addr = 0;
+    word indirect = 0;
+    switch (amod)
+    {
+    case Add_Immediate:
+        imm = cpu->memory[cpu->PC++];
+        cpu->A &= imm;
+        CPU_tick(cpu, 2);
+        break;
+    case Add_ZeroPage:
+        addr = cpu->memory[cpu->PC++];
+        cpu->A &= cpu->memory[addr];
+        CPU_tick(cpu, 3);
+        break;
+    case Add_ZeroPageX:
+        addr = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        cpu->A &= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_Absolute:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A &= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_AbsoluteX:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A &= cpu->memory[addr + cpu->X];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->X + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_AbsoluteY:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A &= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_IndirectX:
+        indirect = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        addr = cpu->memory[indirect];
+        addr |= cpu->memory[(indirect + 1) & 0xFF] << 8;
+        cpu->A &= cpu->memory[addr];
+        CPU_tick(cpu, 6);
+        break;
+    case Add_IndirectY:
+        indirect = cpu->memory[cpu->PC++];
+        addr = cpu->memory[indirect];
+        addr += cpu->memory[(indirect + 1) & 0xff] << 8;
+        cpu->A &= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 5);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    
+    default:
+        set_color(COLOR_RED, stderr);
+        fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for and instruction\n", 
+                amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+        set_color(COLOR_RESET, stderr);
+        break;
+    }
+    CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
+    CPU_updateFlags(cpu, 'A', 'n', cpu->A, 0);
+}
+
+static void helper_eor(CPU* cpu, Addressing_mode amod){
+    byte imm = 0;
+    word addr = 0;
+    word indirect = 0;
+    switch (amod)
+    {
+    case Add_Immediate:
+        imm = cpu->memory[cpu->PC++];
+        cpu->A ^= imm;
+        CPU_tick(cpu, 2);
+        break;
+    case Add_ZeroPage:
+        addr = cpu->memory[cpu->PC++];
+        cpu->A ^= cpu->memory[addr];
+        CPU_tick(cpu, 3);
+        break;
+    case Add_ZeroPageX:
+        addr = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        cpu->A ^= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_Absolute:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A ^= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_AbsoluteX:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A ^= cpu->memory[addr + cpu->X];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->X + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_AbsoluteY:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A ^= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_IndirectX:
+        indirect = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        addr = cpu->memory[indirect];
+        addr |= cpu->memory[(indirect + 1) & 0xFF] << 8;
+        cpu->A ^= cpu->memory[addr];
+        CPU_tick(cpu, 6);
+        break;
+    case Add_IndirectY:
+        indirect = cpu->memory[cpu->PC++];
+        addr = cpu->memory[indirect];
+        addr |= cpu->memory[(indirect + 1) & 0xff] << 8;
+        cpu->A ^= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 5);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    
+    default:
+        set_color(COLOR_RED, stderr);
+        fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for eor instruction\n", 
+                amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+        set_color(COLOR_RESET, stderr);
+        break;
+    }
+    CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
+    CPU_updateFlags(cpu, 'A', 'n', cpu->A, 0);
+}
+
+static void helper_ora(CPU* cpu, Addressing_mode amod){
+    byte imm = 0;
+    word addr = 0;
+    word indirect = 0;
+    switch (amod)
+    {
+    case Add_Immediate:
+        imm = cpu->memory[cpu->PC++];
+        cpu->A |= imm;
+        CPU_tick(cpu, 2);
+        break;
+    case Add_ZeroPage:
+        addr = cpu->memory[cpu->PC++];
+        cpu->A |= cpu->memory[addr];
+        CPU_tick(cpu, 3);
+        break;
+    case Add_ZeroPageX:
+        addr = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        cpu->A |= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_Absolute:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A |= cpu->memory[addr];
+        CPU_tick(cpu, 4);
+        break;
+    case Add_AbsoluteX:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A |= cpu->memory[addr + cpu->X];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->X + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_AbsoluteY:
+        addr = cpu->memory[cpu->PC++];
+        addr += cpu->memory[cpu->PC++] << 8;
+        cpu->A |= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 4);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    case Add_IndirectX:
+        indirect = (cpu->memory[cpu->PC++] + cpu->X) & 0xFF;
+        addr = cpu->memory[indirect];
+        addr |= cpu->memory[(indirect + 1) & 0xFF] << 8;
+        cpu->A |= cpu->memory[addr];
+        CPU_tick(cpu, 6);
+        break;
+    case Add_IndirectY:
+        indirect = cpu->memory[cpu->PC++];
+        addr = cpu->memory[indirect];
+        addr |= cpu->memory[(indirect + 1) & 0xff] << 8;
+        cpu->A |= cpu->memory[addr + cpu->Y];
+        CPU_tick(cpu, 5);
+        if(HIGH_BYTE(cpu->Y + addr) != HIGH_BYTE(addr)) CPU_tick(cpu, 1); // page crossed
+        break;
+    
+    default:
+        set_color(COLOR_RED, stderr);
+        fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ora instruction\n", 
+                amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
+        set_color(COLOR_RESET, stderr);
+        break;
+    }
+    CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
+    CPU_updateFlags(cpu, 'A', 'n', cpu->A, 0);
+}
+
 Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // Load/Store
     [Opcode_LDA_Immediate]   = instruction_LDA_Immediate,
@@ -343,40 +547,40 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     [Opcode_PLA]             = instruction_PLA,
     [Opcode_PLP]             = instruction_PLP,
 
-    // // Logical
-    // [Opcode_AND_Immediate]   = instruction_AND_Immediate,
-    // [Opcode_AND_ZeroPage]    = instruction_AND_ZeroPage,
-    // [Opcode_AND_ZeroPageX]   = instruction_AND_ZeroPageX,
-    // [Opcode_AND_Absolute]    = instruction_AND_Absolute,
-    // [Opcode_AND_AbsoluteX]   = instruction_AND_AbsoluteX,
-    // [Opcode_AND_AbsoluteY]   = instruction_AND_AbsoluteY,
-    // [Opcode_AND_IndirectX]   = instruction_AND_IndirectX,
-    // [Opcode_AND_IndirectY]   = instruction_AND_IndirectY,
+    // Logical
+    [Opcode_AND_Immediate]   = instruction_AND_Immediate,
+    [Opcode_AND_ZeroPage]    = instruction_AND_ZeroPage,
+    [Opcode_AND_ZeroPageX]   = instruction_AND_ZeroPageX,
+    [Opcode_AND_Absolute]    = instruction_AND_Absolute,
+    [Opcode_AND_AbsoluteX]   = instruction_AND_AbsoluteX,
+    [Opcode_AND_AbsoluteY]   = instruction_AND_AbsoluteY,
+    [Opcode_AND_IndirectX]   = instruction_AND_IndirectX,
+    [Opcode_AND_IndirectY]   = instruction_AND_IndirectY,
 
-    // [Opcode_EOR_Immediate]   = instruction_EOR_Immediate,
-    // [Opcode_EOR_ZeroPage]    = instruction_EOR_ZeroPage,
-    // [Opcode_EOR_ZeroPageX]   = instruction_EOR_ZeroPageX,
-    // [Opcode_EOR_Absolute]    = instruction_EOR_Absolute,
-    // [Opcode_EOR_AbsoluteX]   = instruction_EOR_AbsoluteX,
-    // [Opcode_EOR_AbsoluteY]   = instruction_EOR_AbsoluteY,
-    // [Opcode_EOR_IndirectX]   = instruction_EOR_IndirectX,
-    // [Opcode_EOR_IndirectY]   = instruction_EOR_IndirectY,
+    [Opcode_EOR_Immediate]   = instruction_EOR_Immediate,
+    [Opcode_EOR_ZeroPage]    = instruction_EOR_ZeroPage,
+    [Opcode_EOR_ZeroPageX]   = instruction_EOR_ZeroPageX,
+    [Opcode_EOR_Absolute]    = instruction_EOR_Absolute,
+    [Opcode_EOR_AbsoluteX]   = instruction_EOR_AbsoluteX,
+    [Opcode_EOR_AbsoluteY]   = instruction_EOR_AbsoluteY,
+    [Opcode_EOR_IndirectX]   = instruction_EOR_IndirectX,
+    [Opcode_EOR_IndirectY]   = instruction_EOR_IndirectY,
 
-    // [Opcode_ORA_Immediate]   = instruction_ORA_Immediate,
-    // [Opcode_ORA_ZeroPage]    = instruction_ORA_ZeroPage,
-    // [Opcode_ORA_ZeroPageX]   = instruction_ORA_ZeroPageX,
-    // [Opcode_ORA_Absolute]    = instruction_ORA_Absolute,
-    // [Opcode_ORA_AbsoluteX]   = instruction_ORA_AbsoluteX,
-    // [Opcode_ORA_AbsoluteY]   = instruction_ORA_AbsoluteY,
-    // [Opcode_ORA_IndirectX]   = instruction_ORA_IndirectX,
-    // [Opcode_ORA_IndirectY]   = instruction_ORA_IndirectY,
+    [Opcode_ORA_Immediate]   = instruction_ORA_Immediate,
+    [Opcode_ORA_ZeroPage]    = instruction_ORA_ZeroPage,
+    [Opcode_ORA_ZeroPageX]   = instruction_ORA_ZeroPageX,
+    [Opcode_ORA_Absolute]    = instruction_ORA_Absolute,
+    [Opcode_ORA_AbsoluteX]   = instruction_ORA_AbsoluteX,
+    [Opcode_ORA_AbsoluteY]   = instruction_ORA_AbsoluteY,
+    [Opcode_ORA_IndirectX]   = instruction_ORA_IndirectX,
+    [Opcode_ORA_IndirectY]   = instruction_ORA_IndirectY,
 
-    // [Opcode_BIT_ZeroPage]    = instruction_BIT_ZeroPage,
-    // [Opcode_BIT_Absolute]    = instruction_BIT_Absolute,
+    [Opcode_BIT_ZeroPage]    = instruction_BIT_ZeroPage,
+    [Opcode_BIT_Absolute]    = instruction_BIT_Absolute,
 
     // Arithmetic
     // [Opcode_ADC_Immediate]   = instruction_ADC_Immediate,
-    [Opcode_ADC_ZeroPage]    = instruction_ADC_ZeroPage,
+    // [Opcode_ADC_ZeroPage]    = instruction_ADC_ZeroPage,
     // [Opcode_ADC_ZeroPageX]   = instruction_ADC_ZeroPageX,
     // [Opcode_ADC_Absolute]    = instruction_ADC_Absolute,
     // [Opcode_ADC_AbsoluteX]   = instruction_ADC_AbsoluteX,
@@ -424,7 +628,7 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
     // [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
 
-    [Opcode_DEX]             = instruction_DEX,
+    // [Opcode_DEX]             = instruction_DEX,
     // [Opcode_DEY]             = instruction_DEY,
 
     // // Shifts / Rotates
@@ -463,7 +667,7 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // [Opcode_BCS]             = instruction_BCS,
     // [Opcode_BEQ]             = instruction_BEQ,
     // [Opcode_BMI]             = instruction_BMI,
-    [Opcode_BNE]             = instruction_BNE,
+    // [Opcode_BNE]             = instruction_BNE,
     // [Opcode_BPL]             = instruction_BPL,
     // [Opcode_BVC]             = instruction_BVC,
     // [Opcode_BVS]             = instruction_BVS,
@@ -720,136 +924,145 @@ void instruction_PLP(CPU* cpu)
 // Logical
 void instruction_AND_Immediate(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_Immediate);
 
 }
 void instruction_AND_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_ZeroPage);
 
 }
 void instruction_AND_ZeroPageX(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_ZeroPageX);
 
 }
 void instruction_AND_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_Absolute);
 
 }
 void instruction_AND_AbsoluteX(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_AbsoluteX);
 
 }
 void instruction_AND_AbsoluteY(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_AbsoluteY);
 
 }
 void instruction_AND_IndirectX(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_IndirectX);
 
 }
 void instruction_AND_IndirectY(CPU* cpu)
 {
-    UNUSED;
+    helper_and(cpu, Add_IndirectY);
 
 }
 
 void instruction_EOR_Immediate(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_Immediate);
 
 }
 void instruction_EOR_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_ZeroPage);
 
 }
 void instruction_EOR_ZeroPageX(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_ZeroPageX);
 
 }
 void instruction_EOR_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_Absolute);
 
 }
 void instruction_EOR_AbsoluteX(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_AbsoluteX);
 
 }
 void instruction_EOR_AbsoluteY(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_AbsoluteY);
 
 }
 void instruction_EOR_IndirectX(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_IndirectX);
 
 }
 void instruction_EOR_IndirectY(CPU* cpu)
 {
-    UNUSED;
+    helper_eor(cpu, Add_IndirectY);
 
 }
 
 void instruction_ORA_Immediate(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_Immediate);
 
 }
 void instruction_ORA_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_ZeroPage);
 
 }
 void instruction_ORA_ZeroPageX(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_ZeroPageX);
 
 }
 void instruction_ORA_Absolute(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_Absolute);
 
 }
 void instruction_ORA_AbsoluteX(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_AbsoluteX);
 
 }
 void instruction_ORA_AbsoluteY(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_AbsoluteY);
 
 }
 void instruction_ORA_IndirectX(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_IndirectX);
 
 }
 void instruction_ORA_IndirectY(CPU* cpu)
 {
-    UNUSED;
+    helper_ora(cpu, Add_IndirectY);
 
 }
 
 void instruction_BIT_ZeroPage(CPU* cpu)
 {
-    UNUSED;
-
+    word addr = (cpu->memory[cpu->PC++] & 0xff);
+    byte operand = cpu->memory[addr];
+    byte res = cpu->A & operand;
+    if (res == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z'); 
+    cpu->P =  (cpu->P & 0x3f) | (operand & 0xc0); // (cpu->P & 0b00111111) | (operand & 0b11000000)
+    CPU_tick(cpu, 3);
 }
 void instruction_BIT_Absolute(CPU* cpu)
 {
-    UNUSED;
-
+    word addr = cpu->memory[cpu->PC++];
+    addr += cpu->memory[cpu->PC++] << 8;
+    byte operand = cpu->memory[addr];
+    byte res = cpu->A & operand;
+    if (res == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z'); 
+    cpu->P =  (cpu->P & 0x3f) | (operand & 0xc0); // (cpu->P & 0b00111111) | (operand & 0b11000000)
+    CPU_tick(cpu, 4);
 }
 
 // Arithmetic
