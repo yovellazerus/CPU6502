@@ -1,7 +1,6 @@
 #ifndef INSTRACTION_H_
 #define INSTRACTION_H_
 
-#include "utilities.h"
 #include "cpu.h"
 
 // Load/Store

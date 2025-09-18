@@ -64,10 +64,8 @@ static void helper_load(CPU* cpu, char reg, Addressing_mode amod){
             break;
         
         default:
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for lda instraction\n", 
+            fprintf(stderr, COLOR_RED "ERROR: invalid Addresing Mod: `%s` for lda instraction\n" COLOR_RESET, 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
             break;
         }
         CPU_updateFlags(cpu, 'A', 'z', old_cpu, 0);
@@ -107,10 +105,8 @@ static void helper_load(CPU* cpu, char reg, Addressing_mode amod){
             break;
     
         default: // error
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ldx instraction\n", 
+            fprintf(stderr, COLOR_RED "ERROR: invalid Addresing Mod: `%s` for ldx instraction\n" COLOR_RESET, 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
             break;
         }
         CPU_updateFlags(cpu, 'X', 'z', old_cpu, 0);
@@ -150,19 +146,15 @@ static void helper_load(CPU* cpu, char reg, Addressing_mode amod){
             break;
     
         default: // error
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ldy instraction\n", 
+            fprintf(stderr, COLOR_RED "ERROR: invalid Addresing Mod: `%s` for ldy instraction\n" COLOR_RESET, 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
             break;
         }
         CPU_updateFlags(cpu, 'Y', 'z', old_cpu, 0);
         CPU_updateFlags(cpu, 'Y', 'n', old_cpu, 0);
     }
     else{
-        set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: invalid register: `%c` for load operation\n", reg);
-        set_color(COLOR_RESET, stderr);
+        fprintf(stderr, COLOR_RED "ERROR: invalid register: `%c` for load operation\n" COLOR_RESET, reg);
     }
 }
 // TODO: fix bugs in zero page mods
@@ -219,10 +211,10 @@ static void helper_store(CPU* cpu, char reg, Addressing_mode amod){
             break;
         
         default:
-            set_color(COLOR_RED, stderr);
+            
             fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for sta instraction\n", 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
+            
             break;
         }
     }
@@ -247,10 +239,10 @@ static void helper_store(CPU* cpu, char reg, Addressing_mode amod){
             break;
     
         default: // error
-            set_color(COLOR_RED, stderr);
+            
             fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for stx instraction\n", 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
+            
             break;
         }
     }
@@ -275,18 +267,18 @@ static void helper_store(CPU* cpu, char reg, Addressing_mode amod){
             break;
     
         default: // error
-            set_color(COLOR_RED, stderr);
+            
             fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for sty instraction\n", 
                     amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-            set_color(COLOR_RESET, stderr);
+            
             break;
         }
 
     }
     else{
-        set_color(COLOR_RED, stderr);
+        
         fprintf(stderr, "ERROR: invalid register: `%c` for store operation\n", reg);
-        set_color(COLOR_RESET, stderr);
+        
     }
 }
 
@@ -348,10 +340,10 @@ static void helper_and(CPU* cpu, Addressing_mode amod){
         break;
     
     default:
-        set_color(COLOR_RED, stderr);
+        
         fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for and instruction\n", 
                 amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-        set_color(COLOR_RESET, stderr);
+        
         break;
     }
     CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
@@ -416,10 +408,10 @@ static void helper_eor(CPU* cpu, Addressing_mode amod){
         break;
     
     default:
-        set_color(COLOR_RED, stderr);
+        
         fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for eor instruction\n", 
                 amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-        set_color(COLOR_RESET, stderr);
+        
         break;
     }
     CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
@@ -484,10 +476,10 @@ static void helper_ora(CPU* cpu, Addressing_mode amod){
         break;
     
     default:
-        set_color(COLOR_RED, stderr);
+        
         fprintf(stderr, "ERROR: invalid Addresing Mod: `%s` for ora instruction\n", 
                 amod < count_Add ? Addressing_mode_to_cstr[amod] : Addressing_mode_to_cstr[count_Add]);
-        set_color(COLOR_RESET, stderr);
+        
         break;
     }
     CPU_updateFlags(cpu, 'A', 'z', cpu->A, 0);
@@ -1543,8 +1535,8 @@ void instruction_SEI(CPU* cpu)
 void instruction_BRK(CPU* cpu)
 {
     word addr = 0;
-    addr += cpu->memory[IRQ_VECTOR_LOW_ADDER];
-    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] << 8;
+    addr += cpu->memory[0xfffe];
+    addr += cpu->memory[0xffff] << 8;
  
     CPU_onFlag(cpu, 'i');
     cpu->PC += 1;

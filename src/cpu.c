@@ -1,6 +1,26 @@
 
 #include "../include\cpu.h"
 
+const char* Addressing_mode_to_cstr[count_Add + 1] = {
+    [Add_non] = "Add_non",
+    [Add_Brk] = "Add_Brk",
+    [Add_Relative] = "Add_Relative",
+    [Add_Implied] = "Add_Implied",
+    [Add_Immediate] = "Add_Immediate",
+    [Add_Accumulator] = "Add_Accumulator",
+    [Add_Absolute] = "Add_Absolute",
+    [Add_AbsoluteX] = "Add_AbsoluteX",
+    [Add_AbsoluteY] = "Add_AbsoluteY",
+    [Add_ZeroPage] = "Add_ZeroPage",
+    [Add_ZeroPageX] = "Add_ZeroPageX",
+    [Add_ZeroPageY] = "Add_ZeroPageY",
+    [Add_Indirect] = "Add_Indirect",
+    [Add_IndirectX] = "Add_IndirectX",
+    [Add_IndirectY] = "Add_IndirectY",
+
+    [count_Add] = "Add_UNKNOWN",
+};
+
 const char* opcode_to_cstr[0xff + 1] = {
 
     [Opcode_LDA_Immediate]   = "LDA",
@@ -441,12 +461,10 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
             break;
         
         default: // error
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: unkown Addressing mode number: %d for opcode: 0x%.2x\n",
+            fprintf(stderr, COLOR_RED "ERROR: unkown Addressing mode number: %d for opcode: 0x%.2x\n" COLOR_RESET,
                 opcode_to_Addressing_mode[cpu->memory[addr]],
                 cpu->memory[addr]
             );
-            set_color(COLOR_RESET, stderr);
             break;
         }
     }
@@ -486,9 +504,7 @@ bool CPU_getFlag(CPU* cpu, char flag){
         case 'c':
             return (1 & (cpu->P >> 0));
         default:
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: unknown cpu flag %c\n", flag);
-            set_color(COLOR_RESET, stderr);
+            fprintf(stderr, COLOR_RED "ERROR: unknown cpu flag %c\n" COLOR_RESET, flag);
             return false;
     }
 }
@@ -514,9 +530,7 @@ void CPU_push(CPU * cpu, char reg)
         cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(cpu->PC);
         break;
     default:
-        set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal push operation for register `%c`\n", reg);
-        set_color(COLOR_RESET, stderr);
+        fprintf(stderr, COLOR_RED "ERROR: non legal push operation for register `%c`\n" COLOR_RESET, reg);
         break;
     }
 }
@@ -548,9 +562,7 @@ void CPU_pop(CPU * cpu, char reg)
         cpu->PC = (high << 8) | low;
         break;
     default:
-        set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal pop operation for register `%c`\n", reg);
-        set_color(COLOR_RESET, stderr);
+        fprintf(stderr, COLOR_RED "ERROR: non legal pop operation for register `%c`\n" COLOR_RESET, reg);
         break;
     }
 }
@@ -582,9 +594,7 @@ bool CPU_onFlag(CPU* cpu, char flag){
             cpu->P |= 0x01; // 0b00000001
             break;
         default:
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: unknown cpu flag %c\n", flag);
-            set_color(COLOR_RESET, stderr);
+            fprintf(stderr, COLOR_RED "ERROR: unknown cpu flag %c\n" COLOR_RESET, flag);
             return false;
     }
     return true;
@@ -614,9 +624,7 @@ bool CPU_offFlag(CPU* cpu, char flag){
             cpu->P &= ~0x01; // 0b11111110
             break;
         default:
-            set_color(COLOR_RED, stderr);
-            fprintf(stderr, "ERROR: unknown cpu flag %c\n", flag);
-            set_color(COLOR_RESET, stderr);
+            fprintf(stderr, COLOR_RED "ERROR: unknown cpu flag %c\n" COLOR_RESET, flag);
             return false;
     }
     return true;
@@ -630,19 +638,7 @@ void CPU_tick(CPU* cpu, size_t amount){
 
 void CPU_invalid_opcode(CPU * cpu, byte opcode)
 {
-    // for debug:
-    set_color(COLOR_RED, stderr);
-    fprintf(stderr, "ERROR: unknown opcod: 0x%.2x in address: 0x%.4x\n", cpu->memory[cpu->PC-1], cpu->PC-1);
-    set_color(COLOR_RESET, stderr);
-
     CPU_tick(cpu, 2);
-}
-
-void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_t program_size){
-    word start = entry_point;
-    for(size_t curr = 0; curr < program_size; curr++){
-        cpu->memory[start + curr] = program[curr];
-    }
 }
 
 // done at the hardware level not using normal cpu instructions.
@@ -657,8 +653,8 @@ void CPU_reset(CPU *cpu)
     CPU_tick(cpu, 7);
 
     word bus;
-    bus = cpu->memory[RESET_VECTOR_LOW_ADDER];
-    bus += cpu->memory[RESET_VECTOR_HIGH_ADDER] * 0x0100;
+    bus = cpu->memory[0xfffc];
+    bus += cpu->memory[0xfffd] * 0x0100;
     cpu->PC = bus;
 }
 
@@ -697,9 +693,7 @@ void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand
         break;
     
     default:
-        set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal register: `%c` for appdate flags\n", reg);
-        set_color(COLOR_RESET, stderr);
+        fprintf(stderr, COLOR_RED "ERROR: non legal register: `%c` for appdate flags\n" COLOR_RESET, reg);
         return;
     }
 
@@ -714,9 +708,7 @@ void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand
     case 'n':
         IS_NEGATIVE(new_value) ? CPU_onFlag(cpu,'n') : CPU_offFlag(cpu,'n'); break;
     default:
-        set_color(COLOR_RED, stderr);
-        fprintf(stderr, "ERROR: non legal flag: `%c` for appdate flags\n", flag);
-        set_color(COLOR_RESET, stderr);
+        fprintf(stderr, COLOR_RED "ERROR: non legal flag: `%c` for appdate flags\n" COLOR_RESET, flag);
         break;
     }
 }
@@ -752,9 +744,7 @@ bool CPU_debug(CPU* cpu){
             
             
         default:
-            set_color(COLOR_RED, NULL);
-            fprintf(stderr, "ERROR: unknown debug flag: `%c`\n", input);
-            set_color(0, NULL);
+            fprintf(stderr, COLOR_RED "ERROR: unknown debug flag: `%c`\n" COLOR_RESET, input);
             break;
         }
     }
@@ -769,8 +759,8 @@ void CPU_irq(CPU *cpu)
 
     // pull irq handler addres from the interrupt vector 
     word addr = 0;
-    addr += cpu->memory[IRQ_VECTOR_LOW_ADDER];
-    addr += cpu->memory[IRQ_VECTOR_HIGH_ADDER] << 8;
+    addr += cpu->memory[0xfffe];
+    addr += cpu->memory[0xffff] << 8;
 
     // push return addres to stack
     CPU_push(cpu, 'C');
@@ -792,8 +782,8 @@ void CPU_nmi(CPU *cpu)
 
     // pull nmi handler addres from the nmi vector 
     word addr = 0;
-    addr += cpu->memory[NMI_VECTOR_LOW_ADDER];
-    addr += cpu->memory[NMI_VECTOR_HIGH_ADDER] << 8;
+    addr += cpu->memory[0xfffa];
+    addr += cpu->memory[0xfffb] << 8;
 
     // push return addres to stack
     CPU_push(cpu, 'C');

@@ -1,9 +1,64 @@
 #ifndef CPU_H_
 #define CPU_H_
 
-#include "utilities.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdint.h>
+#include <assert.h>
+
+#include "ansi_codes.h"
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#define UNUSED ((void)cpu)
+
+#define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
+#define LOW_BYTE(WORD) ((byte)(WORD))
+#define IS_CROSS_PAGES(old, _new) ((old & 0xFF00) != (_new & 0xFF00))
+
+#define IS_ZERO(reg) (reg == 0)
+#define IS_NEGATIVE(reg) ((reg & 0x80) != 0)
+#define IS_OVERFLOW(reg, operand) (((reg ^ (reg + operand)) & ((operand ^ (reg + operand)) & 0x80)) != 0)
+#define IS_CARRY(reg, operand) (HIGH_BYTE(reg + operand) > 0)
+
+#define MEMORY_SIZE (256*256)
+#define ZERO_PAGE_START 0x0000
+#define ZERO_PAGE_END 0x00ff
+#define STACK_START 0x0100
+#define STACK_END 0x01ff
+#define PAGE_SIZE 0x0100
 
 #define RESET_SP_REGISTER 0xfd
+
+typedef uint8_t byte;
+typedef uint16_t word;
+
+typedef enum {
+    Add_non = 0,
+    Add_Brk,
+    Add_Relative,
+    Add_Implied,
+    Add_Immediate,
+    Add_Accumulator,
+
+    Add_Absolute,
+    Add_AbsoluteX,
+    Add_AbsoluteY,
+
+    Add_ZeroPage,
+    Add_ZeroPageX,
+    Add_ZeroPageY,
+
+    Add_Indirect,
+    Add_IndirectX,
+    Add_IndirectY,
+
+    
+    count_Add,
+} Addressing_mode;
+
+extern const char* Addressing_mode_to_cstr[count_Add + 1];
 
 typedef enum {
     // Load/Store Operations
@@ -199,6 +254,24 @@ typedef enum {
 
 } Opcode;
 
+typedef struct CPU_t {
+
+    byte memory[MEMORY_SIZE];
+
+    word PC;
+    byte SP;
+    byte P;
+
+    byte A;
+    byte X;
+    byte Y;
+
+} CPU;
+
+typedef void (*Instruction)(CPU*);
+
+extern Instruction Opcode_to_Instruction_table[0xff + 1];
+
 // dump's for debug
 void CPU_dump_cpu(CPU* cpu, FILE* file);
 void CPU_dump_memory(CPU* cpu, FILE* file);
@@ -224,9 +297,6 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode);
 void CPU_reset(CPU* cpu);
 void CPU_nmi(CPU* cpu);
 void CPU_irq(CPU* cpu);
-
-// memory management
-void CPU_load_program_from_carr(CPU* cpu, word entry_point, byte* program, size_t program_size);
 
 #endif // CPU_H_
 
