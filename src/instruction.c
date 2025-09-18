@@ -673,10 +673,13 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     [Opcode_SED]             = instruction_SED,
     [Opcode_SEI]             = instruction_SEI,
 
-    // // System
+    // System
     [Opcode_BRK]             = instruction_BRK,
     [Opcode_NOP]             = instruction_NOP,
     [Opcode_RTI]             = instruction_RTI,
+
+    // for debug
+    [Opcode_HLT]             = instruction_HLT,
 
 };
 
@@ -1560,4 +1563,8 @@ void instruction_RTI(CPU* cpu)
     CPU_pop(cpu, 'P');
     CPU_pop(cpu, 'C');
     CPU_tick(cpu, 6);
+}
+
+void instruction_HLT(CPU* cpu){
+    cpu->halt = true;
 }

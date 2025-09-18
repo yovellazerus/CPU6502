@@ -194,4 +194,7 @@ void instruction_BRK(CPU* cpu);
 void instruction_NOP(CPU* cpu);
 void instruction_RTI(CPU* cpu);
 
+// for debug
+void instruction_HLT(CPU* cpu);
+
 #endif // INSTRACTION_H_

@@ -659,7 +659,7 @@ void CPU_reset(CPU *cpu)
 }
 
 void CPU_run(CPU* cpu, bool is_debug){
-    while(true){
+    while(!cpu->halt){
 
         if (is_debug) is_debug = CPU_debug(cpu);
 
@@ -670,7 +670,6 @@ void CPU_run(CPU* cpu, bool is_debug){
         Instruction instruction = Opcode_to_Instruction_table[opcode];
         if(!instruction){
             CPU_invalid_opcode(cpu, opcode);
-            return;
         }
         
         // execute:
