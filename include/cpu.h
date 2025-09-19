@@ -252,7 +252,7 @@ typedef enum {
     Opcode_NOP             = 0xEA,
     Opcode_RTI             = 0x40,
 
-    // for debug
+    // for debug no instraction for it
     Opcode_HLT             = 0xFF,
 
 } Opcode;
@@ -268,9 +268,6 @@ typedef struct CPU_t {
     byte A;
     byte X;
     byte Y;
-
-    // for debug
-    bool halt;
 
 } CPU;
 
@@ -305,4 +302,3 @@ void CPU_nmi(CPU* cpu);
 void CPU_irq(CPU* cpu);
 
 #endif // CPU_H_
-

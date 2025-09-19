@@ -659,12 +659,29 @@ void CPU_reset(CPU *cpu)
 }
 
 void CPU_run(CPU* cpu, bool is_debug){
-    while(!cpu->halt){
 
+#ifdef _WIN64
+    #include <conio.h>
+    char C_terminal_input;
+#endif
+
+    while(true){
+
+        // for debug
         if (is_debug) is_debug = CPU_debug(cpu);
+
+#ifdef _WIN64
+        // Consider this part as a hardware implementation of the keyboard.
+        if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
+            C_terminal_input = _getch();                        // read character without echo
+            if(C_terminal_input == '\x1B') return;              // ESC for debug
+            else cpu->memory[0xc000] = C_terminal_input;        // put the char on the MMIO register
+        }
+#endif
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
+        if(opcode == Opcode_HLT) return; // for debug
 
         // decode:
         Instruction instruction = Opcode_to_Instruction_table[opcode];

@@ -6,8 +6,8 @@ TMP0 = $02
 
 ERR  = $03
 
-keyboard_data   = $c000
-screen_data     = $c010
+KED   = $c000
+DIS   = $c010
 
 .segment "CODE"
 RESET:
@@ -18,7 +18,7 @@ RESET:
     .byte $42 
     sta ARG1
     jsr swap
-    .byte $ff   ; halt for debug
+    jsr RESET   ; loop to halt the cpu
 
 swap:
     pha         ; prologue
@@ -27,7 +27,7 @@ swap:
     sta TMP0    ; byte tmp = a
     lda ARG1
     brk
-    .byte $69   ; test for brk puts the byte in ERR in zero-page
+    .byte $33   ; test for brk puts the byte in ERR in zero-page
     sta ARG0    ; a = b
     lda TMP0
     sta ARG1    ; b = tmp
@@ -55,7 +55,7 @@ irq_handler:
     lda $0100,x
     tax
     dex
-    lda $ff00,x ; hard coded PCH for brk for now at ROM start
+    lda RESET,x ; PCH is coded at RESET for now
     sta ERR
 
     pla         ; epilogue
