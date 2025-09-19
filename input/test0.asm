@@ -6,8 +6,12 @@ TMP0 = $02
 
 ERR  = $03
 
-KED   = $c000
-DIS   = $c010
+COUNTER = $04
+
+keyboard_data   = $d010
+keyboard_ctrl   = $d011
+screen_data     = $d012
+screen_ctrl     = $d013
 
 .segment "CODE"
 RESET:
@@ -18,7 +22,20 @@ RESET:
     .byte $42 
     sta ARG1
     jsr swap
-    jsr RESET   ; loop to halt the cpu
+
+halt:
+    jmp halt
+    
+; main:
+;     lda keyboard_ctrl
+;     cmp #0
+;     beq main
+;     lda keyboard_data
+;     jsr bios_putchar
+;     lda #0
+;     lda keyboard_ctrl
+;     jmp main
+
 
 swap:
     pha         ; prologue
@@ -36,9 +53,23 @@ swap:
     rts
 
 nmi_handler:
+    pha         ; prologue
+    txa
+    pha
+    tya
+    pha
+
+    ldx COUNTER
+    inx
+    stx COUNTER
+    
+    pla         ; epilogue
+    tay
+    pla
+    tax
+    pla
     rti
 
-; for now only brk handler 
 irq_handler:
     pha         ; prologue
     txa
@@ -46,6 +77,18 @@ irq_handler:
     tya
     pha
 
+    jmp brk_handler
+    ; no real irq, for now only brk
+
+irq_end:
+    pla         ; epilogue
+    tay
+    pla
+    tax
+    pla
+    rti
+
+brk_handler:
     tsx
     inx
     inx
@@ -57,13 +100,26 @@ irq_handler:
     dex
     lda RESET,x ; PCH is coded at RESET for now
     sta ERR
+    jmp irq_end
 
-    pla         ; epilogue
-    tay
+; void putchar(char)
+bios_putchar:
+    pha
+    sta screen_data     
+    lda #1
+    sta screen_ctrl
     pla
-    tax
-    pla
-    rti
+    rts
+
+; char getchar()
+bios_getchar:
+    lda keyboard_ctrl   
+    cmp #1
+    bne bios_getchar
+    lda #0
+    sta keyboard_ctrl   
+    lda keyboard_data   
+    rts
 
 .segment "VECTORS"
 .word nmi_handler

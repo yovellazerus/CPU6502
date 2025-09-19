@@ -580,73 +580,73 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     [Opcode_ADC_IndirectX]   = instruction_ADC_IndirectX,
     [Opcode_ADC_IndirectY]   = instruction_ADC_IndirectY,
 
-    // [Opcode_SBC_Immediate]   = instruction_SBC_Immediate,
-    // [Opcode_SBC_ZeroPage]    = instruction_SBC_ZeroPage,
-    // [Opcode_SBC_ZeroPageX]   = instruction_SBC_ZeroPageX,
-    // [Opcode_SBC_Absolute]    = instruction_SBC_Absolute,
-    // [Opcode_SBC_AbsoluteX]   = instruction_SBC_AbsoluteX,
-    // [Opcode_SBC_AbsoluteY]   = instruction_SBC_AbsoluteY,
-    // [Opcode_SBC_IndirectX]   = instruction_SBC_IndirectX,
-    // [Opcode_SBC_IndirectY]   = instruction_SBC_IndirectY,
+    [Opcode_SBC_Immediate]   = instruction_SBC_Immediate,
+    [Opcode_SBC_ZeroPage]    = instruction_SBC_ZeroPage,
+    [Opcode_SBC_ZeroPageX]   = instruction_SBC_ZeroPageX,
+    [Opcode_SBC_Absolute]    = instruction_SBC_Absolute,
+    [Opcode_SBC_AbsoluteX]   = instruction_SBC_AbsoluteX,
+    [Opcode_SBC_AbsoluteY]   = instruction_SBC_AbsoluteY,
+    [Opcode_SBC_IndirectX]   = instruction_SBC_IndirectX,
+    [Opcode_SBC_IndirectY]   = instruction_SBC_IndirectY,
 
-    // [Opcode_CMP_Immediate]   = instruction_CMP_Immediate,
-    // [Opcode_CMP_ZeroPage]    = instruction_CMP_ZeroPage,
-    // [Opcode_CMP_ZeroPageX]   = instruction_CMP_ZeroPageX,
-    // [Opcode_CMP_Absolute]    = instruction_CMP_Absolute,
-    // [Opcode_CMP_AbsoluteX]   = instruction_CMP_AbsoluteX,
-    // [Opcode_CMP_AbsoluteY]   = instruction_CMP_AbsoluteY,
-    // [Opcode_CMP_IndirectX]   = instruction_CMP_IndirectX,
-    // [Opcode_CMP_IndirectY]   = instruction_CMP_IndirectY,
+    [Opcode_CMP_Immediate]   = instruction_CMP_Immediate,
+    [Opcode_CMP_ZeroPage]    = instruction_CMP_ZeroPage,
+    [Opcode_CMP_ZeroPageX]   = instruction_CMP_ZeroPageX,
+    [Opcode_CMP_Absolute]    = instruction_CMP_Absolute,
+    [Opcode_CMP_AbsoluteX]   = instruction_CMP_AbsoluteX,
+    [Opcode_CMP_AbsoluteY]   = instruction_CMP_AbsoluteY,
+    [Opcode_CMP_IndirectX]   = instruction_CMP_IndirectX,
+    [Opcode_CMP_IndirectY]   = instruction_CMP_IndirectY,
 
-    // [Opcode_CPX_Immediate]   = instruction_CPX_Immediate,
-    // [Opcode_CPX_ZeroPage]    = instruction_CPX_ZeroPage,
-    // [Opcode_CPX_Absolute]    = instruction_CPX_Absolute,
+    [Opcode_CPX_Immediate]   = instruction_CPX_Immediate,
+    [Opcode_CPX_ZeroPage]    = instruction_CPX_ZeroPage,
+    [Opcode_CPX_Absolute]    = instruction_CPX_Absolute,
 
-    // [Opcode_CPY_Immediate]   = instruction_CPY_Immediate,
-    // [Opcode_CPY_ZeroPage]    = instruction_CPY_ZeroPage,
-    // [Opcode_CPY_Absolute]    = instruction_CPY_Absolute,
+    [Opcode_CPY_Immediate]   = instruction_CPY_Immediate,
+    [Opcode_CPY_ZeroPage]    = instruction_CPY_ZeroPage,
+    [Opcode_CPY_Absolute]    = instruction_CPY_Absolute,
 
-    // // Increments / Decrements
-    // [Opcode_INC_ZeroPage]    = instruction_INC_ZeroPage,
-    // [Opcode_INC_ZeroPageX]   = instruction_INC_ZeroPageX,
-    // [Opcode_INC_Absolute]    = instruction_INC_Absolute,
-    // [Opcode_INC_AbsoluteX]   = instruction_INC_AbsoluteX,
+    // Increments / Decrements
+    [Opcode_INC_ZeroPage]    = instruction_INC_ZeroPage,
+    [Opcode_INC_ZeroPageX]   = instruction_INC_ZeroPageX,
+    [Opcode_INC_Absolute]    = instruction_INC_Absolute,
+    [Opcode_INC_AbsoluteX]   = instruction_INC_AbsoluteX,
 
     [Opcode_INX]             = instruction_INX,
     [Opcode_INY]             = instruction_INY,
 
-    // [Opcode_DEC_ZeroPage]    = instruction_DEC_ZeroPage,
-    // [Opcode_DEC_ZeroPageX]   = instruction_DEC_ZeroPageX,
-    // [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
-    // [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
+    [Opcode_DEC_ZeroPage]    = instruction_DEC_ZeroPage,
+    [Opcode_DEC_ZeroPageX]   = instruction_DEC_ZeroPageX,
+    [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
+    [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
 
     [Opcode_DEX]             = instruction_DEX,
-    // [Opcode_DEY]             = instruction_DEY,
+    [Opcode_DEY]             = instruction_DEY,
 
-    // // Shifts / Rotates
-    // [Opcode_ASL_Accumulator] = instruction_ASL_Accumulator,
-    // [Opcode_ASL_ZeroPage]    = instruction_ASL_ZeroPage,
-    // [Opcode_ASL_ZeroPageX]   = instruction_ASL_ZeroPageX,
-    // [Opcode_ASL_Absolute]    = instruction_ASL_Absolute,
-    // [Opcode_ASL_AbsoluteX]   = instruction_ASL_AbsoluteX,
+    // Shifts / Rotates
+    [Opcode_ASL_Accumulator] = instruction_ASL_Accumulator,
+    [Opcode_ASL_ZeroPage]    = instruction_ASL_ZeroPage,
+    [Opcode_ASL_ZeroPageX]   = instruction_ASL_ZeroPageX,
+    [Opcode_ASL_Absolute]    = instruction_ASL_Absolute,
+    [Opcode_ASL_AbsoluteX]   = instruction_ASL_AbsoluteX,
 
-    // [Opcode_LSR_Accumulator] = instruction_LSR_Accumulator,
-    // [Opcode_LSR_ZeroPage]    = instruction_LSR_ZeroPage,
-    // [Opcode_LSR_ZeroPageX]   = instruction_LSR_ZeroPageX,
-    // [Opcode_LSR_Absolute]    = instruction_LSR_Absolute,
-    // [Opcode_LSR_AbsoluteX]   = instruction_LSR_AbsoluteX,
+    [Opcode_LSR_Accumulator] = instruction_LSR_Accumulator,
+    [Opcode_LSR_ZeroPage]    = instruction_LSR_ZeroPage,
+    [Opcode_LSR_ZeroPageX]   = instruction_LSR_ZeroPageX,
+    [Opcode_LSR_Absolute]    = instruction_LSR_Absolute,
+    [Opcode_LSR_AbsoluteX]   = instruction_LSR_AbsoluteX,
 
-    // [Opcode_ROL_Accumulator] = instruction_ROL_Accumulator,
-    // [Opcode_ROL_ZeroPage]    = instruction_ROL_ZeroPage,
-    // [Opcode_ROL_ZeroPageX]   = instruction_ROL_ZeroPageX,
-    // [Opcode_ROL_Absolute]    = instruction_ROL_Absolute,
-    // [Opcode_ROL_AbsoluteX]   = instruction_ROL_AbsoluteX,
+    [Opcode_ROL_Accumulator] = instruction_ROL_Accumulator,
+    [Opcode_ROL_ZeroPage]    = instruction_ROL_ZeroPage,
+    [Opcode_ROL_ZeroPageX]   = instruction_ROL_ZeroPageX,
+    [Opcode_ROL_Absolute]    = instruction_ROL_Absolute,
+    [Opcode_ROL_AbsoluteX]   = instruction_ROL_AbsoluteX,
 
-    // [Opcode_ROR_Accumulator] = instruction_ROR_Accumulator,
-    // [Opcode_ROR_ZeroPage]    = instruction_ROR_ZeroPage,
-    // [Opcode_ROR_ZeroPageX]   = instruction_ROR_ZeroPageX,
-    // [Opcode_ROR_Absolute]    = instruction_ROR_Absolute,
-    // [Opcode_ROR_AbsoluteX]   = instruction_ROR_AbsoluteX,
+    [Opcode_ROR_Accumulator] = instruction_ROR_Accumulator,
+    [Opcode_ROR_ZeroPage]    = instruction_ROR_ZeroPage,
+    [Opcode_ROR_ZeroPageX]   = instruction_ROR_ZeroPageX,
+    [Opcode_ROR_Absolute]    = instruction_ROR_Absolute,
+    [Opcode_ROR_AbsoluteX]   = instruction_ROR_AbsoluteX,
 
     // Jumps & Calls
     [Opcode_JMP_Absolute]    = instruction_JMP_Absolute,
@@ -654,15 +654,15 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     [Opcode_JSR]             = instruction_JSR,
     [Opcode_RTS]             = instruction_RTS,
 
-    // // Branches
-    // [Opcode_BCC]             = instruction_BCC,
-    // [Opcode_BCS]             = instruction_BCS,
-    // [Opcode_BEQ]             = instruction_BEQ,
-    // [Opcode_BMI]             = instruction_BMI,
-    // [Opcode_BNE]             = instruction_BNE,
-    // [Opcode_BPL]             = instruction_BPL,
-    // [Opcode_BVC]             = instruction_BVC,
-    // [Opcode_BVS]             = instruction_BVS,
+    // Branches
+    [Opcode_BCC]             = instruction_BCC,
+    [Opcode_BCS]             = instruction_BCS,
+    [Opcode_BEQ]             = instruction_BEQ,
+    [Opcode_BMI]             = instruction_BMI,
+    [Opcode_BNE]             = instruction_BNE,
+    [Opcode_BPL]             = instruction_BPL,
+    [Opcode_BVC]             = instruction_BVC,
+    [Opcode_BVS]             = instruction_BVS,
 
     // Flags
     [Opcode_CLC]             = instruction_CLC,
@@ -696,7 +696,7 @@ void instruction_LDA_ZeroPageX(CPU* cpu)
 }
 void instruction_LDA_Absolute(CPU* cpu) 
 {
-    helper_load(cpu, 'A', Add_ZeroPageY);
+    helper_load(cpu, 'A', Add_Absolute);
 
 }
 void instruction_LDA_AbsoluteX(CPU* cpu) 
@@ -1155,9 +1155,13 @@ void instruction_SBC_IndirectY(CPU* cpu)
 }
 
 void instruction_CMP_Immediate(CPU* cpu){
-    UNUSED;
-
+    byte imm = cpu->memory[cpu->PC++];
+    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'c', cpu->A, imm);
+    CPU_tick(cpu, 2);
 }
+
 void instruction_CMP_ZeroPage(CPU* cpu){
     UNUSED;
 
@@ -1453,9 +1457,18 @@ void instruction_BCS(CPU* cpu)
 }
 void instruction_BEQ(CPU* cpu)
 {
-    UNUSED;
-
+    byte disp = cpu->memory[cpu->PC++];
+    word old_pc = cpu->PC;
+    if(CPU_getFlag(cpu, 'z')){
+        cpu->PC += (int8_t) disp;
+        CPU_tick(cpu, 1);
+        if(IS_CROSS_PAGES(old_pc, cpu->PC)){
+            CPU_tick(cpu, 1);
+        }
+    }
+    CPU_tick(cpu, 2);
 }
+
 void instruction_BMI(CPU* cpu)
 {
     UNUSED;

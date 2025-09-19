@@ -654,16 +654,15 @@ void CPU_reset(CPU *cpu)
 
     word bus;
     bus = cpu->memory[0xfffc];
-    bus += cpu->memory[0xfffd] * 0x0100;
+    bus += cpu->memory[0xfffd] << 8;
     cpu->PC = bus;
 }
 
-void CPU_run(CPU* cpu, bool is_debug){
-
 #ifdef _WIN64
-    #include <conio.h>
-    char C_terminal_input;
+#include <conio.h>
 #endif
+
+void CPU_run(CPU* cpu, bool is_debug){
 
     while(true){
 
@@ -671,12 +670,29 @@ void CPU_run(CPU* cpu, bool is_debug){
         if (is_debug) is_debug = CPU_debug(cpu);
 
 #ifdef _WIN64
-        // Consider this part as a hardware implementation of the keyboard.
+        // note: not like the apple-1 I/O system i use 2 ctrl regs and 2 data regs for I/O
+        // Consider this part as a hardware implementation of the keyboard and the screen.
+        // keyboard:
+        char C_terminal_input;
         if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
             C_terminal_input = _getch();                        // read character without echo
-            if(C_terminal_input == '\x1B') return;              // ESC for debug
-            else cpu->memory[0xc000] = C_terminal_input;        // put the char on the MMIO register
+            if(C_terminal_input == 0x1B) return;                // ESC for debug
+            else if (C_terminal_input == 0x09) CPU_irq(cpu);    // Ctrl-I
+            else if (C_terminal_input == 0x0E) CPU_nmi(cpu);    // Ctrl-N
+            else if (C_terminal_input == 0x12) CPU_reset(cpu);  // Ctrl-R
+            else{
+                cpu->memory[0xd010] = C_terminal_input;         // put the char on the MMIO register
+                cpu->memory[0xd011] = 1;                        // keyboard_ctrl is set to 1
+            } 
         }
+        // screen:
+        char C_terminal_output;
+        if(cpu->memory[0xd013] == 1){                   // if screen_ctrl is set to 1
+            C_terminal_output = cpu->memory[0xd012];    // puts on the screen the byte from screen_data
+            cpu->memory[0xd013] = 0;                    // set screen_ctrl to 0
+            putchar(C_terminal_output);                 // print the char
+        } 
+
 #endif
 
         // fetch:
