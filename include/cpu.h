@@ -11,7 +11,7 @@
 #include "ansi_codes.h"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define UNUSED ((void)cpu)
+#define UNUSED (void)cpu; assert(0 && "not implemented");
 
 #define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
 #define LOW_BYTE(WORD) ((byte)(WORD))

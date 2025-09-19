@@ -571,14 +571,14 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     [Opcode_BIT_Absolute]    = instruction_BIT_Absolute,
 
     // Arithmetic
-    // [Opcode_ADC_Immediate]   = instruction_ADC_Immediate,
-    // [Opcode_ADC_ZeroPage]    = instruction_ADC_ZeroPage,
-    // [Opcode_ADC_ZeroPageX]   = instruction_ADC_ZeroPageX,
-    // [Opcode_ADC_Absolute]    = instruction_ADC_Absolute,
-    // [Opcode_ADC_AbsoluteX]   = instruction_ADC_AbsoluteX,
-    // [Opcode_ADC_AbsoluteY]   = instruction_ADC_AbsoluteY,
-    // [Opcode_ADC_IndirectX]   = instruction_ADC_IndirectX,
-    // [Opcode_ADC_IndirectY]   = instruction_ADC_IndirectY,
+    [Opcode_ADC_Immediate]   = instruction_ADC_Immediate,
+    [Opcode_ADC_ZeroPage]    = instruction_ADC_ZeroPage,
+    [Opcode_ADC_ZeroPageX]   = instruction_ADC_ZeroPageX,
+    [Opcode_ADC_Absolute]    = instruction_ADC_Absolute,
+    [Opcode_ADC_AbsoluteX]   = instruction_ADC_AbsoluteX,
+    [Opcode_ADC_AbsoluteY]   = instruction_ADC_AbsoluteY,
+    [Opcode_ADC_IndirectX]   = instruction_ADC_IndirectX,
+    [Opcode_ADC_IndirectY]   = instruction_ADC_IndirectY,
 
     // [Opcode_SBC_Immediate]   = instruction_SBC_Immediate,
     // [Opcode_SBC_ZeroPage]    = instruction_SBC_ZeroPage,
@@ -612,15 +612,15 @@ Instruction Opcode_to_Instruction_table[0xff + 1] = {
     // [Opcode_INC_Absolute]    = instruction_INC_Absolute,
     // [Opcode_INC_AbsoluteX]   = instruction_INC_AbsoluteX,
 
-    // [Opcode_INX]             = instruction_INX,
-    // [Opcode_INY]             = instruction_INY,
+    [Opcode_INX]             = instruction_INX,
+    [Opcode_INY]             = instruction_INY,
 
     // [Opcode_DEC_ZeroPage]    = instruction_DEC_ZeroPage,
     // [Opcode_DEC_ZeroPageX]   = instruction_DEC_ZeroPageX,
     // [Opcode_DEC_Absolute]    = instruction_DEC_Absolute,
     // [Opcode_DEC_AbsoluteX]   = instruction_DEC_AbsoluteX,
 
-    // [Opcode_DEX]             = instruction_DEX,
+    [Opcode_DEX]             = instruction_DEX,
     // [Opcode_DEY]             = instruction_DEY,
 
     // // Shifts / Rotates
@@ -1244,7 +1244,10 @@ void instruction_INC_AbsoluteX(CPU* cpu)
 }
 
 void instruction_INX(CPU* cpu){
-    UNUSED;
+    cpu->X++;
+    CPU_updateFlags(cpu, 'X', 'z', 0, 0);
+    CPU_updateFlags(cpu, 'X', 'n', 0, 0);
+    CPU_tick(cpu, 2);
 
 }
 void instruction_INY(CPU* cpu){

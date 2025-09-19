@@ -340,7 +340,7 @@ void CPU_dump_cpu(CPU * cpu, FILE * file)
     fprintf(file, "Y: %d (0x%.2x)\n", cpu->Y, cpu->Y);
     fprintf(file, "PC: 0x%.4x\n", cpu->PC);
     fprintf(file, "SP: 0x%.2x\n", cpu->SP);
-    fprintf(file, "P {\n");
+    fprintf(file, "P (0x%.2x) {\n", cpu->P);
     fprintf(file, "    n: %d\n", CPU_getFlag(cpu, 'n'));
     fprintf(file, "    v: %d\n", CPU_getFlag(cpu, 'v'));
     fprintf(file, "    u: %d\n", CPU_getFlag(cpu, 'u'));

@@ -31,7 +31,6 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    byte memory[MEMORY_SIZE];
     FILE* memory_img = fopen(argv[1], "rb");
     if(!memory_img){
         fclose(stack_file);
@@ -40,11 +39,9 @@ int main(int argc, char* argv[]){
         perror(argv[1]);
         return 1;
     }
-    fread(memory, sizeof(*memory), MEMORY_SIZE, memory_img);
-    fclose(memory_img);
-
     CPU cpu;
-    memcpy(cpu.memory, memory, MEMORY_SIZE);
+    fread(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_img);
+    fclose(memory_img);
 
     CPU_reset(&cpu);
     CPU_run(&cpu, false);
