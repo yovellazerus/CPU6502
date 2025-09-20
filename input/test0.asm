@@ -22,20 +22,20 @@ RESET:
     .byte $42 
     sta ARG1
     jsr swap
-
-halt:
-    jmp halt
     
-; main:
-;     lda keyboard_ctrl
-;     cmp #0
-;     beq main
-;     lda keyboard_data
-;     jsr bios_putchar
-;     lda #0
-;     lda keyboard_ctrl
-;     jmp main
+main:
+    lda keyboard_ctrl
+    tax
+    dex
+    bne main
 
+    lda keyboard_data
+    sta screen_data
+    lda #1
+    sta screen_ctrl
+    lda #0
+    sta keyboard_ctrl
+    jmp main
 
 swap:
     pha         ; prologue
@@ -109,16 +109,6 @@ bios_putchar:
     lda #1
     sta screen_ctrl
     pla
-    rts
-
-; char getchar()
-bios_getchar:
-    lda keyboard_ctrl   
-    cmp #1
-    bne bios_getchar
-    lda #0
-    sta keyboard_ctrl   
-    lda keyboard_data   
     rts
 
 .segment "VECTORS"

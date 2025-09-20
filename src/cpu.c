@@ -681,18 +681,17 @@ void CPU_run(CPU* cpu, bool is_debug){
             else if (C_terminal_input == 0x0E) CPU_nmi(cpu);    // Ctrl-N
             else if (C_terminal_input == 0x12) CPU_reset(cpu);  // Ctrl-R
             else{
-                cpu->memory[0xd010] = C_terminal_input;         // put the char on the MMIO register
-                cpu->memory[0xd011] = 1;                        // keyboard_ctrl is set to 1
+                cpu->memory[KEYBOARD_DATA] = C_terminal_input;         // put the char on the MMIO register
+                cpu->memory[KEYBOARD_CTRL] = 1;                        // keyboard_ctrl is set to 1
             } 
         }
         // screen:
         char C_terminal_output;
-        if(cpu->memory[0xd013] == 1){                   // if screen_ctrl is set to 1
-            C_terminal_output = cpu->memory[0xd012];    // puts on the screen the byte from screen_data
-            cpu->memory[0xd013] = 0;                    // set screen_ctrl to 0
-            putchar(C_terminal_output);                 // print the char
+        if(cpu->memory[SCREEN_CTRL] == 1){                   // if screen_ctrl is set to 1
+            C_terminal_output = cpu->memory[SCREEN_DATA];    // puts on the screen the byte from screen_data
+            putchar(C_terminal_output);                      // print the char
+            cpu->memory[SCREEN_CTRL] = 0;                    // set screen_ctrl to 0
         } 
-
 #endif
 
         // fetch:
