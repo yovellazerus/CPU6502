@@ -1154,11 +1154,18 @@ void instruction_SBC_IndirectY(CPU* cpu)
 
 }
 
+// NOTE WORKING!!! 
 void instruction_CMP_Immediate(CPU* cpu){
     byte imm = cpu->memory[cpu->PC++];
-    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
-    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'A', 'c', cpu->A, imm);
+    if(cpu->A == imm){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    // CPU_updateFlags(cpu, 'A', 'z', 0, 0);
+    // CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    // CPU_updateFlags(cpu, 'A', 'c', cpu->A, imm);
     CPU_tick(cpu, 2);
 }
 
@@ -1252,7 +1259,10 @@ void instruction_INX(CPU* cpu){
 
 }
 void instruction_INY(CPU* cpu){
-    UNUSED;
+    cpu->Y++;
+    CPU_updateFlags(cpu, 'Y', 'z', 0, 0);
+    CPU_updateFlags(cpu, 'Y', 'n', 0, 0);
+    CPU_tick(cpu, 2);
 
 }
 
