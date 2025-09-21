@@ -53,6 +53,8 @@ LINE_INDEX   = ZP + $42
 _A           = ZP + $43   ;; tmp's to save the cpu registers 
 _X           = ZP + $44
 _Y           = ZP + $45
+MSRC          = ZP + $46 ;; for _mov(to not use TMP)
+MDST          = ZP + $48   
 
 ;; I/O:
 KED_DATA     = $0210
@@ -98,20 +100,27 @@ print_done:
     EPILOGUE
     rts
 
-;; void _mov(src: PTR0, dst: PTR1, size: A) only i ZP for now!
+;; void _mov(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
 _mov:
-    sta _A       
+    sta _A            
     PROLOGUE
-    ldy #0       
+    lda PTR0        
+    sta MSRC
+    lda PTR0+1      
+    sta MSRC+1
+    lda PTR1        
+    sta MDST
+    lda PTR1+1      
+    sta MDST+1
+    ldy #0             
 @loop:
-    lda (PTR0),y  
-    sta (PTR1),y  
-    iny           
-    cpy _A        
-    bne @loop    
+    lda (MSRC),y    
+    sta (MDST),y    
+    iny
+    cpy _A
+    bne @loop
     EPILOGUE
     rts
-
 @done:
     EPILOGUE
     rts
@@ -160,52 +169,21 @@ RESET:
     cld
     cli
 
-    lda #$11
-    sta ARG0
-    lda #$22
-    sta ARG0+1
-    lda #$33
-    sta ARG0+2
-    lda #$44
-    sta ARG0+3
-
-    ldx #ARG0
+    ldx #<welcome_string    ;; mov test (not in ZP and longer then size == 4)
     stx PTR0
-    lda #0
+    lda #>welcome_string
     sta PTR0+1
 
-    ldy #TMP1
+    ldy #<DISK
     sty PTR1
-    lda #0
+    lda #>DISK
     sta PTR1+1
 
-    lda #4
+    lda #16
     jsr _mov
 
-    lda #$44
-    sta RET1
-    lda #$44
-    sta RET1+1
-    lda #$44
-    sta RET1+2
-    lda #$44
-    sta RET1+3
-
-    ldx #RET1
-    stx PTR0
-    lda #0
-    sta PTR0+1
-
-    ldy #FPA1
-    sty PTR1
-    lda #0
-    sta PTR1+1
-
-    lda #4
-    jsr _mov
-
-    brk 
-    .byte $42      ;; for brk test
+    brk             ;; for brk test
+    .byte $42      
 
 
     ldx #<welcome_string
