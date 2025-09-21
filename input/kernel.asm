@@ -21,34 +21,38 @@
 ;;; FIX-RAM:
 
 ;; zero page:
-ARG0         = $00
-ARG1         = $04
-ARG2         = $08
-ARG3         = $0C
+ZP           = $00
 
-TMP0         = $10
-TMP1         = $14
-TMP2         = $18
-TMP3         = $1C
+ARG0         = ZP + $00
+ARG1         = ZP + $04
+ARG2         = ZP + $08
+ARG3         = ZP + $0C
 
-RET0         = $20
-RET1         = $24
-RET2         = $28
-RET3         = $2C
+TMP0         = ZP + $10
+TMP1         = ZP + $14
+TMP2         = ZP + $18
+TMP3         = ZP + $1C
 
-PTR0         = $30
-PTR1         = $32
+RET0         = ZP + $20
+RET1         = ZP + $24
+RET2         = ZP + $28
+RET3         = ZP + $2C
 
-FPA0         = $34
-FPA1         = $38
-FPA2         = $3C
+PTR0         = ZP + $30
+PTR1         = ZP + $32
 
-ERR          = $40
-NMIC         = $41
-LINE_INDEX   = $42
-_A           = $43   ;; tmp's to save the cpu registers 
-_X           = $44
-_Y           = $45
+FPA0         = ZP + $34
+FPA1         = ZP + $38
+
+SSP          = ZP + $3C
+SBP          = ZP + $3E
+
+ERR          = ZP + $40
+NMIC         = ZP + $41
+LINE_INDEX   = ZP + $42
+_A           = ZP + $43   ;; tmp's to save the cpu registers 
+_X           = ZP + $44
+_Y           = ZP + $45
 
 ;; I/O:
 KED_DATA     = $0210
@@ -56,8 +60,19 @@ KED_CTRL     = $0211
 DIS_DATA     = $0212
 DIS_CTRL     = $0213
 
-;; monitor vars:
-LINE         = $0300
+;; disk I/O buffer
+DISK         = $0300
+
+;; kernel working RAM:
+LINE         = $0400
+ROOT         = $0500
+PCB          = $0600
+EXTRA        = $0700
+
+;; software stack:
+KERNEL_RAM  = $0800
+SS_LOW      = $0C00
+SS_HIGH     = $0FFF    
 
 ;;; ROM:
 
@@ -83,7 +98,7 @@ print_done:
     EPILOGUE
     rts
 
-;; void _mov(src: PTR0, dst: PTR1, size: A)
+;; void _mov(src: PTR0, dst: PTR1, size: A) only i ZP for now!
 _mov:
     sta _A       
     PROLOGUE
