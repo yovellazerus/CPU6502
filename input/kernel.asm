@@ -1,0 +1,255 @@
+
+;;: MACROS:
+
+.macro PROLOGUE
+    pha
+    txa
+    pha
+    tya
+    pha
+.endmacro
+
+.macro EPILOGUE
+    pla
+    tay
+    pla
+    tax
+    pla
+.endmacro
+
+
+;;; FIX-RAM:
+
+;; zero page:
+ARG0         = $00
+ARG1         = $04
+ARG2         = $08
+ARG3         = $0C
+
+TMP0         = $10
+TMP1         = $14
+TMP2         = $18
+TMP3         = $1C
+
+RET0         = $20
+RET1         = $24
+RET2         = $28
+RET3         = $2C
+
+PTR0         = $30
+PTR1         = $32
+
+FPA0         = $34
+FPA1         = $38
+FPA2         = $3C
+
+ERR          = $40
+NMIC         = $41
+LINE_INDEX   = $42
+_A           = $43   ;; tmp's to save the cpu registers 
+_X           = $44
+_Y           = $45
+
+;; I/O:
+KED_DATA     = $0210
+KED_CTRL     = $0211
+DIS_DATA     = $0212
+DIS_CTRL     = $0213
+
+;; monitor vars:
+LINE         = $0300
+
+;;; ROM:
+
+.segment "RODATA"
+welcome_string: .byte "6","5","0","2","-","m","o","n","i","t","o","r",":", $0A, 0
+
+.segment "LIB"
+;; void string_print(X: PTR0L, Y: PTR0H)
+string_print:
+    PROLOGUE
+    stx PTR0       
+    sty PTR0+1        
+    ldy #0
+print_loop:
+    lda (PTR0),y
+    beq print_done   
+    jsr bios_putchar
+    iny             
+    bne print_loop  
+    inc PTR0+1        
+    jmp print_loop
+print_done:
+    EPILOGUE
+    rts
+
+;; void _mov(src: PTR0, dst: PTR1, size: A)
+_mov:
+    sta _A       
+    PROLOGUE
+    ldy #0       
+@loop:
+    lda (PTR0),y  
+    sta (PTR1),y  
+    iny           
+    cpy _A        
+    bne @loop    
+    EPILOGUE
+    rts
+
+@done:
+    EPILOGUE
+    rts
+
+.segment "MONITOR"
+monitor:
+    ldy #0              ;; init vars
+    ldx #0
+    stx LINE_INDEX
+    jsr print_prompt
+@get_line:
+    jsr bios_getchar    ;; echo the input
+    jsr bios_putchar
+    cmp #$0D            ;; is 'cr'?
+    beq @new_line       ;; yes
+    stx LINE_INDEX      ;; no, next char
+    sta LINE,x
+    inx
+    jmp @get_line
+@new_line:
+    lda #$0A            ;; adding new line and null to the LINE
+    jsr bios_putchar
+    stx LINE_INDEX
+    sta LINE,x
+    inx
+    lda #0
+    sta LINE,x           
+    ldx #<LINE          ;; echo the LINE to the user(for now...)
+    ldy #>LINE
+    jsr string_print
+    jmp monitor
+
+print_prompt:
+    pha
+    lda #'>'
+    jsr bios_putchar
+    lda #' '
+    jsr bios_putchar
+    pla
+    rts
+
+.segment "BIOS"
+RESET:
+    ldx #$FF
+    txs
+    cld
+    cli
+
+    lda #$11
+    sta ARG0
+    lda #$22
+    sta ARG0+1
+    lda #$33
+    sta ARG0+2
+    lda #$44
+    sta ARG0+3
+
+    ldx #ARG0
+    stx PTR0
+    lda #0
+    sta PTR0+1
+
+    ldy #TMP1
+    sty PTR1
+    lda #0
+    sta PTR1+1
+
+    lda #4
+    jsr _mov
+
+    lda #$44
+    sta RET1
+    lda #$44
+    sta RET1+1
+    lda #$44
+    sta RET1+2
+    lda #$44
+    sta RET1+3
+
+    ldx #RET1
+    stx PTR0
+    lda #0
+    sta PTR0+1
+
+    ldy #FPA1
+    sty PTR1
+    lda #0
+    sta PTR1+1
+
+    lda #4
+    jsr _mov
+
+    brk 
+    .byte $42      ;; for brk test
+
+
+    ldx #<welcome_string
+    ldy #>welcome_string
+    jsr string_print
+    jmp monitor    ;; inf loop
+
+nmi_handler:
+    PROLOGUE
+    ldx NMIC
+    inx
+    stx NMIC
+    EPILOGUE
+    rti
+
+irq_handler:
+    PROLOGUE
+    jmp brk_handler
+    ;; no real irq, for now only brk
+irq_end:
+    EPILOGUE
+    rti
+
+brk_handler:
+    tsx
+    inx
+    inx
+    inx
+    inx
+    inx
+    lda $0100,x
+    tax
+    dex
+    lda RESET,x     ;; PCH is coded at RESET for now
+    sta ERR
+    jmp irq_end
+
+;; void putchar(A : char)
+bios_putchar:
+    pha
+    sta DIS_DATA     
+    lda #1
+    sta DIS_CTRL
+    pla
+    rts
+
+;; A : char getchar()
+bios_getchar:
+    lda KED_CTRL   ;; wait for a user input
+    cmp #1
+    bne bios_getchar 
+    lda #0
+    sta KED_CTRL
+    lda KED_DATA
+    rts
+
+.byte $FF           ;; stop the cpu for debug
+
+.segment "VECTORS"
+.word nmi_handler
+.word RESET
+.word irq_handler

@@ -31,10 +31,10 @@
 
 #define RESET_SP_REGISTER 0xfd
 
-#define KEYBOARD_DATA  0xd010
-#define KEYBOARD_CTRL  0xd011
-#define SCREEN_DATA    0xd012
-#define SCREEN_CTRL    0xd013
+#define KEYBOARD_DATA  0x0210
+#define KEYBOARD_CTRL  0x0211
+#define SCREEN_DATA    0x0212
+#define SCREEN_CTRL    0x0213
 
 typedef uint8_t byte;
 typedef uint16_t word;

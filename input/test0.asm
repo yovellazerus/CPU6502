@@ -11,10 +11,10 @@ PTR1         = $07
 
 
 ;; I/O:
-keyboard_data   = $D010
-keyboard_ctrl   = $D011
-screen_data     = $D012
-screen_ctrl     = $D013
+keyboard_data   = $0210
+keyboard_ctrl   = $0211
+screen_data     = $0212
+screen_ctrl     = $0213
 
 ;; monitor vars:
 cmd        = $0300

@@ -1154,7 +1154,7 @@ void instruction_SBC_IndirectY(CPU* cpu)
 
 }
 
-// NOTE WORKING!!! 
+// C flag not implemented!!! 
 void instruction_CMP_Immediate(CPU* cpu){
     byte imm = cpu->memory[cpu->PC++];
     if(cpu->A == imm){
@@ -1163,12 +1163,17 @@ void instruction_CMP_Immediate(CPU* cpu){
     else{
         CPU_offFlag(cpu, 'z');
     }
-    // CPU_updateFlags(cpu, 'A', 'z', 0, 0);
-    // CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    if(IS_NEGATIVE(cpu->A - imm)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
     // CPU_updateFlags(cpu, 'A', 'c', cpu->A, imm);
     CPU_tick(cpu, 2);
 }
 
+ 
 void instruction_CMP_ZeroPage(CPU* cpu){
     UNUSED;
 
@@ -1203,9 +1208,24 @@ void instruction_CPX_Immediate(CPU* cpu)
     UNUSED;
 
 }
+// C flag not implemented!!!
 void instruction_CPX_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    word zp_addr = cpu->memory[cpu->PC++];
+    byte val = cpu->memory[zp_addr];
+    if(cpu->X == val){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->X - val)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 3);
 
 }
 void instruction_CPX_Absolute(CPU* cpu)
@@ -1218,9 +1238,24 @@ void instruction_CPY_Immediate(CPU* cpu)
     UNUSED;
 
 }
+// C flag not implemented!!!
 void instruction_CPY_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    word zp_addr = cpu->memory[cpu->PC++];
+    byte val = cpu->memory[zp_addr];
+    if(cpu->Y == val){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->Y - val)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 3);
 
 }
 void instruction_CPY_Absolute(CPU* cpu)
@@ -1232,7 +1267,21 @@ void instruction_CPY_Absolute(CPU* cpu)
 // Increments / Decrements
 void instruction_INC_ZeroPage(CPU* cpu)
 {
-    UNUSED;
+    word zp_addr = cpu->memory[cpu->PC++];
+    cpu->memory[zp_addr]++;
+    if(cpu->memory[zp_addr] == 0){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->memory[zp_addr])){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 5);
 
 }
 void instruction_INC_ZeroPageX(CPU* cpu)
