@@ -10,6 +10,10 @@
 
 #include "ansi_codes.h"
 
+#ifdef _WIN64
+#include <conio.h>
+#endif
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 #define UNUSED (void)cpu; assert(0 && "not implemented");
 
@@ -296,14 +300,16 @@ void CPU_pop(CPU* cpu, char reg);
 
 bool CPU_debug(CPU* cpu);
 void CPU_run(CPU* cpu, bool is_debug);
-void CPU_tick(CPU* cpu, size_t amount);
-
-// in 6502 it is gust NOP (for now print err msg for debug) 
+void CPU_tick(CPU* cpu, size_t amount); 
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
 // hardware input
 void CPU_reset(CPU* cpu);
 void CPU_nmi(CPU* cpu);
 void CPU_irq(CPU* cpu);
+
+// I/O
+bool CPU_keyboard(CPU* cpu);
+void CPU_screen(CPU* cpu);
 
 #endif // CPU_H_

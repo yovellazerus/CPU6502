@@ -17,11 +17,17 @@
     pla
 .endmacro
 
+ZP  = $00
+SSPH_START = $0F
+SSPL_START = $FF
+SSPH_END = $08
+SSPL_END = $00
+ERROR_UNDERFLOW = $01
+
 
 ;;; FIX-RAM:
 
 ;; zero page:
-ZP           = $00
 
 ARG0         = ZP + $00
 ARG1         = ZP + $04
@@ -53,14 +59,25 @@ LINE_INDEX   = ZP + $42
 _A           = ZP + $43   ;; tmp's to save the cpu registers 
 _X           = ZP + $44
 _Y           = ZP + $45
-MSRC          = ZP + $46 ;; for _mov(to not use TMP)
-MDST          = ZP + $48   
+MSRC         = ZP + $46   ;; for mov(to not use TMP)
+MDST         = ZP + $48   
 
 ;; I/O:
-KED_DATA     = $0210
-KED_CTRL     = $0211
-DIS_DATA     = $0212
-DIS_CTRL     = $0213
+KEB_DATA     = $0210
+KEB_CTRL     = $0211
+SCR_DATA     = $0212
+SCR_CTRL     = $0213
+
+DISK_CTRL    = $0214
+DISK_STAT    = $0215
+UDI_DATA     = $0216
+UDI_CTRL     = $0217
+RAND         = $0218
+TIMER_DATAL  = $0219
+TIMER_DATAH  = $021A
+TIMER_LACHL  = $021B
+TIMER_LACHH  = $021C
+TIMER_CTRL   = $021D
 
 ;; disk I/O buffer
 DISK         = $0300
@@ -69,17 +86,19 @@ DISK         = $0300
 LINE         = $0400
 ROOT         = $0500
 PCB          = $0600
-EXTRA        = $0700
+KERNEL_RAM   = $0700
 
 ;; software stack:
-KERNEL_RAM  = $0800
-SS_LOW      = $0C00
-SS_HIGH     = $0FFF    
+SS_LOW  = $0800
+SS_HIGH = $0FFF    
 
 ;;; ROM:
 
 .segment "RODATA"
-welcome_string: .byte "6","5","0","2","-","m","o","n","i","t","o","r",":", $0A, 0
+welcome_msg:         .byte $0A, "**** 6502 ROM computer monitor for all of mankind ****", $0A, 0
+prompt_msg:          .byte "6502-monitor> ", 0
+error_prefix_msg:    .byte "ERROR: ", 0
+error_underFlow_msg: .byte "underFlow", 0
 
 .segment "LIB"
 ;; void string_print(X: PTR0L, Y: PTR0H)
@@ -100,8 +119,8 @@ print_done:
     EPILOGUE
     rts
 
-;; void _mov(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
-_mov:
+;; void mov(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
+mov:
     sta _A            
     PROLOGUE
     lda PTR0        
@@ -125,53 +144,88 @@ _mov:
     EPILOGUE
     rts
 
+;; void error(A : err) power-off the cpu(for debug)
+error:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    cmp #ERROR_UNDERFLOW
+    beq @underFlow
+
+@underFlow:
+    ldx #<error_underFlow_msg
+    ldy #>error_underFlow_msg
+    jsr string_print
+    jmp @end
+@end:
+    lda #$0A
+    jsr bios_putchar
+    .byte $FF
+
 .segment "MONITOR"
 monitor:
-    ldy #0              ;; init vars
+    ldx #<welcome_msg
+    ldy #>welcome_msg
+    jsr string_print
+@loop:                  ;; inf loop
+    jsr print_prompt
+    jsr get_line
+
+    lda LINE            ;; if no input
+    cmp #$0A
+    beq @loop   
+
+    ldx #<LINE          ;; echo the LINE to the user(for now...)
+    ldy #>LINE
+    jsr string_print
+    jmp @loop
+
+get_line:
+    PROLOGUE
     ldx #0
     stx LINE_INDEX
-    jsr print_prompt
-@get_line:
-    jsr bios_getchar    ;; echo the input
+@loop:
+    jsr bios_waitchar    ;; echo the input
     jsr bios_putchar
     cmp #$0D            ;; is 'cr'?
-    beq @new_line       ;; yes
+    beq @end           ;; yes
     stx LINE_INDEX      ;; no, next char
     sta LINE,x
     inx
-    jmp @get_line
-@new_line:
+    jmp @loop
+@end:
     lda #$0A            ;; adding new line and null to the LINE
     jsr bios_putchar
     stx LINE_INDEX
     sta LINE,x
     inx
     lda #0
-    sta LINE,x           
-    ldx #<LINE          ;; echo the LINE to the user(for now...)
-    ldy #>LINE
-    jsr string_print
-    jmp monitor
+    sta LINE,x  
+    EPILOGUE
+    rts
 
 print_prompt:
-    pha
-    lda #'>'
-    jsr bios_putchar
-    lda #' '
-    jsr bios_putchar
-    pla
+    PROLOGUE
+    ldx #<prompt_msg
+    ldy #>prompt_msg
+    jsr string_print
+    EPILOGUE
     rts
 
 .segment "BIOS"
 RESET:
-    ldx #$FF
+    ldx #$FF                ;; BIOS init's 
     txs
     cld
     cli
+    lda #SSPH_START
+    sta SSP+1
+    lda #SSPL_START
+    sta SSP
 
-    ldx #<welcome_string    ;; mov test (not in ZP and longer then size == 4)
+    ldx #<welcome_msg    ;; mov test (not in ZP and longer then size == 4)
     stx PTR0
-    lda #>welcome_string
+    lda #>welcome_msg
     sta PTR0+1
 
     ldy #<DISK
@@ -180,16 +234,12 @@ RESET:
     sta PTR1+1
 
     lda #16
-    jsr _mov
+    jsr mov
 
     brk             ;; for brk test
     .byte $42      
 
-
-    ldx #<welcome_string
-    ldy #>welcome_string
-    jsr string_print
-    jmp monitor    ;; inf loop
+    jmp monitor
 
 nmi_handler:
     PROLOGUE
@@ -224,20 +274,20 @@ brk_handler:
 ;; void putchar(A : char)
 bios_putchar:
     pha
-    sta DIS_DATA     
+    sta SCR_DATA     
     lda #1
-    sta DIS_CTRL
+    sta SCR_CTRL
     pla
     rts
 
-;; A : char getchar()
-bios_getchar:
-    lda KED_CTRL   ;; wait for a user input
+;; A : char waitchar()
+bios_waitchar:
+    lda KEB_CTRL   ;; wait for a user input
     cmp #1
-    bne bios_getchar 
+    bne bios_waitchar 
     lda #0
-    sta KED_CTRL
-    lda KED_DATA
+    sta KEB_CTRL
+    lda KEB_DATA
     rts
 
 .byte $FF           ;; stop the cpu for debug

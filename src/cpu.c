@@ -658,10 +658,6 @@ void CPU_reset(CPU *cpu)
     cpu->PC = bus;
 }
 
-#ifdef _WIN64
-#include <conio.h>
-#endif
-
 void CPU_run(CPU* cpu, bool is_debug){
 
     while(true){
@@ -669,30 +665,9 @@ void CPU_run(CPU* cpu, bool is_debug){
         // for debug
         if (is_debug) is_debug = CPU_debug(cpu);
 
-#ifdef _WIN64
-        // note: not like the apple-1 I/O system i use 2 ctrl regs and 2 data regs for I/O
-        // Consider this part as a hardware implementation of the keyboard and the screen.
-        // keyboard:
-        char C_terminal_input;
-        if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
-            C_terminal_input = _getch();                        // read character without echo
-            if(C_terminal_input == 0x1B) return;                // ESC for debug
-            else if (C_terminal_input == 0x09) CPU_irq(cpu);    // Ctrl-I
-            else if (C_terminal_input == 0x0E) CPU_nmi(cpu);    // Ctrl-N
-            else if (C_terminal_input == 0x12) CPU_reset(cpu);  // Ctrl-R
-            else{
-                cpu->memory[KEYBOARD_DATA] = C_terminal_input;         // put the char on the MMIO register
-                cpu->memory[KEYBOARD_CTRL] = 1;                        // keyboard_ctrl is set to 1
-            } 
-        }
-        // screen:
-        char C_terminal_output;
-        if(cpu->memory[SCREEN_CTRL] == 1){                   // if screen_ctrl is set to 1
-            C_terminal_output = cpu->memory[SCREEN_DATA];    // puts on the screen the byte from screen_data
-            putchar(C_terminal_output);                      // print the char
-            cpu->memory[SCREEN_CTRL] = 0;                    // set screen_ctrl to 0
-        } 
-#endif
+        // I/O
+        if(!CPU_keyboard(cpu)) return; // irq/nmi/reset trigger from keyboard ^i, ^n and ^r. ESC for power-off
+        CPU_screen(cpu);
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
@@ -828,4 +803,33 @@ void CPU_nmi(CPU *cpu)
 
     CPU_onFlag(cpu, 'i');
     CPU_tick(cpu, 7);
+}
+
+bool CPU_keyboard(CPU* cpu){
+#ifdef _WIN64
+    char C_terminal_input;
+    if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
+        C_terminal_input = _getch();                        // read character without echo
+        if(C_terminal_input == 0x1B) return false;          // ESC for debug
+        else if (C_terminal_input == 0x09) CPU_irq(cpu);    // Ctrl-I
+        else if (C_terminal_input == 0x0E) CPU_nmi(cpu);    // Ctrl-N
+        else if (C_terminal_input == 0x12) CPU_reset(cpu);  // Ctrl-R
+        else{
+            cpu->memory[KEYBOARD_DATA] = C_terminal_input;         // put the char on the MMIO register
+            cpu->memory[KEYBOARD_CTRL] = 1;                        // keyboard_ctrl is set to 1
+        } 
+    }
+    return true;
+#endif
+}
+
+void CPU_screen(CPU* cpu){
+#ifdef _WIN64
+    char C_terminal_output;
+    if(cpu->memory[SCREEN_CTRL] == 1){                   // if screen_ctrl is set to 1
+        C_terminal_output = cpu->memory[SCREEN_DATA];    // puts on the screen the byte from screen_data
+        putchar(C_terminal_output);                      // print the char
+        cpu->memory[SCREEN_CTRL] = 0;                    // set screen_ctrl to 0
+    }
+#endif
 }
