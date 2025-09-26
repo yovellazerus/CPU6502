@@ -44,7 +44,9 @@ int main(int argc, char* argv[]){
     fclose(memory_img);
 
     CPU_reset(&cpu);
+    printf(COLOR_GREEN);
     CPU_run(&cpu, false);
+    printf(COLOR_RESET);
 
     CPU_dump_cpu(&cpu, cpu_file);
     CPU_dump_memory(&cpu, memory_file);

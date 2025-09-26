@@ -831,5 +831,9 @@ void CPU_screen(CPU* cpu){
         putchar(C_terminal_output);                      // print the char
         cpu->memory[SCREEN_CTRL] = 0;                    // set screen_ctrl to 0
     }
+    if(cpu->memory[SCREEN_CTRL] == 2){                   // clear the screen
+        system("cls");
+        cpu->memory[SCREEN_CTRL] = 0;
+    }
 #endif
 }

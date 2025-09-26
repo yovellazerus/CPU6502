@@ -96,7 +96,7 @@ SS_HIGH = $0FFF
 
 .segment "RODATA"
 welcome_msg:         .byte $0A, "**** 6502 ROM computer monitor for all of mankind ****", $0A, 0
-prompt_msg:          .byte "6502-monitor> ", 0
+prompt_msg:          .byte "> ", 0
 error_prefix_msg:    .byte "ERROR: ", 0
 error_underFlow_msg: .byte "underFlow", 0
 
@@ -222,6 +222,7 @@ RESET:
     sta SSP+1
     lda #SSPL_START
     sta SSP
+    jsr bios_clear
 
     ldx #<welcome_msg    ;; mov test (not in ZP and longer then size == 4)
     stx PTR0
@@ -276,6 +277,14 @@ bios_putchar:
     pha
     sta SCR_DATA     
     lda #1
+    sta SCR_CTRL
+    pla
+    rts
+
+;; void clear(void)
+bios_clear:
+    pha
+    lda #2
     sta SCR_CTRL
     pla
     rts
