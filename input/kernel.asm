@@ -141,12 +141,13 @@ string_cmp:
 
 @loop:
     ldy #0
-    lda (TMP0),Y       
+    lda (TMP0),Y
+    cmp #0
+    beq @null       
     sta TMP2           
     lda (TMP1),Y     
     cmp TMP2       
-    bne @diff          
-    beq @equal         
+    bne @diff                   
     inc TMP0
     bne @skip0
     inc TMP0+1
@@ -156,6 +157,10 @@ string_cmp:
     inc TMP1+1
 @skip1:
     jmp @loop
+@null:
+    lda (TMP1),Y 
+    cmp #0
+    bne @diff
 @equal:
     lda #0
     rts
