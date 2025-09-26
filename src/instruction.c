@@ -1175,7 +1175,22 @@ void instruction_CMP_Immediate(CPU* cpu){
 
  
 void instruction_CMP_ZeroPage(CPU* cpu){
-    UNUSED;
+    word zp_addr = cpu->memory[cpu->PC++];
+    byte val = cpu->memory[zp_addr];
+    if(cpu->A == val){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->A - val)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    // CPU_updateFlags(cpu, 'A', 'c', cpu->A, imm);
+    CPU_tick(cpu, 2);
 
 }
 void instruction_CMP_ZeroPageX(CPU* cpu){
@@ -1352,8 +1367,16 @@ void instruction_DEY(CPU* cpu)
 // Shifts / Rotates
 void instruction_ASL_Accumulator(CPU* cpu)
 {
-    UNUSED;
-
+    if(IS_NEGATIVE(cpu->A)){
+        CPU_onFlag(cpu, 'c');
+    }
+    else{
+       CPU_offFlag(cpu, 'c'); 
+    }
+    cpu->A << 1;
+    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
+    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
+    CPU_tick(cpu, 2);
 }
 void instruction_ASL_ZeroPage(CPU* cpu)
 {

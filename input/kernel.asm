@@ -22,7 +22,8 @@ SSPH_START = $0F
 SSPL_START = $FF
 SSPH_END = $08
 SSPL_END = $00
-ERROR_UNDERFLOW = $01
+ERROR_UNDERFLOW  = $01
+ERROR_UNKNOWN_MP = $02
 
 
 ;;; FIX-RAM:
@@ -55,12 +56,13 @@ SBP          = ZP + $3E
 
 ERR          = ZP + $40
 NMIC         = ZP + $41
-LINE_INDEX   = ZP + $42
+LINE_SIZE   = ZP + $42
 _A           = ZP + $43   ;; tmp's to save the cpu registers 
 _X           = ZP + $44
 _Y           = ZP + $45
 MSRC         = ZP + $46   ;; for mov(to not use TMP)
-MDST         = ZP + $48   
+MDST         = ZP + $48  
+ARGC         = ZP + $50
 
 ;; I/O:
 KEB_DATA     = $0210
@@ -84,9 +86,9 @@ DISK         = $0300
 
 ;; kernel working RAM:
 LINE         = $0400
-ROOT         = $0500
-PCB          = $0600
-KERNEL_RAM   = $0700
+ARGV         = $0500
+ROOT         = $0600
+PCB          = $0700
 
 ;; software stack:
 SS_LOW  = $0800
@@ -95,10 +97,14 @@ SS_HIGH = $0FFF
 ;;; ROM:
 
 .segment "RODATA"
-welcome_msg:         .byte $0A, "**** 6502 ROM computer monitor for all of mankind ****", $0A, 0
-prompt_msg:          .byte "> ", 0
-error_prefix_msg:    .byte "ERROR: ", 0
-error_underFlow_msg: .byte "underFlow", 0
+welcome_msg:          .byte $0A, "**** 6502 kernel monitor for all of mankind ****", $0A, 0
+prompt_msg:           .byte "> ", 0
+
+error_prefix_msg:     .byte "ERROR: ", 0
+error_underFlow_msg:  .byte "underFlow", 0
+error_unknown_MP_msg: .byte "unknown monitor service", 0
+
+MP_dump_str:          .byte "DUMP", 0
 
 .segment "LIB"
 ;; void string_print(X: PTR0L, Y: PTR0H)
@@ -118,6 +124,45 @@ print_loop:
 print_done:
     EPILOGUE
     rts
+
+;; A : bool string_cmp(PTR0, PTR1)
+;; note: 0 if eq 1 if diff no <,> for now
+string_cmp:
+    
+    lda PTR0
+    sta TMP0
+    lda PTR0+1
+    sta TMP0+1
+
+    lda PTR1
+    sta TMP1
+    lda PTR1+1
+    sta TMP1+1
+
+@loop:
+    ldy #0
+    lda (TMP0),Y       
+    sta TMP2           
+    lda (TMP1),Y     
+    cmp TMP2       
+    bne @diff          
+    beq @equal         
+    inc TMP0
+    bne @skip0
+    inc TMP0+1
+@skip0:
+    inc TMP1
+    bne @skip1
+    inc TMP1+1
+@skip1:
+    jmp @loop
+@equal:
+    lda #0
+    rts
+@diff:
+    lda #1
+    rts
+
 
 ;; void mov(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
 mov:
@@ -151,7 +196,23 @@ error:
     jsr string_print
     cmp #ERROR_UNDERFLOW
     beq @underFlow
+    cmp #ERROR_UNKNOWN_MP
+    beq @unknown_MP
 
+@unknown_MP:
+    ldx #<error_unknown_MP_msg
+    ldy #>error_unknown_MP_msg
+    jsr string_print
+    lda #' '
+    jsr bios_putchar
+    lda #'"'
+    jsr bios_putchar
+    ldx #<ARGV
+    ldy #>ARGV
+    jsr string_print
+    lda #'"'
+    jsr bios_putchar
+    jmp @end
 @underFlow:
     ldx #<error_underFlow_msg
     ldy #>error_underFlow_msg
@@ -160,7 +221,7 @@ error:
 @end:
     lda #$0A
     jsr bios_putchar
-    .byte $FF
+    rts
 
 .segment "MONITOR"
 monitor:
@@ -170,38 +231,117 @@ monitor:
 @loop:                  ;; inf loop
     jsr print_prompt
     jsr get_line
+    jsr parse_line
 
-    lda LINE            ;; if no input
-    cmp #$0A
-    beq @loop   
+    lda ARGC            ;; if no input
+    cmp #0
+    beq @loop 
 
-    ldx #<LINE          ;; echo the LINE to the user(for now...)
-    ldy #>LINE
-    jsr string_print
+    jsr execute_line  
+
     jmp @loop
 
 get_line:
     PROLOGUE
     ldx #0
-    stx LINE_INDEX
+    stx LINE_SIZE
 @loop:
     jsr bios_waitchar    ;; echo the input
     jsr bios_putchar
     cmp #$0D            ;; is 'cr'?
     beq @end           ;; yes
-    stx LINE_INDEX      ;; no, next char
+    stx LINE_SIZE      ;; no, next char
     sta LINE,x
     inx
     jmp @loop
 @end:
     lda #$0A            ;; adding new line and null to the LINE
     jsr bios_putchar
-    stx LINE_INDEX
+    stx LINE_SIZE
     sta LINE,x
     inx
     lda #0
     sta LINE,x  
     EPILOGUE
+    rts
+
+parse_line:
+    ldx #0             ; LINE index
+    ldy #0             ; ARGV index
+    lda #0
+    sta ARGC
+@loop:
+    jsr trim
+    jsr parse_token
+    lda LINE,x
+    cmp #$0A           ; newline? (stop)
+    beq @end
+    cmp #$00           ; end of string? (stop)
+    beq @end
+    jmp @loop
+@end:
+    rts
+
+trim:
+    lda LINE,x
+    cmp #' '
+    bne @end
+    inx
+    jmp trim
+@end:
+    rts
+
+parse_token:
+    lda LINE,x
+    cmp #$0A            ; newline?
+    beq @end_of_line
+    cmp #$00            ; end of string?
+    beq @end_of_line
+@copy:
+    lda LINE,x
+    cmp #' '            ; space?
+    beq @done_token
+    cmp #$0A            ; newline?
+    beq @done_token
+    cmp #$00            ; end-of-string?
+    beq @done_token
+
+    sta ARGV,y         
+    iny                 
+    inx                 
+    jmp @copy
+@done_token:
+    lda #0
+    sta ARGV,y          
+    iny                 
+    inc ARGC            
+    inx                 
+    rts
+@end_of_line:
+    lda #0
+    sta ARGV,y          
+    rts
+
+execute_line:
+    ldx #<ARGV
+    ldy #>ARGV
+    stx PTR0
+    sty PTR0+1
+    ldx #<MP_dump_str
+    ldy #>MP_dump_str
+    stx PTR1
+    sty PTR1+1
+    jsr string_cmp
+    cmp #0
+    bne @not_dump
+    jsr MP_dump
+    jmp @end
+@not_dump:
+
+@error:
+    lda #ERROR_UNKNOWN_MP
+    jsr error
+@end:
     rts
 
 print_prompt:
@@ -210,6 +350,29 @@ print_prompt:
     ldy #>prompt_msg
     jsr string_print
     EPILOGUE
+    rts
+
+MP_dump:
+    ldy #0              
+    ldx #0              
+@next_arg:
+    cpx ARGC            
+    beq @done            
+@print_arg:
+    lda ARGV,y          
+    beq @end_of_arg      
+    jsr bios_putchar      
+    iny                 
+    jmp @print_arg
+@end_of_arg:
+    lda #$0A
+    jsr bios_putchar
+    lda #$0D
+    jsr bios_putchar   
+    iny                 
+    inx                 
+    jmp @next_arg
+@done:
     rts
 
 .segment "BIOS"
@@ -240,7 +403,7 @@ RESET:
     brk             ;; for brk test
     .byte $42      
 
-    jmp monitor
+    jmp monitor     ;; not returning, inf loop
 
 nmi_handler:
     PROLOGUE
