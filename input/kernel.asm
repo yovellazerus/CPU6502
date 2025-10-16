@@ -104,7 +104,7 @@ error_prefix_msg:     .byte "ERROR: ", 0
 error_underFlow_msg:  .byte "underFlow", 0
 error_unknown_MP_msg: .byte "unknown monitor service", 0
 
-MP_dump_str:          .byte "DUMP", 0
+MP_dump_str:          .byte "dump", 0
 
 .segment "LIB"
 ;; void string_print(X: PTR0L, Y: PTR0H)

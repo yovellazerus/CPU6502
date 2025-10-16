@@ -810,7 +810,7 @@ bool CPU_keyboard(CPU* cpu){
     char C_terminal_input;
     if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
         C_terminal_input = _getch();                        // read character without echo
-        if(C_terminal_input == 0x1B) return false;          // ESC for debug
+        if(C_terminal_input == 0x1B) return false;          // ESC for debug, power-off the CPU
         else if (C_terminal_input == 0x09) CPU_irq(cpu);    // Ctrl-I
         else if (C_terminal_input == 0x0E) CPU_nmi(cpu);    // Ctrl-N
         else if (C_terminal_input == 0x12) CPU_reset(cpu);  // Ctrl-R
