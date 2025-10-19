@@ -5,6 +5,8 @@
 ;; using a simple MMIO-based disk interface.
 ;; ***************************************************************************
 
+PRL_KERNEL = 0
+PRL_USER   = 1
 DISK_READ  = 1
 DISK_READY = 1
 BOOT_YES   = 1
@@ -16,30 +18,34 @@ kernel_irq   = $C3FF
 kernel_brk   = $C4FF
 
 ;; MMIO
-BOOT_STATUS  = $C000
-DISK_CMD     = $C001
-DISK_ADDRL   = $C002
-DISK_ADDRH   = $C003
-DISK_STATUS  = $C004
+PRL_REG      = $C000
+BOOT_STATUS  = $C001
+DISK_CMD     = $C002
+DISK_ADDRL   = $C003
+DISK_ADDRH   = $C004
+DISK_STATUS  = $C005
 
 
 DISK_DATA    = $C0FF ;; 256 byte blocks
 
-;; NOTE: no memory protection is implemented for now
-;; all IRQ/NMI must return to bios! for later  memory protection implementation
+;; NOTE: no memory protection is implemented for now in the CPU level, sow emulate via MMIO
+;; all IRQ/NMI must return to bios! for memory protection implementation
 
 .segment "BIOS"
 bios_reset:
-    sei            ;; init CPU registers 
+    sei             ;; init CPU registers 
     cld
     ldx #$FF
     txs
+
+    lda #PRL_KERNEL ;; kernel mod
+    sta PRL_REG
 
     lda BOOT_STATUS
     cmp #BOOT_YES
     beq hot_reset
     
-    lda #0         ;; boot sector is block: $0000 of the disk
+    lda #0          ;; boot sector is block: $0000 of the disk
     sta DISK_ADDRL
     sta DISK_ADDRH
     lda #DISK_READ
@@ -68,7 +74,13 @@ bios_nmi:
     tya
     pha
 
+    lda #PRL_KERNEL ;; kernel mod
+    sta PRL_REG
+
     jsr kernel_nmi
+
+    lda #PRL_USER   ;; user mod
+    sta PRL_REG
 
     pla
     tay
@@ -84,6 +96,9 @@ bios_irq:
     tya
     pha
 
+    lda #PRL_KERNEL ;; kernel mod
+    sta PRL_REG
+
     tsx            
     lda $0103, x
     and #$10       ;; test bit 4 (B flag)
@@ -96,6 +111,10 @@ bios_irq_is_irq:
     jsr kernel_irq
 
 bios_irq_end:
+
+    lda #PRL_USER   ;; user mod
+    sta PRL_REG
+
     pla
     tay
     pla
