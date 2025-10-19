@@ -16,8 +16,8 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
 	$(RM) $(OBJ)
-	.\cc65-2.19\bin\ca65.exe .\input\kernel.asm -o .\input\kernel.o
-	.\cc65-2.19\bin\ld65.exe .\input\kernel.o -C .\input\kernel.cfg -o .\input\kernel.bin
+	.\cc65-2.19\bin\ca65.exe .\input\bios.asm -o .\input\bios.o
+	.\cc65-2.19\bin\ld65.exe .\input\bios.o -C .\input\bios.cfg -o .\input\bios.bin
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
