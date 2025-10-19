@@ -1,4 +1,10 @@
 
+;; ***************************************************************************
+;; This is a minimalist 6502 BIOS
+;; that boots a system from disk and forwards interrupts to kernel handlers, 
+;; using a simple MMIO-based disk interface.
+;; ***************************************************************************
+
 DISK_READ  = 1
 DISK_READY = 1
 BOOT_YES   = 1
