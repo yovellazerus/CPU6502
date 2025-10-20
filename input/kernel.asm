@@ -95,7 +95,7 @@ ARGV         = $C500
 ;; ================================================================================
 
 .segment "RODATA"
-welcome_msg:          .byte $0A, "**** 6502 kernel monitor ****", $0A, 0
+welcome_msg:          .byte "**** 6502 kernel monitor ****", $0A, 0
 prompt_msg:           .byte "> ", 0
 
 error_prefix_msg:     .byte "ERROR: ", 0
