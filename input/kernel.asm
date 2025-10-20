@@ -1,21 +1,18 @@
 
-;;: MACROS:
+;*******************************************************************************
+;*******          ROM BASE OS — Core Firmware for the 6502           ***********
+;*******************************************************************************
 
-.macro PROLOGUE
-    pha
-    txa
-    pha
-    tya
-    pha
-.endmacro
 
-.macro EPILOGUE
-    pla
-    tay
-    pla
-    tax
-    pla
-.endmacro
+;; ================================================================================
+;; macros:
+;; ================================================================================
+
+;; non for now...
+
+;; ================================================================================
+;; consts:
+;; ================================================================================
 
 ZP  = $00
 SSPH_START = $0F
@@ -25,10 +22,15 @@ SSPL_END = $00
 ERROR_UNDERFLOW  = $01
 ERROR_UNKNOWN_MP = $02
 
+DISK_READ  = 1
+DISK_READY = 1
+SCR_WRITE  = 1
+SCR_CLEAR  = 2
+KEB_READY  = 1
 
-;;; FIX-RAM:
-
-;; zero page:
+;; ================================================================================
+;; zero page vars:
+;; ================================================================================
 
 ARG0         = ZP + $00
 ARG1         = ZP + $04
@@ -54,50 +56,46 @@ FPA1         = ZP + $38
 SSP          = ZP + $3C
 SBP          = ZP + $3E
 
-ERR          = ZP + $40
-NMIC         = ZP + $41
-LINE_SIZE   = ZP + $42
+LINE_SIZE    = ZP + $42
 _A           = ZP + $43   ;; tmp's to save the cpu registers 
 _X           = ZP + $44
 _Y           = ZP + $45
-MSRC         = ZP + $46   ;; for mov(to not use TMP)
+MSRC         = ZP + $46   ;; for memcpy(to not use TMP)
 MDST         = ZP + $48  
 ARGC         = ZP + $50
 
+;; ================================================================================
+;; MMIO registers
+;; ================================================================================
+
+;; dick ctrl
+DISK_CMD     = $C004
+DISK_ADDRL   = $C005
+DISK_ADDRH   = $C006
+DISK_STATUS  = $C007
 ;; I/O:
-KEB_DATA     = $0210
-KEB_CTRL     = $0211
-SCR_DATA     = $0212
-SCR_CTRL     = $0213
+KEB_DATA     = $C008
+KEB_CTRL     = $C009
+SCR_DATA     = $C00A
+SCR_CTRL     = $C00B
 
-DISK_CTRL    = $0214
-DISK_STAT    = $0215
-UDI_DATA     = $0216
-UDI_CTRL     = $0217
-RAND         = $0218
-TIMER_DATAL  = $0219
-TIMER_DATAH  = $021A
-TIMER_LACHL  = $021B
-TIMER_LACHH  = $021C
-TIMER_CTRL   = $021D
 
-;; disk I/O buffer
-DISK         = $0300
+;; dick data
+DISK_DATA    = $C100 ;; 256 byte blocks
 
-;; kernel working RAM:
-LINE         = $0400
-ARGV         = $0500
-ROOT         = $0600
-PCB          = $0700
+;; ================================================================================
+;; kernel working RAM
+;; ================================================================================
 
-;; software stack:
-SS_LOW  = $0800
-SS_HIGH = $0FFF    
+LINE         = $C400
+ARGV         = $C500
 
-;;; ROM:
+;; ================================================================================
+;;; kernel code and read only data is here
+;; ================================================================================
 
 .segment "RODATA"
-welcome_msg:          .byte $0A, "**** 6502 kernel monitor for all of mankind ****", $0A, 0
+welcome_msg:          .byte $0A, "**** 6502 kernel monitor ****", $0A, 0
 prompt_msg:           .byte "> ", 0
 
 error_prefix_msg:     .byte "ERROR: ", 0
@@ -105,11 +103,11 @@ error_underFlow_msg:  .byte "underFlow", 0
 error_unknown_MP_msg: .byte "unknown monitor service", 0
 
 MP_dump_str:          .byte "dump", 0
+MP_clear_str:         .byte "clear", 0
 
 .segment "LIB"
 ;; void string_print(X: PTR0L, Y: PTR0H)
 string_print:
-    PROLOGUE
     stx PTR0       
     sty PTR0+1        
     ldy #0
@@ -122,7 +120,6 @@ print_loop:
     inc PTR0+1        
     jmp print_loop
 print_done:
-    EPILOGUE
     rts
 
 ;; A : bool string_cmp(PTR0, PTR1)
@@ -168,11 +165,9 @@ string_cmp:
     lda #1
     rts
 
-
-;; void mov(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
-mov:
+;; void memcpy(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
+memcpy:
     sta _A            
-    PROLOGUE
     lda PTR0        
     sta MSRC
     lda PTR0+1      
@@ -188,10 +183,7 @@ mov:
     iny
     cpy _A
     bne @loop
-    EPILOGUE
-    rts
 @done:
-    EPILOGUE
     rts
 
 ;; void error(A : err) power-off the cpu(for debug)
@@ -247,7 +239,6 @@ monitor:
     jmp @loop
 
 get_line:
-    PROLOGUE
     ldx #0
     stx LINE_SIZE
 @loop:
@@ -267,7 +258,6 @@ get_line:
     inx
     lda #0
     sta LINE,x  
-    EPILOGUE
     rts
 
 parse_line:
@@ -342,6 +332,20 @@ execute_line:
     jsr MP_dump
     jmp @end
 @not_dump:
+    ldx #<ARGV
+    ldy #>ARGV
+    stx PTR0
+    sty PTR0+1
+    ldx #<MP_clear_str
+    ldy #>MP_clear_str
+    stx PTR1
+    sty PTR1+1
+    jsr string_cmp
+    cmp #0
+    bne @not_clear
+    jsr MP_clear
+    jmp @end
+@not_clear:
 
 @error:
     lda #ERROR_UNKNOWN_MP
@@ -350,11 +354,9 @@ execute_line:
     rts
 
 print_prompt:
-    PROLOGUE
     ldx #<prompt_msg
     ldy #>prompt_msg
     jsr string_print
-    EPILOGUE
     rts
 
 MP_dump:
@@ -380,8 +382,12 @@ MP_dump:
 @done:
     rts
 
+MP_clear:
+    jsr bios_clear
+    rts
+
 .segment "BIOS"
-RESET:
+reset:
     ldx #$FF                ;; BIOS init's 
     txs
     cld
@@ -392,59 +398,74 @@ RESET:
     sta SSP
     jsr bios_clear
 
-    ldx #<welcome_msg    ;; mov test (not in ZP and longer then size == 4)
+    ldx #<welcome_msg    ;; memcpy test (not in ZP and longer then size == 4)
     stx PTR0
     lda #>welcome_msg
     sta PTR0+1
 
-    ldy #<DISK
+    ldy #<DISK_DATA
     sty PTR1
-    lda #>DISK
+    lda #>DISK_DATA
     sta PTR1+1
 
     lda #16
-    jsr mov
+    jsr memcpy
 
     brk             ;; for brk test
     .byte $42      
 
     jmp monitor     ;; not returning, inf loop
 
-nmi_handler:
-    PROLOGUE
-    ldx NMIC
-    inx
-    stx NMIC
-    EPILOGUE
-    rti
-
-irq_handler:
-    PROLOGUE
-    jmp brk_handler
-    ;; no real irq, for now only brk
-irq_end:
-    EPILOGUE
-    rti
-
-brk_handler:
-    tsx
-    inx
-    inx
-    inx
-    inx
-    inx
-    lda $0100,x
+bios_nmi_handler:
+    pha
+    txa
+    pha
+    tya
+    pha
+    ;; TODO: do staff...
+    .byte $ff  ;; NMI power of for now...
+    pla
+    tay
+    pla
     tax
-    dex
-    lda RESET,x     ;; PCH is coded at RESET for now
-    sta ERR
-    jmp irq_end
+    pla
+    rti
+
+bios_irq_handler:
+    pha
+    txa
+    pha
+    tya
+    pha
+
+    tsx            
+    lda $0104,x
+    and #$10       ;; test bit 4 (B flag)
+    beq bios_irq_is_irq     
+
+    jsr bios_brk_handler
+    jmp bios_irq_end
+
+bios_irq_is_irq:
+    ;; TODO: do staff...
+
+bios_irq_end:
+    pla
+    tay
+    pla
+    tax
+    pla
+    rti
+
+bios_brk_handler:
+    ;; TODO: do staff...
+    rts
 
 ;; void putchar(A : char)
 bios_putchar:
     pha
     sta SCR_DATA     
-    lda #1
+    lda #SCR_WRITE
     sta SCR_CTRL
     pla
     rts
@@ -452,24 +473,22 @@ bios_putchar:
 ;; void clear(void)
 bios_clear:
     pha
-    lda #2
+    lda #SCR_CLEAR
     sta SCR_CTRL
     pla
     rts
 
 ;; A : char waitchar()
 bios_waitchar:
-    lda KEB_CTRL   ;; wait for a user input
-    cmp #1
+    lda KEB_CTRL
+    cmp #KEB_READY
     bne bios_waitchar 
     lda #0
     sta KEB_CTRL
     lda KEB_DATA
     rts
 
-.byte $FF           ;; stop the cpu for debug
-
 .segment "VECTORS"
-.word nmi_handler
-.word RESET
-.word irq_handler
+.word bios_nmi_handler
+.word reset
+.word bios_irq_handler

@@ -1650,7 +1650,6 @@ void instruction_BRK(CPU* cpu)
 }
 void instruction_NOP(CPU* cpu)
 {
-    UNUSED;
     CPU_tick(cpu, 2);
 }
 void instruction_RTI(CPU* cpu)
