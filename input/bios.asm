@@ -10,23 +10,48 @@ PRL_USER   = 1
 DISK_READ  = 1
 DISK_READY = 1
 BOOT_YES   = 1
+SCR_WRITE  = 1
+SCR_CLEAR  = 2
+KBD_READY  = 1
 
-;; kernel fix entries
-boot_entry   = $C1FF
-kernel_nmi   = $C2FF
-kernel_irq   = $C3FF
-kernel_brk   = $C4FF
+;; ***************************************************************************
+;; BIOS zp registers
+;; ***************************************************************************
 
-;; MMIO
+BIOS_TMP = $00
+
+;; ***************************************************************************
+;; MMIO registers
+;; ***************************************************************************
+
+;; MMU
 PRL_REG      = $C000
-BOOT_STATUS  = $C001
-DISK_CMD     = $C002
-DISK_ADDRL   = $C003
-DISK_ADDRH   = $C004
-DISK_STATUS  = $C005
+BASE_REG     = $C001
+SIZE_REG     = $C002
+;; kernel status
+BOOT_STATUS  = $C003
+;; dick ctrl
+DISK_CMD     = $C004
+DISK_ADDRL   = $C005
+DISK_ADDRH   = $C006
+DISK_STATUS  = $C007
+;; I/O:
+KEB_DATA     = $C008
+KEB_CTRL     = $C009
+SCR_DATA     = $C00A
+SCR_CTRL     = $C00B
 
+;; dick data
+DISK_DATA    = $C100 ;; 256 byte blocks
 
-DISK_DATA    = $C0FF ;; 256 byte blocks
+;; ***************************************************************************
+;; kernel fix entries
+;; ***************************************************************************
+
+boot_entry   = $C200
+kernel_nmi   = $C300
+kernel_irq   = $C400
+kernel_brk   = $C500
 
 ;; NOTE: no memory protection is implemented for now in the CPU level, sow emulate via MMIO
 ;; all IRQ/NMI must return to bios! for memory protection implementation
@@ -44,6 +69,10 @@ bios_reset:
     lda BOOT_STATUS
     cmp #BOOT_YES
     beq hot_reset
+
+    ldx #<cold_msg
+    ldy #>cold_msg
+    jsr bios_puts
     
     lda #0          ;; boot sector is block: $0000 of the disk
     sta DISK_ADDRL
@@ -65,6 +94,9 @@ copy_boot:
     lda #BOOT_YES
     sta BOOT_STATUS
 hot_reset:
+    ldx #<hot_msg
+    ldy #>hot_msg
+    jsr bios_puts
     jmp boot_entry
 
 bios_nmi:
@@ -121,6 +153,52 @@ bios_irq_end:
     tax
     pla
     rti
+
+;; ***************************************************************************
+;; BIOS functions (A, X and Y are CALLER saved!) 
+;; ***************************************************************************
+
+;; void bios_puts(X: strL, Y: strH)
+bios_puts:
+    stx BIOS_TMP       
+    sty BIOS_TMP+1        
+    ldy #0
+bios_puts_loop:
+    lda (BIOS_TMP),y
+    beq bios_puts_end   
+    jsr bios_putchar
+    iny             
+    bne bios_puts_loop  
+    inc BIOS_TMP+1        
+    jmp bios_puts_loop
+bios_puts_end:
+    rts
+
+;; void putchar(A : char)
+bios_putchar:
+    sta SCR_DATA     
+    lda #SCR_WRITE
+    sta SCR_CTRL
+    rts
+
+;; void bios_clear(void)
+bios_clear:
+    lda #SCR_CLEAR
+    sta SCR_CTRL
+    rts
+
+;; A : char waitchar()
+bios_waitchar:
+    lda KEB_CTRL
+    cmp #KBD_READY
+    bne bios_waitchar 
+    lda #0
+    sta KEB_CTRL
+    lda KEB_DATA
+    rts
+
+cold_msg:  .byte "BIOS: cold start...", $0A, 0
+hot_msg:  .byte "BIOS: BOOT block FOUND, jumping to BOOT...", $0A, 0
 
 .segment "VECTORS"
 .word bios_nmi
