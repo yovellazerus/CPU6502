@@ -3,75 +3,49 @@
 #include "../include/instruction.h"
 
 int main(int argc, char* argv[]){
-    if(argc < 2){
-        fprintf(stderr, COLOR_RED "USAGE: cpu6502 <program.bin>\n");
-        fprintf(stderr, "ERROR: no program file was provided\n" COLOR_RESET);
-        return 1;
-    }
-    
-    const char* memory_file_path = "./output/memory.txt";
-    const char* cpu_file_path = "./output/cpu.txt";
-    const char* stack_file_path = "./output/stack.txt";
-    FILE* stack_file = fopen(stack_file_path, "w");
-    if(!stack_file){
-        perror(stack_file_path);
-        return 1;
-    }
-    FILE* memory_file = fopen(memory_file_path, "w");
-    if(!memory_file){
-        fclose(stack_file);
-        perror(memory_file_path);
-        return 1;
-    }
-    FILE* cpu_file = fopen(cpu_file_path, "w");
-    if(!cpu_file){
-        fclose(stack_file);
-        fclose(memory_file);
-        perror(cpu_file_path);
-        return 1;
-    }
-
-    FILE* memory_img = fopen(argv[1], "rb");
-    if(!memory_img){
-        fclose(stack_file);
-        fclose(memory_file);
-        fclose(cpu_file);
-        perror(argv[1]);
-        return 1;
-    }
-
-    const char* disk_path = "C:\\Users\\yovel\\Desktop\\VScode\\CPU6502\\input\\boot.bin";
-    FILE* boot = fopen(disk_path, "rb");
-    if(!boot){
-        fclose(memory_img);
-        fclose(stack_file);
-        fclose(memory_file);
-        fclose(cpu_file);
-        perror(disk_path);
+    if(argc < 3){
+        fprintf(stderr, COLOR_RED "USAGE: %s <memory.bin> <disk.bin>\n", argv[0]);
+        fprintf(stderr, "ERROR: no input was provided\n" COLOR_RESET);
         return 1;
     }
 
     CPU cpu;
     byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE];
-    
-    fread(disk[0], sizeof(**disk), BLOCK_SIZE, boot);
-    fclose(boot);
 
+    const char* memory_path = argv[1];
+    FILE* memory_img = fopen(argv[1], "rb");
+    if(!memory_img){
+        perror(memory_path);
+        return 1;
+    }
     fread(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_img);
     fclose(memory_img);
+
+    const char* disk_path = argv[2];
+    FILE* disk_img = fopen(disk_path, "rwb");
+    if(!disk_img){
+        fclose(memory_img);
+        perror(disk_path);
+        return 1;
+    }
+    fread(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_img);
 
     CPU_reset(&cpu);
     printf(COLOR_GREEN);
     CPU_run(&cpu, disk);
     printf(COLOR_RESET);
 
-    CPU_dump_cpu(&cpu, cpu_file);
-    CPU_dump_memory(&cpu, memory_file);
-    CPU_dump_stack(&cpu, stack_file);
+    fwrite(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_img);
+    fclose(disk_img);
 
-    fclose(stack_file);
-    fclose(memory_file);
-    fclose(cpu_file);
+    const char* memory_dump_path = "./output/memory.bin";
+    FILE* memory_dump_file = fopen(memory_dump_path, "wb");
+    if(!memory_dump_file){
+        perror(memory_dump_path);
+        return 1;
+    }
+    fwrite(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_dump_file);
+    fclose(memory_dump_file);
 
     return 0;
 }
