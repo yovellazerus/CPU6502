@@ -39,13 +39,30 @@ int main(int argc, char* argv[]){
         perror(argv[1]);
         return 1;
     }
+
+    const char* disk_path = "C:\\Users\\yovel\\Desktop\\VScode\\CPU6502\\input\\boot.bin";
+    FILE* boot = fopen(disk_path, "rb");
+    if(!boot){
+        fclose(memory_img);
+        fclose(stack_file);
+        fclose(memory_file);
+        fclose(cpu_file);
+        perror(disk_path);
+        return 1;
+    }
+
     CPU cpu;
+    byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE];
+    
+    fread(disk[0], sizeof(**disk), BLOCK_SIZE, boot);
+    fclose(boot);
+
     fread(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_img);
     fclose(memory_img);
 
     CPU_reset(&cpu);
     printf(COLOR_GREEN);
-    CPU_run(&cpu, false);
+    CPU_run(&cpu, disk);
     printf(COLOR_RESET);
 
     CPU_dump_cpu(&cpu, cpu_file);

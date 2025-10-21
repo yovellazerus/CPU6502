@@ -658,22 +658,23 @@ void CPU_reset(CPU *cpu)
     cpu->PC = bus;
 }
 
-void CPU_run(CPU* cpu, bool is_debug){
+void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
 
     while(true){
 
-        // for debug
-        if (is_debug) is_debug = CPU_debug(cpu);
-
+        // power control
         if(!CPU_power(cpu)) return;
 
         // I/O
-        CPU_keyboard(cpu);
+        CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
         CPU_screen(cpu);
+
+        // disk
+        CPU_disk(cpu, disk);
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
-        if(opcode == Opcode_HLT) return; // for debug
+        if(opcode == 0xFF) return; // for debug
 
         // decode:
         Instruction instruction = Opcode_to_Instruction_table[opcode];
@@ -843,3 +844,34 @@ bool CPU_power(CPU* cpu){
     }
     return true;
 }
+
+void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]) {
+    static size_t read_timer = DISK_TIME;
+    static size_t write_timer = DISK_TIME;
+
+    word addr = ((word)cpu->memory[DISK_ADDRH] << 8) | cpu->memory[DISK_ADDRL];
+    if (addr >= DISK_BLOCK_COUNT) {
+        cpu->memory[DISK_STATUS] = DISK_ERR;
+        cpu->memory[DISK_CMD] = DISK_IDLE;
+        return;
+    }
+
+    switch (cpu->memory[DISK_CMD]) {
+        case DISK_READ:
+            if (read_timer-- > 0) return;
+            memcpy(&cpu->memory[DISK_DATA], disk[addr], BLOCK_SIZE);
+            cpu->memory[DISK_CMD] = DISK_IDLE;
+            cpu->memory[DISK_STATUS] = DISK_READY;
+            read_timer = DISK_TIME;
+            break;
+
+        case DISK_WRITE:
+            if (write_timer-- > 0) return;
+            memcpy(disk[addr], &cpu->memory[DISK_DATA], BLOCK_SIZE);
+            cpu->memory[DISK_CMD] = DISK_IDLE;
+            cpu->memory[DISK_STATUS] = DISK_READY;
+            write_timer = DISK_TIME;
+            break;
+    }
+}
+

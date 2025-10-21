@@ -448,8 +448,9 @@ bios_nmi_handler:
     pha
     tya
     pha
-    ;; TODO: do staff...
-    .byte $ff  ;; NMI power of for now...
+    ;; TODO: do staff... NMI power of for now...
+    lda #POWER_OFF
+    sta POWER
     pla
     tay
     pla

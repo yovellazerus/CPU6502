@@ -33,12 +33,23 @@
 #define STACK_END 0x01ff
 #define PAGE_SIZE 0x0100
 
+#define BLOCK_SIZE 0x0100
+#define DISK_BLOCK_COUNT (8*256)
+#define DISK_TIME 100
+
 #define RESET_SP_REGISTER 0xfd
 
 /****     MMIO and flags for the CPU, with consisted with bios.asm  ****/
 
 // flags:
 #define POWER_OFF 0xFF
+
+#define DISK_READY 1
+#define DISK_ERR 2
+
+#define DISK_IDLE 0
+#define DISK_READ 1
+#define DISK_WRITE 2
 
 // devices:
 
@@ -293,9 +304,6 @@ typedef enum {
     Opcode_NOP             = 0xEA,
     Opcode_RTI             = 0x40,
 
-    // for debug no instraction for it
-    Opcode_HLT             = 0xFF,
-
 } Opcode;
 
 typedef struct CPU_t {
@@ -331,7 +339,7 @@ void CPU_push(CPU* cpu, char reg);
 void CPU_pop(CPU* cpu, char reg);
 
 bool CPU_debug(CPU* cpu);
-void CPU_run(CPU* cpu, bool is_debug);
+void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 void CPU_tick(CPU* cpu, size_t amount); 
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
@@ -344,5 +352,7 @@ void CPU_irq(CPU* cpu);
 bool CPU_power(CPU* cpu);
 void CPU_keyboard(CPU* cpu);
 void CPU_screen(CPU* cpu);
+void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 
 #endif // CPU_H_
+
