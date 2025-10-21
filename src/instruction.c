@@ -1060,7 +1060,19 @@ void instruction_BIT_Absolute(CPU* cpu)
 // Arithmetic
 void instruction_ADC_Immediate(CPU* cpu)
 {
-    UNUSED;
+    byte operand = cpu->memory[cpu->PC++];
+    byte carry_in = CPU_getFlag(cpu, 'c');
+
+    operand = (byte)operand + (byte)carry_in;
+
+    CPU_updateFlags(cpu, 'A', 'z', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'n', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'c', cpu->A, operand);
+    CPU_updateFlags(cpu, 'A', 'v', cpu->A, operand);
+
+    cpu->A += operand;
+
+    CPU_tick(cpu, 2);
 
 }
 void instruction_ADC_ZeroPage(CPU* cpu)

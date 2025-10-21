@@ -35,10 +35,42 @@
 
 #define RESET_SP_REGISTER 0xfd
 
-#define KEYBOARD_DATA  0xc008
-#define KEYBOARD_CTRL  0xc009
-#define SCREEN_DATA    0xc00a
-#define SCREEN_CTRL    0xc00b
+/****     MMIO and flags for the CPU, with consisted with bios.asm  ****/
+
+// flags:
+#define POWER_OFF 0xFF
+
+// devices:
+
+// wild-card devices
+#define NULL_REG      0xC000
+#define POWER         0xC001
+#define RND           0xC002
+// KERNEL status
+#define BOOT_STATUS   0xC003
+// dick ctrl
+#define DISK_CMD      0xC004
+#define DISK_ADDRL    0xC005
+#define DISK_ADDRH    0xC006
+#define DISK_STATUS   0xC007
+// I/O:
+#define KEB_DATA      0xC008
+#define KEB_CTRL      0xC009
+#define SCR_DATA      0xC00A
+#define SCR_CTRL      0xC00B
+#define SPK_DATA      0xC00C
+#define SPK_CTRL      0xC00D
+#define MIC_DATA      0xC00E
+#define MIC_CTRL      0xC00F
+// MMU
+#define BSL           0xC010
+#define BSH           0xC011
+#define SSL           0xC012
+#define SSH           0xC013
+// dick data
+#define DISK_DATA     0xC100 // 256 byte blocks
+
+//****************************************************************************
 
 typedef uint8_t byte;
 typedef uint16_t word;
@@ -309,7 +341,8 @@ void CPU_nmi(CPU* cpu);
 void CPU_irq(CPU* cpu);
 
 // I/O
-bool CPU_keyboard(CPU* cpu);
+bool CPU_power(CPU* cpu);
+void CPU_keyboard(CPU* cpu);
 void CPU_screen(CPU* cpu);
 
 #endif // CPU_H_

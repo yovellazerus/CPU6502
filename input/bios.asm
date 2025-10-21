@@ -10,13 +10,22 @@
 ;; =====================================================================================================
 
 DISK_READ    = 1
-DISK_FOUND   = $FF
 DISK_READY   = 1
 BOOT_FOUND   = 1
 SCR_WRITE    = 1
 SCR_CLEAR    = 2
 KEB_READY    = 1
+DISK_FOUND   = $FF
 KEB_FOUND    = $FF
+SCR_FOUND    = $FF
+SPK_FOUND    = $FF
+MIC_FOUND    = $FF
+DISK_ERR     = 0
+KEB_ERR      = 1
+SCR_ERR      = 2
+SPK_ERR      = 3
+MIC_ERR      = 4
+POWER_OFF    = $FF
 
 ;; =====================================================================================================
 ;; BIOS zp registers
@@ -28,6 +37,10 @@ STR = $00
 ;; MMIO registers
 ;; =====================================================================================================
 
+;; wild-card devices
+NULL         = $C000
+POWER        = $C001
+RND          = $C002
 ;; KERNEL status
 BOOT_STATUS  = $C003
 ;; dick ctrl
@@ -40,6 +53,15 @@ KEB_DATA     = $C008
 KEB_CTRL     = $C009
 SCR_DATA     = $C00A
 SCR_CTRL     = $C00B
+SPK_DATA     = $C00C
+SPK_CTRL     = $C00D
+MIC_DATA     = $C00E
+MIC_CTRL     = $C00F
+;; MMU
+BSL          = $C010
+BSH          = $C011
+SSL          = $C012
+SSH          = $C013
 
 ;; dick data
 DISK_DATA    = $C100 ;; 256 byte blocks
@@ -57,50 +79,64 @@ kernel_irq         = $C400
 ;; =====================================================================================================
 
 .segment "BIOS"
-bootstrap_reset:
+bios_reset:
     sei             ;; init CPU registers 
     cld
     ldx #$FF
     txs
 
-    jsr bios_clear
+    lda #SCR_CLEAR  ;; clear the screen
+    sta SCR_CTRL
 
     ldx #<bios_msg
     ldy #>bios_msg
     jsr bios_puts
 
-    lda DISK_STATUS
-    cmp DISK_FOUND
-    beq @disk_found
-
-    ldx #<no_disk_msg
-    ldy #>no_disk_msg
-    jsr bios_puts
-    jmp bios_halt
-
-@disk_found:
     lda BOOT_STATUS
     cmp #BOOT_FOUND
     beq @hot_reset
 
-    ldx #<disk_msg
-    ldy #>disk_msg
+@cold_reset:
+    ldx #<cold_msg
+    ldy #>cold_msg
     jsr bios_puts
 
+    lda DISK_STATUS
+    cmp DISK_FOUND
+    beq @disk_found
+    lda #DISK_ERR
+    jmp bios_error       ;; no disk is found
+
+@disk_found:
     lda KEB_CTRL
     cmp KEB_FOUND
     beq @keyboard_found
-
-    ldx #<no_keyboard_msg
-    ldy #>no_keyboard_msg
-    jsr bios_puts
-    jmp bios_halt
+    lda #KEB_ERR
+    jmp bios_error       ;; no keyboard is found
 
 @keyboard_found:
-    ldx #<keyboard_msg
-    ldy #>keyboard_msg
-    jsr bios_puts
-    
+    lda SCR_CTRL
+    cmp SCR_FOUND
+    beq @screen_found
+    lda #SCR_ERR
+    jmp bios_error       ;; no screen is found
+
+@screen_found:
+    lda SPK_CTRL
+    cmp SPK_FOUND
+    beq @speaker_found
+    lda #SPK_ERR
+    jmp bios_error       ;; no speaker is found
+
+@speaker_found:
+    lda MIC_CTRL
+    cmp MIC_FOUND
+    beq @microphone_found
+    lda #MIC_ERR
+    jmp bios_error       ;; no microphone is found
+
+@microphone_found:
+
     lda #0          ;; boot sector is block: $0000 of the disk
     sta DISK_ADDRL
     sta DISK_ADDRH
@@ -111,7 +147,7 @@ bootstrap_reset:
     cmp #DISK_READY
     bne @wait_disk
 
-    ldx $FF
+    ldx $FF           ;; copy BOOT from disk buffer to it's entry point
 @copy_boot:
     lda DISK_DATA,x
     sta boot_entry,x
@@ -120,9 +156,14 @@ bootstrap_reset:
 
     lda #BOOT_FOUND
     sta BOOT_STATUS
+
+    ldx #<ready_msg
+    ldy #>ready_msg
+    jsr bios_puts
+    jmp boot_entry
 @hot_reset:
-    ldx #<boot_msg
-    ldy #>boot_msg
+    ldx #<hot_msg
+    ldy #>hot_msg
     jsr bios_puts
     jmp boot_entry
 
@@ -153,36 +194,26 @@ bios_putchar:
     sta SCR_CTRL
     rts
 
-;; void clear(void)
-bios_clear:
-    lda #SCR_CLEAR
-    sta SCR_CTRL
-    rts
-
-;; A : char waitchar(void)
-bios_waitchar:
-    lda KEB_CTRL
-    cmp #KEB_READY
-    bne bios_waitchar 
-    lda #0
-    sta KEB_CTRL
-    lda KEB_DATA
-    rts
-
-;; void halt(void)
-bios_halt:
-    jmp bios_halt
+;; void error(A : err)
+bios_error:
+    clc
+    adc #'0'
+    jsr bios_putchar
+    ldx #<error_msg
+    ldy #>error_msg
+    jsr bios_puts
+    lda #POWER_OFF
+    sta POWER
 
 ;; =====================================================================================================
 ;; BIOS msg strings, NOTE: consider removing it...
 ;; =====================================================================================================
 
 bios_msg:        .byte "BIOS:", $0A, 0
-disk_msg:        .byte "DISK OK", $0A, 0
-keyboard_msg:    .byte "KEB OK", $0A, 0
-boot_msg:        .byte "BOOT OK", $0A, "BIOS -> BOOT...", $0A, 0
-no_disk_msg:     .byte "ERR: NO DISK", $0A, 0
-no_keyboard_msg: .byte "ERR: NO KEB", $0A, 0
+cold_msg:        .byte "COLD START", $0A, 0
+hot_msg:         .byte "HOT RESET", $0A, 0
+ready_msg:       .byte "READY.", $0A, 0
+error_msg:       .byte " DEVICE ERR.", $0A, 0
 
 ;; =====================================================================================================
 ;; IRQ/BRK/NMI and RESET vectors
@@ -190,5 +221,5 @@ no_keyboard_msg: .byte "ERR: NO KEB", $0A, 0
 
 .segment "VECTORS"
 .word kernel_nmi
-.word bootstrap_reset
+.word bios_reset
 .word kernel_irq

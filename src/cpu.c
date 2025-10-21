@@ -665,8 +665,10 @@ void CPU_run(CPU* cpu, bool is_debug){
         // for debug
         if (is_debug) is_debug = CPU_debug(cpu);
 
+        if(!CPU_power(cpu)) return;
+
         // I/O
-        if(!CPU_keyboard(cpu)) return; // irq/nmi/reset trigger from keyboard ^i, ^n and ^r. ESC for power-off
+        CPU_keyboard(cpu);
         CPU_screen(cpu);
 
         // fetch:
@@ -805,7 +807,7 @@ void CPU_nmi(CPU *cpu)
     CPU_tick(cpu, 7);
 }
 
-bool CPU_keyboard(CPU* cpu){
+void CPU_keyboard(CPU* cpu){
 #ifdef _WIN64
     char C_terminal_input;
     if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
@@ -813,25 +815,31 @@ bool CPU_keyboard(CPU* cpu){
         if(C_terminal_input == 0x1B)       CPU_nmi(cpu);    // ESC for NMI
         else if (C_terminal_input == 0x09) CPU_reset(cpu);  // Tab for reset
         else{
-            cpu->memory[KEYBOARD_DATA] = C_terminal_input;         // put the char on the MMIO register
-            cpu->memory[KEYBOARD_CTRL] = 1;                        // keyboard_ctrl is set to 1
+            cpu->memory[KEB_DATA] = C_terminal_input;         // put the char on the MMIO register
+            cpu->memory[KEB_CTRL] = 1;                        // keyboard_ctrl is set to 1
         } 
     }
-    return true;
 #endif
 }
 
 void CPU_screen(CPU* cpu){
 #ifdef _WIN64
     char C_terminal_output;
-    if(cpu->memory[SCREEN_CTRL] == 1){                   // if screen_ctrl is set to 1
-        C_terminal_output = cpu->memory[SCREEN_DATA];    // puts on the screen the byte from screen_data
+    if(cpu->memory[SCR_CTRL] == 1){                   // if screen_ctrl is set to 1
+        C_terminal_output = cpu->memory[SCR_DATA];    // puts on the screen the byte from screen_data
         putchar(C_terminal_output);                      // print the char
-        cpu->memory[SCREEN_CTRL] = 0;                    // set screen_ctrl to 0
+        cpu->memory[SCR_CTRL] = 0;                    // set screen_ctrl to 0
     }
-    if(cpu->memory[SCREEN_CTRL] == 2){                   // clear the screen
+    if(cpu->memory[SCR_CTRL] == 2){                   // clear the screen
         system("cls");
-        cpu->memory[SCREEN_CTRL] = 0;
+        cpu->memory[SCR_CTRL] = 0;
     }
 #endif
+}
+
+bool CPU_power(CPU* cpu){
+    if(cpu->memory[POWER] == POWER_OFF){
+        return false;
+    }
+    return true;
 }

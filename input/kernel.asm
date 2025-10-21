@@ -22,11 +22,23 @@ SSPL_END = $00
 ERROR_UNDERFLOW  = $01
 ERROR_UNKNOWN_MP = $02
 
-DISK_READ  = 1
-DISK_READY = 1
-SCR_WRITE  = 1
-SCR_CLEAR  = 2
-KEB_READY  = 1
+DISK_READ    = 1
+DISK_READY   = 1
+BOOT_FOUND   = 1
+SCR_WRITE    = 1
+SCR_CLEAR    = 2
+KEB_READY    = 1
+DISK_FOUND   = $FF
+KEB_FOUND    = $FF
+SCR_FOUND    = $FF
+SPK_FOUND    = $FF
+MIC_FOUND    = $FF
+DISK_ERR     = 0
+KEB_ERR      = 1
+SCR_ERR      = 2
+SPK_ERR      = 3
+MIC_ERR      = 4
+POWER_OFF    = $FF
 
 ;; ================================================================================
 ;; zero page vars:
@@ -68,6 +80,12 @@ ARGC         = ZP + $50
 ;; MMIO registers
 ;; ================================================================================
 
+;; wild-card devices
+NULL         = $C000
+POWER        = $C001
+RND          = $C002
+;; KERNEL status
+BOOT_STATUS  = $C003
 ;; dick ctrl
 DISK_CMD     = $C004
 DISK_ADDRL   = $C005
@@ -78,7 +96,15 @@ KEB_DATA     = $C008
 KEB_CTRL     = $C009
 SCR_DATA     = $C00A
 SCR_CTRL     = $C00B
-
+SPK_DATA     = $C00C
+SPK_CTRL     = $C00D
+MIC_DATA     = $C00E
+MIC_CTRL     = $C00F
+;; MMU
+BSL          = $C010
+BSH          = $C011
+SSL          = $C012
+SSH          = $C013
 
 ;; dick data
 DISK_DATA    = $C100 ;; 256 byte blocks
