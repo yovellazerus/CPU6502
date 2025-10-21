@@ -104,40 +104,16 @@ bios_reset:
     lda DISK_STATUS
     cmp DISK_FOUND
     beq @disk_found
-    lda #DISK_ERR
-    jmp bios_error       ;; no disk is found
+
+    ldx #<error_msg     ;; no disk is found
+    ldy #>error_msg
+    jsr bios_puts
+    lda #POWER_OFF
+    sta POWER
 
 @disk_found:
-    lda KEB_CTRL
-    cmp KEB_FOUND
-    beq @keyboard_found
-    lda #KEB_ERR
-    jmp bios_error       ;; no keyboard is found
 
-@keyboard_found:
-    lda SCR_CTRL
-    cmp SCR_FOUND
-    beq @screen_found
-    lda #SCR_ERR
-    jmp bios_error       ;; no screen is found
-
-@screen_found:
-    lda SPK_CTRL
-    cmp SPK_FOUND
-    beq @speaker_found
-    lda #SPK_ERR
-    jmp bios_error       ;; no speaker is found
-
-@speaker_found:
-    lda MIC_CTRL
-    cmp MIC_FOUND
-    beq @microphone_found
-    lda #MIC_ERR
-    jmp bios_error       ;; no microphone is found
-
-@microphone_found:
-
-    lda #0          ;; boot sector is block: $0000 of the disk
+    lda #0              ;; boot sector is block: $0000 of the disk
     sta DISK_ADDRL
     sta DISK_ADDRH
     lda #DISK_READ
@@ -147,7 +123,7 @@ bios_reset:
     cmp #DISK_READY
     bne @wait_disk
 
-    ldx $FF           ;; copy BOOT from disk buffer to it's entry point
+    ldx $FF             ;; copy BOOT from disk buffer to it's entry point
 @copy_boot:
     lda DISK_DATA,x
     sta boot_entry,x
@@ -194,26 +170,15 @@ bios_putchar:
     sta SCR_CTRL
     rts
 
-;; void error(A : err)
-bios_error:
-    clc
-    adc #'0'
-    jsr bios_putchar
-    ldx #<error_msg
-    ldy #>error_msg
-    jsr bios_puts
-    lda #POWER_OFF
-    sta POWER
-
 ;; =====================================================================================================
 ;; BIOS msg strings, NOTE: consider removing it...
 ;; =====================================================================================================
 
 bios_msg:        .byte "BIOS:", $0A, 0
-cold_msg:        .byte "COLD START", $0A, 0
-hot_msg:         .byte "HOT RESET", $0A, 0
+cold_msg:        .byte "COLD START...", $0A, 0
+hot_msg:         .byte "HOT RESET...", $0A, 0
 ready_msg:       .byte "READY.", $0A, 0
-error_msg:       .byte " DEVICE ERR.", $0A, 0
+error_msg:       .byte "ERR: NO BOOT.", $0A, 0
 
 ;; =====================================================================================================
 ;; IRQ/BRK/NMI and RESET vectors
