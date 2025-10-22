@@ -1372,7 +1372,10 @@ void instruction_DEX(CPU* cpu)
 }
 void instruction_DEY(CPU* cpu)
 {
-    UNUSED;
+    cpu->Y--;
+    if(cpu->Y == 0) CPU_onFlag(cpu, 'z'); else CPU_offFlag(cpu, 'z');
+    if(IS_NEGATIVE(cpu->Y)) CPU_onFlag(cpu, 'n'); else CPU_offFlag(cpu, 'n');
+    CPU_tick(cpu, 2);
 
 }
 

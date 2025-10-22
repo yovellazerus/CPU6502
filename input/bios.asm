@@ -11,7 +11,7 @@
 ;; BIOS startup for cold start and hot reset
 ;; =====================================================================================================
 
-.segment "BIOS"
+.segment "STARTUP"
 bios_reset:
     sei             ;; init CPU registers 
     cld
@@ -79,6 +79,7 @@ bios_reset:
 ;; BIOS routines and services to be use by the BOOT and first KERNEL stages
 ;; =====================================================================================================
 
+.segment "BIOS"
 ;; void puts(X: strL, Y: strH)
 bios_puts:
     stx STR       
@@ -103,7 +104,7 @@ bios_putchar:
     rts
 
 ;; =====================================================================================================
-;; BIOS msg strings, NOTE: consider removing it...
+;; BIOS read only segment
 ;; =====================================================================================================
 
 bios_msg:        .byte "BIOS:", $0A, 0

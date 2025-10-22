@@ -69,6 +69,6 @@ DISK_DATA    = $C100 ;; 256 byte blocks
 ;; =====================================================================================================
 
 boot_entry         = $C200
-kernel_nmi         = $C300
-kernel_irq         = $C400
-
+kernel_entry       = $C300
+kernel_nmi         = $C400
+kernel_irq         = $C500
