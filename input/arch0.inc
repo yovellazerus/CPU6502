@@ -3,22 +3,26 @@
 ;; constants
 ;; =====================================================================================================
 
+DISK_IDLE    = 0
 DISK_READ    = 1
 DISK_WRITE   = 2
+
 DISK_READY   = 1
+DISK_ERR     = 2
+
 BOOT_FOUND   = 1
+
 SCR_WRITE    = 1
 SCR_CLEAR    = 2
+
 KEB_READY    = 1
+
 DISK_FOUND   = $FF
 KEB_FOUND    = $FF
 SCR_FOUND    = $FF
 SPK_FOUND    = $FF
 MIC_FOUND    = $FF
-KEB_ERR      = 1
-SCR_ERR      = 2
-SPK_ERR      = 3
-MIC_ERR      = 4
+
 POWER_OFF    = $FF
 
 ;; =====================================================================================================

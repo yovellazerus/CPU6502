@@ -41,11 +41,10 @@ bios_reset:
     ldx #<error_msg     ;; no disk is found
     ldy #>error_msg
     jsr bios_puts
-    lda #POWER_OFF
-    sta POWER
+@halt:
+    jmp @halt
 
 @disk_found:
-
     lda #0              ;; boot sector is block: $0000 of the disk
     sta DISK_ADDRL
     sta DISK_ADDRH
@@ -111,7 +110,7 @@ bios_msg:        .byte "BIOS:", $0A, 0
 cold_msg:        .byte "COLD START...", $0A, 0
 hot_msg:         .byte "HOT RESET...", $0A, 0
 ready_msg:       .byte "READY.", $0A, 0
-error_msg:       .byte "ERR: NO BOOT.", $0A, 0
+error_msg:       .byte "ERR: NO DISK FOUND.", $0A, 0
 
 ;; =====================================================================================================
 ;; IRQ/BRK/NMI and RESET vectors

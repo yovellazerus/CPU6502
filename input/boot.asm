@@ -27,8 +27,12 @@ _start:
     cmp #DISK_READY
     bne @wait_disk
 
-    lda #POWER_OFF      ;; power-off the CPU
-    sta POWER
+    nop
+    .byte $FF
+    nop
+    
+@halt:
+    jmp @halt
 
 ;; void puts(X: strL, Y: strH)
 puts:
@@ -53,5 +57,5 @@ putchar:
     sta SCR_CTRL
     rts
     
-hello_msg: .byte "Hello BOOT!", $0A, 0
+hello_msg: .byte "**** boot loader v1.0: ****", $0A, 0
 buffer:    .byte "I wrote this to disk!", $0A, 0

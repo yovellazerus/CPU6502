@@ -866,6 +866,7 @@ void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]) {
             break;
 
         case DISK_WRITE:
+            // printf("%d\n", write_timer);
             if (write_timer-- > 0) return;
             memcpy(disk[addr], &cpu->memory[DISK_DATA], BLOCK_SIZE);
             cpu->memory[DISK_CMD] = DISK_IDLE;
