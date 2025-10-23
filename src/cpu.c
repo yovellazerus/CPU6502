@@ -665,6 +665,9 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
         // power control
         if(!CPU_power(cpu)) return;
 
+        // apple-1 IO for WosMon:
+        CPU_apple_1_IO_sim(cpu);
+
         // I/O
         CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
         CPU_screen(cpu);
@@ -834,6 +837,48 @@ void CPU_screen(CPU* cpu){
     if(cpu->memory[SCR_CTRL] == 2){                   // clear the screen
         system("cls");
         cpu->memory[SCR_CTRL] = 0;
+    }
+#endif
+}
+
+// NOTE: no uniform buss r/w, "key_ready" emulates read-to-clear behavior for now
+void CPU_apple_1_IO_sim(CPU* cpu){
+#ifdef _WIN64
+
+    //***************************************************************/
+    // apple-1 keyboard: 
+    //***************************************************************/
+
+    static bool key_ready = false;  // tracks if key is pending consumption
+
+    char from_terminal;
+    if (_kbhit() && !key_ready) {                                         
+        from_terminal = _getch(); 
+        // Force uppercase (Apple-1 keyboard was uppercase only)
+        if (from_terminal >= 'a' && from_terminal <= 'z') from_terminal -= 0x20;                       
+        cpu->memory[APPLE1_KBD] = (from_terminal & 0x7F) | 0x80;            // set msb to 1 to signal that a key was prest
+        cpu->memory[APPLE1_KBDCR] = 0x80;                                 // set msb to 1 when a key is prest 
+
+        key_ready = true;
+    }
+
+    // Emulate read-to-clear behavior
+    if (key_ready && !(cpu->memory[APPLE1_KBD] & 0x80)) {
+        // CPU has read the key, clear the ready flags
+        cpu->memory[APPLE1_KBDCR] &= 0x7F;
+        key_ready = false;
+    }
+
+    //***************************************************************/
+    // apple-1 screen:
+    //***************************************************************/
+
+    byte from_mmio = cpu->memory[APPLE1_DSP];
+    if (((cpu->memory[APPLE1_DSPCR] & 0x80) == 0) && ((from_mmio & 0x80) == 0)) {   // if msb==0 putchar
+        putchar(from_mmio & 0x7F);      // put msb of data to 0 to emit a normal ASCII char 
+        fflush(stdout);
+        // After displaying, mark display as ready again
+        cpu->memory[APPLE1_DSPCR] = 0x80;
     }
 #endif
 }

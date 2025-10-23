@@ -17,7 +17,7 @@ RM      = del /Q /F
 # ====================================================================================
 #  Main build rule
 # ====================================================================================
-all: $(TARGET) input\bios.bin input\disk.bin input\lazmon.bin
+all: $(TARGET) input\bios.bin input\disk.bin input\wosmon.bin
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
@@ -33,10 +33,10 @@ input\disk.bin: input\boot.asm input\disk.cfg
 	$(LD) input\boot.o -C input\disk.cfg -o bin\disk.bin
 	$(RM) input\boot.o >nul 2>&1
 
-input\lazmon.bin: input\lazmon.asm input\lazmon.cfg
-	$(CA) input\lazmon.asm -o input\lazmon.o
-	$(LD) input\lazmon.o -C input\lazmon.cfg -o bin\lazmon.bin
-	$(RM) input\lazmon.o >nul 2>&1
+input\wosmon.bin: input\wosmon.asm input\wosmon.cfg
+	$(CA) input\wosmon.asm -o input\wosmon.o
+	$(LD) input\wosmon.o -C input\wosmon.cfg -o bin\wosmon.bin
+	$(RM) input\wosmon.o >nul 2>&1
 
 src\%.o: src\%.c
 	$(CC) $(CFLAGS) -c $< -o $@

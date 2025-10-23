@@ -83,6 +83,14 @@
 
 //****************************************************************************
 
+// for WosMon:
+#define APPLE1_KBD     0xD010   // PIA.A keyboard input
+#define APPLE1_KBDCR   0xD011   // PIA.A keyboard control register
+#define APPLE1_DSP     0xD012   // PIA.B display output register
+#define APPLE1_DSPCR   0xD013   // PIA.B display control register
+
+//****************************************************************************
+
 typedef uint8_t byte;
 typedef uint16_t word;
 
@@ -353,6 +361,9 @@ bool CPU_power(CPU* cpu);
 void CPU_keyboard(CPU* cpu);
 void CPU_screen(CPU* cpu);
 void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
+
+// for WosMon:
+void CPU_apple_1_IO_sim(CPU* cpu);
 
 #endif // CPU_H_
 
