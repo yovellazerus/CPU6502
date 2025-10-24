@@ -140,8 +140,18 @@ argv         = KERNEL_RAM + $0100
 user         = KERNEL_RAM + $0200
 
 ;; ================================================================================
-;;; kernel code and read only data is here
+;;; kernel code and data is here
 ;; ================================================================================
+
+.segment "DATA"
+
+users_table:
+user_root:              .byte "root",   0, 0, 0, 0,    "1967@1A", 0
+user_alice:             .byte "alice",  0, 0, 0,       "abcdefg", 0
+user_bob:               .byte "bob"  ,  0, 0, 0, 0, 0, "1234567", 0
+user_carmen:            .byte "carmen", 0, 0,          "!@#$%^&", 0
+
+users_count:            .byte 04
 
 .segment "RODATA"
 
@@ -251,13 +261,6 @@ monitor:
 ;; users table entry must be:
 ;; 8B user-name(ctr), 8B password(ctr)
 ;; =====================================================================================================
-
-users_count:            .byte 04
-users_table:
-user_root:              .byte "root",   0, 0, 0, 0,    "1967@1A", 0
-user_alice:             .byte "alice",  0, 0, 0,       "abcdefg", 0
-user_bob:               .byte "bob"  ,  0, 0, 0, 0, 0, "1234567", 0
-user_carmen:            .byte "carmen", 0, 0,          "!@#$%^&", 0
 
 login:
 @user:
