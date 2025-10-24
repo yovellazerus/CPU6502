@@ -1357,9 +1357,23 @@ void instruction_INY(CPU* cpu){
 
 void instruction_DEC_ZeroPage(CPU* cpu)
 {
-    UNUSED;
-
+    word zp_addr = cpu->memory[cpu->PC++];
+    cpu->memory[zp_addr]--;
+    if(cpu->memory[zp_addr] == 0){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->memory[zp_addr])){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 5);
 }
+
 void instruction_DEC_ZeroPageX(CPU* cpu)
 {
     UNUSED;

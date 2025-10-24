@@ -111,7 +111,7 @@ bios_msg:        .byte "BIOS:", $0A, 0
 cold_msg:        .byte "COLD START...", $0A, 0
 hot_msg:         .byte "HOT RESET...", $0A, 0
 ready_msg:       .byte "READY.", $0A, 0
-error_msg:       .byte "ERR: NO BOOTABLE DEVICE.", $0A, 0
+error_msg:       .byte "ERROR: NO BOOTABLE DEVICE.", $0A, 0
 
 ;; =====================================================================================================
 ;; IRQ/BRK/NMI and RESET vectors

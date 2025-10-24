@@ -68,32 +68,33 @@ POWER_OFF    = $FF
 ;; =====================================================================================================
 
 ZP_X86_64 = $00
+REG_SIZE  = 8
 
-rax = ZP_X86_64 + $00
-rbx = ZP_X86_64 + $08
-rcx = ZP_X86_64 + $10
-rdx = ZP_X86_64 + $18
-rsi = ZP_X86_64 + $20
-rdi = ZP_X86_64 + $28
-rbp = ZP_X86_64 + $30
-rsp = ZP_X86_64 + $38
-r8  = ZP_X86_64 + $40
-r9  = ZP_X86_64 + $48
-r10 = ZP_X86_64 + $50
-r11 = ZP_X86_64 + $58
-r12 = ZP_X86_64 + $60
-r13 = ZP_X86_64 + $68
-r14 = ZP_X86_64 + $70
-r15 = ZP_X86_64 + $78
+rax = ZP_X86_64 + REG_SIZE*0 
+rbx = ZP_X86_64 + REG_SIZE*1 
+rcx = ZP_X86_64 + REG_SIZE*2 
+rdx = ZP_X86_64 + REG_SIZE*3 
+rsi = ZP_X86_64 + REG_SIZE*4 
+rdi = ZP_X86_64 + REG_SIZE*5 
+rbp = ZP_X86_64 + REG_SIZE*6 
+rsp = ZP_X86_64 + REG_SIZE*7 
+r8  = ZP_X86_64 + REG_SIZE*8 
+r9  = ZP_X86_64 + REG_SIZE*9 
+r10 = ZP_X86_64 + REG_SIZE*10 
+r11 = ZP_X86_64 + REG_SIZE*11 
+r12 = ZP_X86_64 + REG_SIZE*12 
+r13 = ZP_X86_64 + REG_SIZE*13 
+r14 = ZP_X86_64 + REG_SIZE*14 
+r15 = ZP_X86_64 + REG_SIZE*15 
 
 ;; ================================================================================
 ;; KERNEL zero page vars:
 ;; ================================================================================
 
-KERNEL_ZP    = $80
+KERNEL_ZP    = ZP_X86_64 + REG_SIZE*16
 
-line_size    = KERNEL_ZP + $42
-argc         = KERNEL_ZP + $50
+line_size    = KERNEL_ZP + $00
+argc         = KERNEL_ZP + $01
 
 ;; =====================================================================================================
 ;; MMIO registers
@@ -136,23 +137,31 @@ KERNEL_RAM   = $C200
 
 line         = KERNEL_RAM + $0000
 argv         = KERNEL_RAM + $0100
+user         = KERNEL_RAM + $0200
 
 ;; ================================================================================
 ;;; kernel code and read only data is here
 ;; ================================================================================
 
 .segment "RODATA"
-welcome_msg:          .byte "**** 6502 kernel monitor ****", $0A, 0
-prompt_msg:           .byte "> ", 0
 
-error_prefix_msg:     .byte "ERROR: ", 0
-error_underFlow_msg:  .byte "underFlow", 0
-error_unknown_MP_msg: .byte "unknown monitor service", 0
+login_user_msg:         .byte "User: ", 0
+login_pass_msg:         .byte "Password: ", 0
 
-MP_dump_str:          .byte "dump", 0
-MP_clear_str:         .byte "clear", 0
+welcome_msg:            .byte "**** welcome to the 6502 kernel monitor ****", $0A, 0
+prompt_msg:             .byte "> ", 0
+
+error_prefix_msg:       .byte "ERROR: ", 0
+error_underFlow_msg:    .byte "underFlow", 0
+error_unknown_user_msg: .byte "unknown user: ", 0
+error_unknown_MP_msg:   .byte "unknown monitor service", 0
+
+MP_dump_str:            .byte "dump", 0
+MP_clear_str:           .byte "clear", 0
+MP_exit_str:            .byte "exit", 0
 
 .segment "LIB"
+
 ;; void string_print(str s) the arg "s" is in X,Y
 string_print:
     stx r8       
@@ -172,7 +181,6 @@ print_done:
 ;; A : bool string_cmp(str a, str b)
 ;; note: 0 if eq 1 if diff no <,> for now
 string_cmp:
-    
     lda rdi
     sta r8
     lda rdi+1
@@ -212,46 +220,20 @@ string_cmp:
     lda #1
     rts
 
-;; void error(A : err) "err" in A
-error:
-    ldx #<error_prefix_msg
-    ldy #>error_prefix_msg
-    jsr string_print
-    cmp #ERROR_UNDERFLOW
-    beq @underFlow
-    cmp #ERROR_UNKNOWN_MP
-    beq @unknown_MP
-
-@unknown_MP:
-    ldx #<error_unknown_MP_msg
-    ldy #>error_unknown_MP_msg
-    jsr string_print
-    lda #' '
-    jsr bios_putchar
-    lda #'"'
-    jsr bios_putchar
-    ldx #<argv
-    ldy #>argv
-    jsr string_print
-    lda #'"'
-    jsr bios_putchar
-    jmp @end
-@underFlow:
-    ldx #<error_underFlow_msg
-    ldy #>error_underFlow_msg
-    jsr string_print
-    jmp @end
-@end:
-    lda #$0A
-    jsr bios_putchar
-    rts
-
 .segment "MONITOR"
+
+;; =====================================================================================================
+;; main monitor function:
+;; =====================================================================================================
+
 monitor:
     ldx #<welcome_msg
     ldy #>welcome_msg
     jsr string_print
 @loop:                  ;; inf loop
+    ldx #<user
+    ldy #>user
+    jsr string_print
     jsr print_prompt
     jsr get_line
     jsr parse_line
@@ -264,16 +246,117 @@ monitor:
 
     jmp @loop
 
-;; 
+;; =====================================================================================================
+;; login protocol: 
+;; users table entry must be:
+;; 8B user-name(ctr), 8B password(ctr)
+;; =====================================================================================================
+
+users_count:            .byte 04
+users_table:
+user_root:              .byte "root",   0, 0, 0, 0,    "1967@1A", 0
+user_alice:             .byte "alice",  0, 0, 0,       "abcdefg", 0
+user_bob:               .byte "bob"  ,  0, 0, 0, 0, 0, "1234567", 0
+user_carmen:            .byte "carmen", 0, 0,          "!@#$%^&", 0
+
+login:
+@user:
+    jsr get_user
+    cmp #0
+    beq @user
+    rts
+
+get_user:
+    ldx #<login_user_msg
+    ldy #>login_user_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line      ;; argv[0] = user input
+
+    lda users_count     ;; number of users
+    sta rcx
+@search_loop:
+    ldx #<argv          ;; a = argv[0]
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+
+    lda #0              
+    sta rdx
+    lda rcx             
+    sta r8              ;; r8 = rcx(i)
+    dec r8              ;; r8--
+@mul:
+    lda rdx
+    clc
+    adc #16
+    sta rdx
+    dec r8
+    bne @mul
+
+
+    ldx #<users_table   ;; rdx = (rcx(i) - 1) * 16
+    txa
+    clc
+    adc rdx
+    tax                 ;; b = users_table[rdx]
+    ldy #>users_table
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @next_entry     ;; a != b
+
+    ;; a == b
+    ldx #0
+@copy_user:
+    lda argv,x
+    beq @set_ret
+    sta user,x
+    inx
+    jmp @copy_user
+@set_ret:
+    lda #1              
+    jmp @end
+
+@next_entry:
+    dec rcx
+    bne @search_loop    ;; if loop finish than bad user name
+
+@bad_user:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_unknown_user_msg
+    ldy #>error_unknown_user_msg
+    jsr string_print
+    lda #'"'
+    jsr bios_putchar
+    ldx #<argv
+    ldy #>argv
+    jsr string_print
+    lda #'"'
+    jsr bios_putchar
+    lda #$0A
+    jsr bios_putchar
+    lda #0
+@end:
+    rts
+
+;; =====================================================================================================
+;; monitor helper functions:
+;; =====================================================================================================
+
 get_line:
     ldx #0
     stx line_size
 @loop:
-    jsr bios_waitchar    ;; echo the input
+    jsr bios_waitchar   ;; echo the input
     jsr bios_putchar
     cmp #$0D            ;; is 'cr'?
-    beq @end           ;; yes
-    stx line_size      ;; no, next char
+    beq @end            ;; yes
+    stx line_size       ;; no, next char
     sta line,x
     inx
     jmp @loop
@@ -288,17 +371,17 @@ get_line:
     rts
 
 parse_line:
-    ldx #0             ; line index
-    ldy #0             ; argv index
+    ldx #0             ;; line index
+    ldy #0             ;; argv index
     lda #0
     sta argc
 @loop:
     jsr trim
     jsr parse_token
     lda line,x
-    cmp #$0A           ; newline? (stop)
+    cmp #$0A           ;; newline? (stop)
     beq @end
-    cmp #$00           ; end of string? (stop)
+    cmp #$00           ;; end of string? (stop)
     beq @end
     jmp @loop
 @end:
@@ -315,17 +398,17 @@ trim:
 
 parse_token:
     lda line,x
-    cmp #$0A            ; newline?
+    cmp #$0A            ;; newline?
     beq @end_of_line
-    cmp #$00            ; end of string?
+    cmp #$00            ;; end of string?
     beq @end_of_line
 @copy:
     lda line,x
-    cmp #' '            ; space?
+    cmp #' '            ;; space?
     beq @done_token
-    cmp #$0A            ; newline?
+    cmp #$0A            ;; newline?
     beq @done_token
-    cmp #$00            ; end-of-string?
+    cmp #$00            ;; end-of-string?
     beq @done_token
 
     sta argv,y         
@@ -373,11 +456,59 @@ execute_line:
     jsr MP_clear
     jmp @end
 @not_clear:
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+    ldx #<MP_exit_str
+    ldy #>MP_exit_str
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @not_exit
+    jsr MP_exit
+    jmp @end
+@not_exit:
 
 @error:
     lda #ERROR_UNKNOWN_MP
     jsr error
 @end:
+    rts
+
+;; void error(A : err) "err" in A
+error:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    cmp #ERROR_UNDERFLOW
+    beq @underFlow
+    cmp #ERROR_UNKNOWN_MP
+    beq @unknown_MP
+
+@unknown_MP:
+    ldx #<error_unknown_MP_msg
+    ldy #>error_unknown_MP_msg
+    jsr string_print
+    lda #' '
+    jsr bios_putchar
+    lda #'"'
+    jsr bios_putchar
+    ldx #<argv
+    ldy #>argv
+    jsr string_print
+    lda #'"'
+    jsr bios_putchar
+    jmp @end
+@underFlow:
+    ldx #<error_underFlow_msg
+    ldy #>error_underFlow_msg
+    jsr string_print
+    jmp @end
+@end:
+    lda #$0A
+    jsr bios_putchar
     rts
 
 print_prompt:
@@ -386,14 +517,18 @@ print_prompt:
     jsr string_print
     rts
 
+;; =====================================================================================================
+;; monitor sub programs:
+;; =====================================================================================================
+
 MP_dump:
     ldy #0              
     ldx #0              
 @next_arg:
     cpx argc            
-    beq @done            
+    beq @done 
 @print_arg:
-    lda argv,y          
+    lda argv,y 
     beq @end_of_arg      
     jsr bios_putchar      
     iny                 
@@ -413,9 +548,12 @@ MP_clear:
     jsr bios_clear
     rts
 
+MP_exit:
+    jmp reset
+
 .segment "BIOS"
 reset:
-    ldx #$FF                    ;; BIOS init's 
+    ldx #$FF               ;; BIOS init's 
     txs
     cld
     cli
@@ -425,7 +563,16 @@ reset:
     sta rsp
     jsr bios_clear
 
+    ldx #8                  ;; sizeof(user) == 8
+    lda #0
+@user_init:
+    sta user,x
+    dex
+    bne @user_init
+
     MOV64 welcome_msg, $B000    ;; macro test, macros are amazing!!!!
+
+    jsr login
 
     jmp monitor                 ;; not returning, inf loop
 
