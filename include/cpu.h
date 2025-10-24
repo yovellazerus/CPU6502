@@ -337,17 +337,15 @@ void CPU_dump_cpu(CPU* cpu, FILE* file);
 void CPU_dump_memory(CPU* cpu, FILE* file);
 void CPU_dump_stack(CPU* cpu, FILE* file);
 void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file);
+bool CPU_debug(CPU* cpu);
 
-// helpers for cpu operations
+// helpers functions for cpu 
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);
 void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand);
 void CPU_push(CPU* cpu, char reg);
 void CPU_pop(CPU* cpu, char reg);
-
-bool CPU_debug(CPU* cpu);
-void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 void CPU_tick(CPU* cpu, size_t amount); 
 void CPU_invalid_opcode(CPU* cpu, byte opcode);
 
@@ -355,6 +353,9 @@ void CPU_invalid_opcode(CPU* cpu, byte opcode);
 void CPU_reset(CPU* cpu);
 void CPU_nmi(CPU* cpu);
 void CPU_irq(CPU* cpu);
+
+// main emulator function
+void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 
 // I/O
 bool CPU_power(CPU* cpu);

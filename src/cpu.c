@@ -331,6 +331,10 @@ Addressing_mode opcode_to_Addressing_mode[0xff + 1] = {
     [Opcode_RTI            ] = Add_Implied ,       
 };
 
+//====================================================================================================
+// debug function, mostly not needed at that point...
+//====================================================================================================
+
 void CPU_dump_cpu(CPU * cpu, FILE * file)
 {
     if(!file) file = stdout;
@@ -363,6 +367,21 @@ void CPU_dump_memory(CPU * cpu, FILE * file)
             line += 8;
         }
         fprintf(file, " 0x%.2x ", cpu->memory[i]);
+    }
+}
+
+void CPU_dump_stack(CPU * cpu, FILE * file)
+{
+    if(!file) file = stdout;
+    for(int i = STACK_END; i >= STACK_START; i--){
+        fprintf(file, "0x%.4x: ", i);
+        fprintf(file, " 0x%.2x", cpu->memory[i]);
+        if(i == cpu->SP + STACK_START){
+            fprintf(file, " <--- sp\n");
+        }
+        else{
+            fprintf(file, "\n");
+        }
     }
 }
 
@@ -470,20 +489,47 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
     }
 }
 
-void CPU_dump_stack(CPU * cpu, FILE * file)
-{
-    if(!file) file = stdout;
-    for(int i = STACK_END; i >= STACK_START; i--){
-        fprintf(file, "0x%.4x: ", i);
-        fprintf(file, " 0x%.2x", cpu->memory[i]);
-        if(i == cpu->SP + STACK_START){
-            fprintf(file, " <--- sp\n");
-        }
-        else{
-            fprintf(file, "\n");
+bool CPU_debug(CPU* cpu){
+    char input = 0;
+    printf("A = 0x%.2x, X = 0x%.2x, Y = 0x%.2x, SP = 0x%.2x, PC = ", cpu->A, cpu->X, cpu->Y, cpu->SP);
+    CPU_dumpProgram(cpu, cpu->PC, 1, stdout);
+    while(true){
+        fflush(stdin);
+        input = getchar();
+        switch (input)
+        {
+        case 's':
+            return true;
+        case 'p':
+            printf("P {");
+            printf("  n: %d", CPU_getFlag(cpu, 'n'));
+            printf("  v: %d", CPU_getFlag(cpu, 'v'));
+            printf("  u: %d", CPU_getFlag(cpu, 'u'));
+            printf("  b: %d", CPU_getFlag(cpu, 'b'));
+            printf("  d: %d", CPU_getFlag(cpu, 'd'));
+            printf("  i: %d", CPU_getFlag(cpu, 'i'));
+            printf("  z: %d", CPU_getFlag(cpu, 'z'));
+            printf("  c: %d", CPU_getFlag(cpu, 'c'));
+            printf("  }\n");
+            break;
+        case 'd':
+            CPU_dump_stack(cpu, 0);
+            break;
+        case 'q':
+            return false;
+            
+            
+        default:
+            fprintf(stderr, COLOR_RED "ERROR: unknown debug flag: `%c`\n" COLOR_RESET, input);
+            break;
         }
     }
 }
+
+//====================================================================================================
+// helper cpu functions:
+// NOTE: need to extend to uniform r/w bus function for pure 6502 cpu implementation
+//====================================================================================================
 
 bool CPU_getFlag(CPU* cpu, char flag){
     switch (flag){
@@ -506,64 +552,6 @@ bool CPU_getFlag(CPU* cpu, char flag){
         default:
             fprintf(stderr, COLOR_RED "ERROR: unknown cpu flag %c\n" COLOR_RESET, flag);
             return false;
-    }
-}
-
-void CPU_push(CPU * cpu, char reg)
-{
-    switch (reg)
-    {
-    case 'A':
-        cpu->memory[STACK_START + cpu->SP--] = cpu->A;
-        break;
-    case 'X':
-        cpu->memory[STACK_START + cpu->SP--] = cpu->X;
-        break;
-    case 'Y':
-        cpu->memory[STACK_START + cpu->SP--] = cpu->Y;
-        break;
-    case 'P':
-        cpu->memory[STACK_START + cpu->SP--] = cpu->P;
-        break;
-    case 'C': // for PC
-        cpu->memory[STACK_START + cpu->SP--] = HIGH_BYTE(cpu->PC);
-        cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(cpu->PC);
-        break;
-    default:
-        fprintf(stderr, COLOR_RED "ERROR: non legal push operation for register `%c`\n" COLOR_RESET, reg);
-        break;
-    }
-}
-
-void CPU_pop(CPU * cpu, char reg)
-{
-    word addr = 0;
-    byte low = 0;
-    byte high = 0;
-
-    switch (reg)
-    {
-    case 'A':
-        cpu->A = cpu->memory[++cpu->SP + STACK_START];
-        break;
-    case 'X':
-        cpu->X = cpu->memory[++cpu->SP + STACK_START];
-        break;
-    case 'Y':
-        cpu->Y = cpu->memory[++cpu->SP + STACK_START];
-        break;
-    case 'P':
-        cpu->P = cpu->memory[++cpu->SP + STACK_START];
-        CPU_onFlag(cpu, 'u'); // always on
-        break;
-    case 'C': // for PC
-        low  = cpu->memory[STACK_START + ++cpu->SP];
-        high = cpu->memory[STACK_START + ++cpu->SP];
-        cpu->PC = (high << 8) | low;
-        break;
-    default:
-        fprintf(stderr, COLOR_RED "ERROR: non legal pop operation for register `%c`\n" COLOR_RESET, reg);
-        break;
     }
 }
 
@@ -630,66 +618,6 @@ bool CPU_offFlag(CPU* cpu, char flag){
     return true;
 }
 
-void CPU_tick(CPU* cpu, size_t amount){
-    (void) cpu;
-    (void) amount;
-    return;
-}
-
-void CPU_invalid_opcode(CPU * cpu, byte opcode)
-{
-    CPU_tick(cpu, 2);
-}
-
-// done at the hardware level not using normal cpu instructions.
-// call wan the reset input is set low, not an interrupt!  
-void CPU_reset(CPU *cpu)
-{
-    cpu->SP = RESET_SP_REGISTER;
-    CPU_onFlag(cpu, 'u');
-    CPU_onFlag(cpu, 'i');
-    CPU_offFlag(cpu, 'd');
-
-    CPU_tick(cpu, 7);
-
-    word bus;
-    bus = cpu->memory[0xfffc];
-    bus += cpu->memory[0xfffd] << 8;
-    cpu->PC = bus;
-}
-
-void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
-
-    while(true){
-
-        // power control
-        if(!CPU_power(cpu)) return;
-
-        // apple-1 IO for WosMon:
-        CPU_apple_1_IO_sim(cpu);
-
-        // I/O
-        CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
-        CPU_screen(cpu);
-
-        // disk
-        CPU_disk(cpu, disk);
-
-        // fetch:
-        Opcode opcode = cpu->memory[cpu->PC++];
-        if(opcode == 0xFF) return; // for debug
-
-        // decode:
-        Instruction instruction = Opcode_to_Instruction_table[opcode];
-        if(!instruction){
-            CPU_invalid_opcode(cpu, opcode);
-        }
-        
-        // execute:
-        instruction(cpu);
-    }
-}
-
 void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand){
     byte new_value = 0;
     switch (reg)
@@ -725,41 +653,95 @@ void CPU_updateFlags(CPU* cpu, char reg, char flag, byte old_value, byte operand
     }
 }
 
-bool CPU_debug(CPU* cpu){
-    char input = 0;
-    printf("A = 0x%.2x, X = 0x%.2x, Y = 0x%.2x, SP = 0x%.2x, PC = ", cpu->A, cpu->X, cpu->Y, cpu->SP);
-    CPU_dumpProgram(cpu, cpu->PC, 1, stdout);
-    while(true){
-        fflush(stdin);
-        input = getchar();
-        switch (input)
-        {
-        case 's':
-            return true;
-        case 'p':
-            printf("P {");
-            printf("  n: %d", CPU_getFlag(cpu, 'n'));
-            printf("  v: %d", CPU_getFlag(cpu, 'v'));
-            printf("  u: %d", CPU_getFlag(cpu, 'u'));
-            printf("  b: %d", CPU_getFlag(cpu, 'b'));
-            printf("  d: %d", CPU_getFlag(cpu, 'd'));
-            printf("  i: %d", CPU_getFlag(cpu, 'i'));
-            printf("  z: %d", CPU_getFlag(cpu, 'z'));
-            printf("  c: %d", CPU_getFlag(cpu, 'c'));
-            printf("  }\n");
-            break;
-        case 'd':
-            CPU_dump_stack(cpu, 0);
-            break;
-        case 'q':
-            return false;
-            
-            
-        default:
-            fprintf(stderr, COLOR_RED "ERROR: unknown debug flag: `%c`\n" COLOR_RESET, input);
-            break;
-        }
+void CPU_push(CPU * cpu, char reg)
+{
+    switch (reg)
+    {
+    case 'A':
+        cpu->memory[STACK_START + cpu->SP--] = cpu->A;
+        break;
+    case 'X':
+        cpu->memory[STACK_START + cpu->SP--] = cpu->X;
+        break;
+    case 'Y':
+        cpu->memory[STACK_START + cpu->SP--] = cpu->Y;
+        break;
+    case 'P':
+        cpu->memory[STACK_START + cpu->SP--] = cpu->P;
+        break;
+    case 'C': // for PC
+        cpu->memory[STACK_START + cpu->SP--] = HIGH_BYTE(cpu->PC);
+        cpu->memory[STACK_START + cpu->SP--] = LOW_BYTE(cpu->PC);
+        break;
+    default:
+        fprintf(stderr, COLOR_RED "ERROR: non legal push operation for register `%c`\n" COLOR_RESET, reg);
+        break;
     }
+}
+
+void CPU_pop(CPU * cpu, char reg)
+{
+    word addr = 0;
+    byte low = 0;
+    byte high = 0;
+
+    switch (reg)
+    {
+    case 'A':
+        cpu->A = cpu->memory[++cpu->SP + STACK_START];
+        break;
+    case 'X':
+        cpu->X = cpu->memory[++cpu->SP + STACK_START];
+        break;
+    case 'Y':
+        cpu->Y = cpu->memory[++cpu->SP + STACK_START];
+        break;
+    case 'P':
+        cpu->P = cpu->memory[++cpu->SP + STACK_START];
+        CPU_onFlag(cpu, 'u'); // always on
+        break;
+    case 'C': // for PC
+        low  = cpu->memory[STACK_START + ++cpu->SP];
+        high = cpu->memory[STACK_START + ++cpu->SP];
+        cpu->PC = (high << 8) | low;
+        break;
+    default:
+        fprintf(stderr, COLOR_RED "ERROR: non legal pop operation for register `%c`\n" COLOR_RESET, reg);
+        break;
+    }
+}
+
+void CPU_tick(CPU* cpu, size_t amount){
+    (void) cpu;
+    (void) amount;
+    return;
+}
+
+void CPU_invalid_opcode(CPU * cpu, byte opcode)
+{
+    CPU_tick(cpu, 2);
+}
+
+
+//===================================================================================================
+// interrupt's and reset:
+// done at the hardware level not using normal cpu instructions.
+// reset is called wan the reset input is set low, not an interrupt! 
+//===================================================================================================
+ 
+void CPU_reset(CPU *cpu)
+{
+    cpu->SP = RESET_SP_REGISTER;
+    CPU_onFlag(cpu, 'u');
+    CPU_onFlag(cpu, 'i');
+    CPU_offFlag(cpu, 'd');
+
+    CPU_tick(cpu, 7);
+
+    word bus;
+    bus = cpu->memory[0xfffc];
+    bus += cpu->memory[0xfffd] << 8;
+    cpu->PC = bus;
 }
 
 void CPU_irq(CPU *cpu)
@@ -810,6 +792,46 @@ void CPU_nmi(CPU *cpu)
     CPU_onFlag(cpu, 'i');
     CPU_tick(cpu, 7);
 }
+
+//====================================================================================================
+// main emulator function: (NOTE: for now a VM implementation needs to be pure 6502 cpu, for later...)
+//====================================================================================================
+
+void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
+
+    while(true){
+
+        // power control
+        if(!CPU_power(cpu)) return;
+
+        // apple-1 IO for WosMon:
+        CPU_apple_1_IO_sim(cpu);
+
+        // arch0 I/O
+        CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
+        CPU_screen(cpu);
+
+        // disk
+        CPU_disk(cpu, disk);
+
+        // fetch:
+        Opcode opcode = cpu->memory[cpu->PC++];
+        if(opcode == 0xFF) return; // for debug
+
+        // decode:
+        Instruction instruction = Opcode_to_Instruction_table[opcode];
+        if(!instruction){
+            CPU_invalid_opcode(cpu, opcode);
+        }
+        
+        // execute:
+        instruction(cpu);
+    }
+}
+
+//===================================================================================================
+// MMIO: (NOTE: needs to move to the r/w function for the VM implementation)
+//===================================================================================================
 
 void CPU_keyboard(CPU* cpu){
 #ifdef _WIN64

@@ -3,9 +3,14 @@
 #include "../include/instruction.h"
 
 int main(int argc, char* argv[]){
-    if(argc < 3){
-        fprintf(stderr, COLOR_RED "USAGE: %s <memory.bin> <disk.bin>\n", argv[0]);
-        fprintf(stderr, "ERROR: no input was provided\n" COLOR_RESET);
+    if(argc < 2){
+        fprintf(stderr, COLOR_RED "USAGE: %s <memory_img.bin>\n", argv[0]);
+        fprintf(stderr, "ERROR: no input was provided.\n" COLOR_RESET);
+        return 1;
+    }
+    if(argc > 2){
+        fprintf(stderr, COLOR_RED "USAGE: %s <memory_img.bin>\n", argv[0]);
+        fprintf(stderr, "ERROR: to many arguments.\n" COLOR_RESET);
         return 1;
     }
 
@@ -13,32 +18,31 @@ int main(int argc, char* argv[]){
     byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE];
 
     const char* memory_path = argv[1];
-    FILE* memory_img = fopen(argv[1], "rb");
-    if(!memory_img){
+    FILE* memory_file = fopen(argv[1], "rb");
+    if(!memory_file){
         perror(memory_path);
         return 1;
     }
-    fread(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_img);
-    fclose(memory_img);
+    fread(cpu.memory, sizeof(*cpu.memory), MEMORY_SIZE, memory_file);
+    fclose(memory_file);
 
-    const char* disk_path = argv[2];
-    FILE* disk_img = fopen(disk_path, "rwb");
-    if(!disk_img){
-        fclose(memory_img);
+    const char* disk_path = "./bin/disk.bin";
+    FILE* disk_file = fopen(disk_path, "rb+");
+    if(!disk_file){
         perror(disk_path);
         return 1;
     }
-    fread(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_img);
+    fread(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_file);
 
-    CPU_reset(&cpu);
     printf(COLOR_GREEN);
+    CPU_reset(&cpu);
     CPU_run(&cpu, disk);
     printf(COLOR_RESET);
 
-    fwrite(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_img);
-    fclose(disk_img);
+    fwrite(disk, sizeof(**disk), BLOCK_SIZE*DISK_BLOCK_COUNT, disk_file);
+    fclose(disk_file);
 
-    const char* memory_dump_path = "./output/memory.bin";
+    const char* memory_dump_path = "./bin/memory_dump.bin";
     FILE* memory_dump_file = fopen(memory_dump_path, "wb");
     if(!memory_dump_file){
         perror(memory_dump_path);
