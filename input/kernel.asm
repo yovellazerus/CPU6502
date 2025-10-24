@@ -138,6 +138,7 @@ KERNEL_RAM   = $C200
 line         = KERNEL_RAM + $0000
 argv         = KERNEL_RAM + $0100
 user         = KERNEL_RAM + $0200
+password     = KERNEL_RAM + $0208
 
 ;; ================================================================================
 ;;; kernel code and data is here
@@ -156,7 +157,7 @@ users_count:            .byte 04
 .segment "RODATA"
 
 login_user_msg:         .byte "User: ", 0
-login_pass_msg:         .byte "Password: ", 0
+login_password_msg:     .byte "Password: ", 0
 
 welcome_msg:            .byte "**** welcome to the 6502 kernel monitor ****", $0A, 0
 prompt_msg:             .byte "> ", 0
@@ -164,6 +165,7 @@ prompt_msg:             .byte "> ", 0
 error_prefix_msg:       .byte "ERROR: ", 0
 error_underFlow_msg:    .byte "underFlow", 0
 error_unknown_user_msg: .byte "unknown user: ", 0
+error_wrong_password:   .byte "wrong password", $0A, 0
 error_unknown_MP_msg:   .byte "unknown monitor service", 0
 
 MP_dump_str:            .byte "dump", 0
@@ -260,16 +262,54 @@ monitor:
 ;; login protocol: 
 ;; users table entry must be:
 ;; 8B user-name(ctr), 8B password(ctr)
+;; NOTE: only for upp to 16 users!
 ;; =====================================================================================================
 
 login:
-@user:
-    jsr get_user
+@loop:
+    jsr get_user_and_password
     cmp #0
-    beq @user
+    beq @loop
+    jsr verify_password
+    cmp #0
+    beq @loop
+    ;; password is right!
     rts
 
-get_user:
+verify_password:
+    ldx #<login_password_msg
+    ldy #>login_password_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line
+
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+    ldx #<password
+    ldy #>password
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @bad_exit
+@good_exit:
+    lda #1
+    rts
+
+@bad_exit:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_wrong_password
+    ldy #>error_wrong_password
+    jsr string_print
+    lda #0
+    rts
+
+get_user_and_password:
     ldx #<login_user_msg
     ldy #>login_user_msg
     jsr string_print
@@ -312,14 +352,21 @@ get_user:
     bne @next_entry     ;; a != b
 
     ;; a == b
-    ldx #0
+    ldy #0
+    lda rsi
+    clc
+    adc #8
+    sta rsi
+@copy_password:         ;; in rsi is the pointer of the password
+    lda (rsi),y
+    sta password,y
+    cmp #0
+    beq @copy_user
+    iny
+    jmp @copy_password
+    
 @copy_user:
-    lda argv,x
-    beq @set_ret
-    sta user,x
-    inx
-    jmp @copy_user
-@set_ret:
+    MOV64 argv, user
     lda #1              
     jmp @end
 
