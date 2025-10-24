@@ -805,7 +805,7 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
         if(!CPU_power(cpu)) return;
 
         // apple-1 IO for WosMon:
-        CPU_apple_1_IO_sim(cpu);
+        // CPU_apple_1_IO_sim(cpu);
 
         // arch0 I/O
         CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
@@ -913,8 +913,14 @@ bool CPU_power(CPU* cpu){
 }
 
 void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]) {
+
     static size_t read_timer = DISK_TIME;
     static size_t write_timer = DISK_TIME;
+
+    // prevent disk_status from aver being 0
+    if(cpu->memory[DISK_STATUS] == DISK_BAD){
+       cpu->memory[DISK_STATUS] = DISK_PRESENT; 
+    }
 
     word addr = ((word)cpu->memory[DISK_ADDRH] << 8) | cpu->memory[DISK_ADDRL];
     if (addr >= DISK_BLOCK_COUNT) {

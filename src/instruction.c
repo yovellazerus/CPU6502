@@ -1229,10 +1229,23 @@ void instruction_CMP_IndirectY(CPU* cpu){
     UNUSED;
 
 }
-
+// C flag not implemented!!!
 void instruction_CPX_Immediate(CPU* cpu)
 {
-    UNUSED;
+    byte val = cpu->memory[cpu->PC++];
+    if(cpu->X == val){
+        CPU_onFlag(cpu, 'z');
+    }
+    else{
+        CPU_offFlag(cpu, 'z');
+    }
+    if(IS_NEGATIVE(cpu->X - val)){
+        CPU_onFlag(cpu, 'n');
+    }
+    else{
+        CPU_offFlag(cpu, 'n');
+    }
+    CPU_tick(cpu, 3);
 
 }
 // C flag not implemented!!!

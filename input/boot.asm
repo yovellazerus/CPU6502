@@ -1,7 +1,7 @@
 
 .include "arch0.inc"
 
-bios_putchar = $FF90   ;; start of segment BIOS in the STARTUP ROM
+bios_putstring = $FF80   ;; start of segment BIOS in the STARTUP ROM
 
 .segment "BOOT"
 .org boot_entry
@@ -9,25 +9,25 @@ _start:
     
     ldx #<hello_msg     ;; hello msg
     ldy #>hello_msg
-    jsr  bios_putchar  
+    jsr  bios_putstring  
 
-;; ****** writing to disk test ******
+    ;; ****** writing to disk test ******
 
     ldx $FF             ;; copy from msg to disk data
 @copy:
-    lda DISK_DATA,x
+    lda disk_data,x
     sta write_msg,x
     dex
     bne @copy 
 
     lda #0              ;; writing to disk test
-    sta DISK_ADDRL
+    sta disk_addrl
     lda #1
-    sta DISK_ADDRH
+    sta disk_addrh
     lda #DISK_WRITE
-    sta DISK_CMD
+    sta disk_cmd
 @wait_disk:
-    lda DISK_STATUS
+    lda disk_status
     cmp #DISK_READY
     bne @wait_disk
 

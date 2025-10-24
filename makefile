@@ -17,7 +17,7 @@ RM      = del /Q /F
 # ====================================================================================
 #  Main build rule
 # ====================================================================================
-all: $(TARGET) input\bios.bin input\disk.bin input\wosmon.bin
+all: $(TARGET) input\bios.bin input\disk.bin input\wosmon.bin input\kernel.bin
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
@@ -37,6 +37,11 @@ input\wosmon.bin: input\wosmon.asm input\wosmon.cfg
 	$(CA) input\wosmon.asm -o input\wosmon.o
 	$(LD) input\wosmon.o -C input\wosmon.cfg -o bin\wosmon.bin
 	$(RM) input\wosmon.o >nul 2>&1
+
+input\kernel.bin: input\kernel.asm input\kernel.cfg
+	$(CA) input\kernel.asm -o input\kernel.o
+	$(LD) input\kernel.o -C input\kernel.cfg -o bin\kernel.bin
+	$(RM) input\kernel.o >nul 2>&1
 
 src\%.o: src\%.c
 	$(CC) $(CFLAGS) -c $< -o $@

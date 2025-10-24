@@ -1,4 +1,10 @@
 
+;; *****************************************************************************************************
+;; A heder file for my 6502 base computer aka arch0.
+;; constants are UPPERCASE, vars and labels(functions) are lowercase.
+;; *****************************************************************************************************
+
+
 ;; =====================================================================================================
 ;; constants
 ;; =====================================================================================================
@@ -7,6 +13,7 @@ DISK_IDLE    = 0
 DISK_READ    = 1
 DISK_WRITE   = 2
 
+DISK_BAD     = 0
 DISK_READY   = 1
 DISK_ERR     = 2
 
@@ -17,11 +24,11 @@ SCR_CLEAR    = 2
 
 KEB_READY    = 1
 
-DISK_FOUND   = $FF
-KEB_FOUND    = $FF
-SCR_FOUND    = $FF
-SPK_FOUND    = $FF
-MIC_FOUND    = $FF
+DISK_PRESENT   = $FF
+KEB_PRESENT    = $FF
+SCR_PRESENT    = $FF
+SPK_PRESENT    = $FF
+MIC_PRESENT    = $FF
 
 POWER_OFF    = $FF
 
@@ -29,40 +36,40 @@ POWER_OFF    = $FF
 ;; zp registers
 ;; =====================================================================================================
 
-STR = $00
+str = $00
 
 ;; =====================================================================================================
 ;; MMIO registers
 ;; =====================================================================================================
 
 ;; wild-card devices
-NULL         = $C000
-POWER        = $C001
-RND          = $C002
+null         = $C000
+power        = $C001
+rnd          = $C002
 ;; KERNEL status
-BOOT_STATUS  = $C003
+boot_status  = $C003
 ;; dick ctrl
-DISK_CMD     = $C004
-DISK_ADDRL   = $C005
-DISK_ADDRH   = $C006
-DISK_STATUS  = $C007
+disk_cmd     = $C004
+disk_addrl   = $C005
+disk_addrh   = $C006
+disk_status  = $C007
 ;; I/O:
-KEB_DATA     = $C008
-KEB_CTRL     = $C009
-SCR_DATA     = $C00A
-SCR_CTRL     = $C00B
-SPK_DATA     = $C00C
-SPK_CTRL     = $C00D
-MIC_DATA     = $C00E
-MIC_CTRL     = $C00F
+keb_data     = $C008
+keb_ctrl     = $C009
+scr_data     = $C00A
+scr_ctrl     = $C00B
+spk_data     = $C00C
+spk_ctrl     = $C00D
+mic_data     = $C00E
+mic_ctrl     = $C00F
 ;; MMU
-BSL          = $C010
-BSH          = $C011
-SSL          = $C012
-SSH          = $C013
+bsl          = $C010
+bsh          = $C011
+ssl          = $C012
+ssh          = $C013
 
 ;; dick data
-DISK_DATA    = $C100 ;; 256 byte blocks
+disk_data    = $C100 ;; 256 byte blocks
 
 ;; =====================================================================================================
 ;; KERNEL fix entries

@@ -44,8 +44,10 @@
 // flags:
 #define POWER_OFF 0xFF
 
+#define DISK_BAD 0
 #define DISK_READY 1
 #define DISK_ERR 2
+#define DISK_PRESENT 0xFF
 
 #define DISK_IDLE 0
 #define DISK_READ 1
@@ -367,4 +369,3 @@ void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 void CPU_apple_1_IO_sim(CPU* cpu);
 
 #endif // CPU_H_
-

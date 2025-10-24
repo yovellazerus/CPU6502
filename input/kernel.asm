@@ -3,24 +3,47 @@
 ;*******          ROM BASE OS — Core Firmware for the 6502           ***********
 ;*******************************************************************************
 
+;; ******************************************************************************************************
+;; System V AMD64 ABI (x86-64 calling convention)
+;; Registers: zero page registers x86-64 style
+;; Callee-saved: rbx, rbp, r12, r13, r14, r15
+;; Caller-saved: rax, rcx, rdx, rsi, rdi, r8-r11
+;; Args: rdi, rsi, rdx, rcx, r8, r9 (first 6 int/pointer)
+;; Return: rax
+
+;; EXCEPTIONS:
+;; Stack: NO caller aligns to 16 bytes before call
+;; Note: with documented exceptions to fit the 6502 architecture
+;; ******************************************************************************************************
 
 ;; ================================================================================
 ;; macros:
 ;; ================================================================================
 
-;; non for now...
+; copy 8 bytes from src to dest
+.macro MOV64 src, dest
+    ldx #0
+@loop:
+    lda src,x
+    sta dest,x
+    inx
+    cpx #8
+    bne @loop
+.endmacro
+
 
 ;; ================================================================================
 ;; consts:
 ;; ================================================================================
 
-ZP  = $00
-SSPH_START = $0F
-SSPL_START = $FF
-SSPH_END = $08
-SSPL_END = $00
+;; KERNEL constants
+
+STACK_START_H    = $0F
+STACK_START_L    = $FF
 ERROR_UNDERFLOW  = $01
 ERROR_UNKNOWN_MP = $02
+
+;; arch0 MMIO constants
 
 DISK_READ    = 1
 DISK_READY   = 1
@@ -40,81 +63,79 @@ SPK_ERR      = 3
 MIC_ERR      = 4
 POWER_OFF    = $FF
 
-;; ================================================================================
-;; zero page vars:
-;; ================================================================================
+;; =====================================================================================================
+;; Zero page registers x86-64 style:
+;; =====================================================================================================
 
-ARG0         = ZP + $00
-ARG1         = ZP + $04
-ARG2         = ZP + $08
-ARG3         = ZP + $0C
+ZP_X86_64 = $00
 
-TMP0         = ZP + $10
-TMP1         = ZP + $14
-TMP2         = ZP + $18
-TMP3         = ZP + $1C
-
-RET0         = ZP + $20
-RET1         = ZP + $24
-RET2         = ZP + $28
-RET3         = ZP + $2C
-
-PTR0         = ZP + $30
-PTR1         = ZP + $32
-
-FPA0         = ZP + $34
-FPA1         = ZP + $38
-
-SSP          = ZP + $3C
-SBP          = ZP + $3E
-
-LINE_SIZE    = ZP + $42
-_A           = ZP + $43   ;; tmp's to save the cpu registers 
-_X           = ZP + $44
-_Y           = ZP + $45
-MSRC         = ZP + $46   ;; for memcpy(to not use TMP)
-MDST         = ZP + $48  
-ARGC         = ZP + $50
+rax = ZP_X86_64 + $00
+rbx = ZP_X86_64 + $08
+rcx = ZP_X86_64 + $10
+rdx = ZP_X86_64 + $18
+rsi = ZP_X86_64 + $20
+rdi = ZP_X86_64 + $28
+rbp = ZP_X86_64 + $30
+rsp = ZP_X86_64 + $38
+r8  = ZP_X86_64 + $40
+r9  = ZP_X86_64 + $48
+r10 = ZP_X86_64 + $50
+r11 = ZP_X86_64 + $58
+r12 = ZP_X86_64 + $60
+r13 = ZP_X86_64 + $68
+r14 = ZP_X86_64 + $70
+r15 = ZP_X86_64 + $78
 
 ;; ================================================================================
+;; KERNEL zero page vars:
+;; ================================================================================
+
+KERNEL_ZP    = $80
+
+line_size    = KERNEL_ZP + $42
+argc         = KERNEL_ZP + $50
+
+;; =====================================================================================================
 ;; MMIO registers
-;; ================================================================================
+;; =====================================================================================================
 
 ;; wild-card devices
-NULL         = $C000
-POWER        = $C001
-RND          = $C002
+null         = $C000
+power        = $C001
+rnd          = $C002
 ;; KERNEL status
-BOOT_STATUS  = $C003
+boot_status  = $C003
 ;; dick ctrl
-DISK_CMD     = $C004
-DISK_ADDRL   = $C005
-DISK_ADDRH   = $C006
-DISK_STATUS  = $C007
+disk_cmd     = $C004
+disk_addrl   = $C005
+disk_addrh   = $C006
+disk_status  = $C007
 ;; I/O:
-KEB_DATA     = $C008
-KEB_CTRL     = $C009
-SCR_DATA     = $C00A
-SCR_CTRL     = $C00B
-SPK_DATA     = $C00C
-SPK_CTRL     = $C00D
-MIC_DATA     = $C00E
-MIC_CTRL     = $C00F
+keb_data     = $C008
+keb_ctrl     = $C009
+scr_data     = $C00A
+scr_ctrl     = $C00B
+spk_data     = $C00C
+spk_ctrl     = $C00D
+mic_data     = $C00E
+mic_ctrl     = $C00F
 ;; MMU
-BSL          = $C010
-BSH          = $C011
-SSL          = $C012
-SSH          = $C013
+bsl          = $C010
+bsh          = $C011
+ssl          = $C012
+ssh          = $C013
 
 ;; dick data
-DISK_DATA    = $C100 ;; 256 byte blocks
+disk_data    = $C100 ;; 256 byte blocks
 
 ;; ================================================================================
 ;; kernel working RAM
 ;; ================================================================================
 
-LINE         = $C400
-ARGV         = $C500
+KERNEL_RAM   = $C200
+
+line         = KERNEL_RAM + $0000
+argv         = KERNEL_RAM + $0100
 
 ;; ================================================================================
 ;;; kernel code and read only data is here
@@ -132,56 +153,56 @@ MP_dump_str:          .byte "dump", 0
 MP_clear_str:         .byte "clear", 0
 
 .segment "LIB"
-;; void string_print(X: PTR0L, Y: PTR0H)
+;; void string_print(str s) the arg "s" is in X,Y
 string_print:
-    stx PTR0       
-    sty PTR0+1        
+    stx r8       
+    sty r8+1        
     ldy #0
 print_loop:
-    lda (PTR0),y
+    lda (r8),y
     beq print_done   
     jsr bios_putchar
     iny             
     bne print_loop  
-    inc PTR0+1        
+    inc r8+1        
     jmp print_loop
 print_done:
     rts
 
-;; A : bool string_cmp(PTR0, PTR1)
+;; A : bool string_cmp(str a, str b)
 ;; note: 0 if eq 1 if diff no <,> for now
 string_cmp:
     
-    lda PTR0
-    sta TMP0
-    lda PTR0+1
-    sta TMP0+1
+    lda rdi
+    sta r8
+    lda rdi+1
+    sta r8+1
 
-    lda PTR1
-    sta TMP1
-    lda PTR1+1
-    sta TMP1+1
+    lda rsi
+    sta r9
+    lda rsi+1
+    sta r9+1
 
 @loop:
     ldy #0
-    lda (TMP0),Y
+    lda (r8),Y
     cmp #0
     beq @null       
-    sta TMP2           
-    lda (TMP1),Y     
-    cmp TMP2       
+    sta r10           
+    lda (r9),Y     
+    cmp r10       
     bne @diff                   
-    inc TMP0
+    inc r8
     bne @skip0
-    inc TMP0+1
+    inc r8+1
 @skip0:
-    inc TMP1
+    inc r9
     bne @skip1
-    inc TMP1+1
+    inc r9+1
 @skip1:
     jmp @loop
 @null:
-    lda (TMP1),Y 
+    lda (r9),Y 
     cmp #0
     bne @diff
 @equal:
@@ -191,28 +212,7 @@ string_cmp:
     lda #1
     rts
 
-;; void memcpy(src: PTR0, dst: PTR1, size: A) size < 256 for  now!
-memcpy:
-    sta _A            
-    lda PTR0        
-    sta MSRC
-    lda PTR0+1      
-    sta MSRC+1
-    lda PTR1        
-    sta MDST
-    lda PTR1+1      
-    sta MDST+1
-    ldy #0             
-@loop:
-    lda (MSRC),y    
-    sta (MDST),y    
-    iny
-    cpy _A
-    bne @loop
-@done:
-    rts
-
-;; void error(A : err) power-off the cpu(for debug)
+;; void error(A : err) "err" in A
 error:
     ldx #<error_prefix_msg
     ldy #>error_prefix_msg
@@ -230,8 +230,8 @@ error:
     jsr bios_putchar
     lda #'"'
     jsr bios_putchar
-    ldx #<ARGV
-    ldy #>ARGV
+    ldx #<argv
+    ldy #>argv
     jsr string_print
     lda #'"'
     jsr bios_putchar
@@ -256,7 +256,7 @@ monitor:
     jsr get_line
     jsr parse_line
 
-    lda ARGC            ;; if no input
+    lda argc            ;; if no input
     cmp #0
     beq @loop 
 
@@ -264,37 +264,38 @@ monitor:
 
     jmp @loop
 
+;; 
 get_line:
     ldx #0
-    stx LINE_SIZE
+    stx line_size
 @loop:
     jsr bios_waitchar    ;; echo the input
     jsr bios_putchar
     cmp #$0D            ;; is 'cr'?
     beq @end           ;; yes
-    stx LINE_SIZE      ;; no, next char
-    sta LINE,x
+    stx line_size      ;; no, next char
+    sta line,x
     inx
     jmp @loop
 @end:
-    lda #$0A            ;; adding new line and null to the LINE
+    lda #$0A            ;; adding new line and null to the line
     jsr bios_putchar
-    stx LINE_SIZE
-    sta LINE,x
+    stx line_size
+    sta line,x
     inx
     lda #0
-    sta LINE,x  
+    sta line,x  
     rts
 
 parse_line:
-    ldx #0             ; LINE index
-    ldy #0             ; ARGV index
+    ldx #0             ; line index
+    ldy #0             ; argv index
     lda #0
-    sta ARGC
+    sta argc
 @loop:
     jsr trim
     jsr parse_token
-    lda LINE,x
+    lda line,x
     cmp #$0A           ; newline? (stop)
     beq @end
     cmp #$00           ; end of string? (stop)
@@ -304,7 +305,7 @@ parse_line:
     rts
 
 trim:
-    lda LINE,x
+    lda line,x
     cmp #' '
     bne @end
     inx
@@ -313,13 +314,13 @@ trim:
     rts
 
 parse_token:
-    lda LINE,x
+    lda line,x
     cmp #$0A            ; newline?
     beq @end_of_line
     cmp #$00            ; end of string?
     beq @end_of_line
 @copy:
-    lda LINE,x
+    lda line,x
     cmp #' '            ; space?
     beq @done_token
     cmp #$0A            ; newline?
@@ -327,45 +328,45 @@ parse_token:
     cmp #$00            ; end-of-string?
     beq @done_token
 
-    sta ARGV,y         
+    sta argv,y         
     iny                 
     inx                 
     jmp @copy
 @done_token:
     lda #0
-    sta ARGV,y          
+    sta argv,y          
     iny                 
-    inc ARGC            
+    inc argc            
     inx                 
     rts
 @end_of_line:
     lda #0
-    sta ARGV,y          
+    sta argv,y          
     rts
 
 execute_line:
-    ldx #<ARGV
-    ldy #>ARGV
-    stx PTR0
-    sty PTR0+1
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
     ldx #<MP_dump_str
     ldy #>MP_dump_str
-    stx PTR1
-    sty PTR1+1
+    stx rsi
+    sty rsi+1
     jsr string_cmp
     cmp #0
     bne @not_dump
     jsr MP_dump
     jmp @end
 @not_dump:
-    ldx #<ARGV
-    ldy #>ARGV
-    stx PTR0
-    sty PTR0+1
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
     ldx #<MP_clear_str
     ldy #>MP_clear_str
-    stx PTR1
-    sty PTR1+1
+    stx rsi
+    sty rsi+1
     jsr string_cmp
     cmp #0
     bne @not_clear
@@ -389,10 +390,10 @@ MP_dump:
     ldy #0              
     ldx #0              
 @next_arg:
-    cpx ARGC            
+    cpx argc            
     beq @done            
 @print_arg:
-    lda ARGV,y          
+    lda argv,y          
     beq @end_of_arg      
     jsr bios_putchar      
     iny                 
@@ -414,33 +415,19 @@ MP_clear:
 
 .segment "BIOS"
 reset:
-    ldx #$FF                ;; BIOS init's 
+    ldx #$FF                    ;; BIOS init's 
     txs
     cld
     cli
-    lda #SSPH_START
-    sta SSP+1
-    lda #SSPL_START
-    sta SSP
+    lda #STACK_START_H
+    sta rsp+1
+    lda #STACK_START_L
+    sta rsp
     jsr bios_clear
 
-    ldx #<welcome_msg    ;; memcpy test (not in ZP and longer then size == 4)
-    stx PTR0
-    lda #>welcome_msg
-    sta PTR0+1
+    MOV64 welcome_msg, $B000    ;; macro test, macros are amazing!!!!
 
-    ldy #<DISK_DATA
-    sty PTR1
-    lda #>DISK_DATA
-    sta PTR1+1
-
-    lda #16
-    jsr memcpy
-
-    brk             ;; for brk test
-    .byte $42      
-
-    jmp monitor     ;; not returning, inf loop
+    jmp monitor                 ;; not returning, inf loop
 
 bios_nmi_handler:
     pha
@@ -448,9 +435,9 @@ bios_nmi_handler:
     pha
     tya
     pha
-    ;; TODO: do staff... NMI power of for now...
+    ;; TODO: do staff... NMI power-off the cpu for now...
     lda #POWER_OFF
-    sta POWER
+    sta power
     pla
     tay
     pla
@@ -491,9 +478,9 @@ bios_brk_handler:
 ;; void putchar(A : char)
 bios_putchar:
     pha
-    sta SCR_DATA     
+    sta scr_data     
     lda #SCR_WRITE
-    sta SCR_CTRL
+    sta scr_ctrl
     pla
     rts
 
@@ -501,18 +488,18 @@ bios_putchar:
 bios_clear:
     pha
     lda #SCR_CLEAR
-    sta SCR_CTRL
+    sta scr_ctrl
     pla
     rts
 
 ;; A : char waitchar()
 bios_waitchar:
-    lda KEB_CTRL
+    lda keb_ctrl
     cmp #KEB_READY
     bne bios_waitchar 
     lda #0
-    sta KEB_CTRL
-    lda KEB_DATA
+    sta keb_ctrl
+    lda keb_data
     rts
 
 .segment "VECTORS"

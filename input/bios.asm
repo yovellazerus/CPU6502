@@ -19,60 +19,60 @@ bios_reset:
     txs
 
     lda #SCR_CLEAR  ;; clear the screen
-    sta SCR_CTRL
+    sta scr_ctrl
 
     ldx #<bios_msg
     ldy #>bios_msg
-    jsr bios_puts
+    jsr bios_putstring
 
-    lda BOOT_STATUS
+    lda boot_status
     cmp #BOOT_FOUND
     beq @hot_reset
 
 @cold_reset:
     ldx #<cold_msg
     ldy #>cold_msg
-    jsr bios_puts
+    jsr bios_putstring
 
-    lda DISK_STATUS
-    cmp DISK_FOUND
-    beq @disk_found
+    lda disk_status
+    cmp #DISK_BAD
+    bne @disk_found
 
     ldx #<error_msg     ;; no disk is found
     ldy #>error_msg
-    jsr bios_puts
+    jsr bios_putstring
 @halt:
     jmp @halt
 
 @disk_found:
     lda #0              ;; boot sector is block: $0000 of the disk
-    sta DISK_ADDRL
-    sta DISK_ADDRH
+    sta disk_addrl
+    sta disk_addrh
     lda #DISK_READ
-    sta DISK_CMD
+    sta disk_cmd
 @wait_disk:
-    lda DISK_STATUS
+    lda disk_status
     cmp #DISK_READY
     bne @wait_disk
 
-    ldx $FF             ;; copy BOOT from disk buffer to it's entry point
+    ldx $FF             ;; copy BOOT from disk data to it's entry point
 @copy_boot:
-    lda DISK_DATA,x
+    lda disk_data,x
     sta boot_entry,x
     dex
     bne @copy_boot
 
     lda #BOOT_FOUND
-    sta BOOT_STATUS
+    sta boot_status
 
     ldx #<ready_msg
     ldy #>ready_msg
-    jsr bios_puts
+    jsr bios_putstring
     jmp boot_entry
 @hot_reset:
     ldx #<hot_msg
     ldy #>hot_msg
-    jsr bios_puts
+    jsr bios_putstring
     jmp boot_entry
 
 ;; =====================================================================================================
@@ -80,27 +80,27 @@ bios_reset:
 ;; =====================================================================================================
 
 .segment "BIOS"
-;; void puts(X: strL, Y: strH)
-bios_puts:
-    stx STR       
-    sty STR+1        
+;; void putstring(X: strL, Y: strH)
+bios_putstring:
+    stx str       
+    sty str+1        
     ldy #0
 @loop:
-    lda (STR),y
+    lda (str),y
     beq @done   
     jsr bios_putchar
     iny             
     bne @loop  
-    inc STR+1        
+    inc str+1        
     jmp @loop
 @done:
     rts
 
 ;; void putchar(A : char)
 bios_putchar:
-    sta SCR_DATA     
+    sta scr_data     
     lda #SCR_WRITE
-    sta SCR_CTRL
+    sta scr_ctrl
     rts
 
 ;; =====================================================================================================
@@ -111,7 +111,7 @@ bios_msg:        .byte "BIOS:", $0A, 0
 cold_msg:        .byte "COLD START...", $0A, 0
 hot_msg:         .byte "HOT RESET...", $0A, 0
 ready_msg:       .byte "READY.", $0A, 0
-error_msg:       .byte "ERR: NO DISK FOUND.", $0A, 0
+error_msg:       .byte "ERR: NO BOOTABLE DEVICE.", $0A, 0
 
 ;; =====================================================================================================
 ;; IRQ/BRK/NMI and RESET vectors
