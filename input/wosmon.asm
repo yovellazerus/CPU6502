@@ -45,7 +45,7 @@ DSPCR           =     $D013           ; PIA.B display control register
 BS              =     $DF             ; Backspace key, arrow left key
 CR              =     $8D             ; Carriage Return
 ESC             =     $9B             ; ESC key
-PROMPT          =     '\'             ; Prompt character
+PROMPT          =     $DC             ; Prompt character ;; NOTE: was '\' in the orig src code...
 
 ;-------------------------------------------------------------------------
 ;  Let's get started
@@ -90,12 +90,17 @@ BACKSPACE:      DEY                     ;Backup text index
 NEXTCHAR:       LDA     KBDCR           ;Wait for key press
                 BPL     NEXTCHAR        ;No key yet!
                 LDA     KBD             ;Load character. B7 should be '1'
-
+                
+                ;; NOTE:
                 ;; my softer trick simulating "read-to-clear"
                 PHA
-                LDA KBD        ; load the byte from KBD
-                AND #%01111111 ; clear bit 7
-                STA KBD        ; store it back
+                LDA KBD        
+                AND #%01111111
+                STA KBD        
+
+                LDA KBDCR       
+                AND #%01111111  
+                STA KBDCR       
                 PLA
                 ;; end of my part
 

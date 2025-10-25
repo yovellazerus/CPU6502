@@ -805,14 +805,14 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
         if(!CPU_power(cpu)) return;
 
         // apple-1 IO for WosMon:
-        // if(!CPU_apple_1_IO_sim(cpu)) return;
+        if(!CPU_apple_1_IO_sim(cpu)) return;
 
-        // arch0 I/O
-        CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
-        CPU_screen(cpu);
+        // // arch0 I/O
+        // CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
+        // CPU_screen(cpu);
 
-        // disk
-        CPU_disk(cpu, disk);
+        // // disk
+        // CPU_disk(cpu, disk);
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
@@ -833,14 +833,14 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
 // MMIO: (NOTE: needs to move to the r/w function for the VM implementation)
 //===================================================================================================
 
-// NOTE: no uniform buss r/w, read-to-clear is not fully implemented
+// NOTE: no uniform buss r/w, read-to-clear is not implemented, it is don in 6502 software :)
 bool CPU_apple_1_IO_sim(CPU* cpu) {
 #ifdef _WIN64
     // ---- keyboard -----
     char in;
     if (_kbhit()) {                                         
         in = _getch();
-        if(in == 0x1B) return false;        // ESC for debug
+        if(in == 0x09) return false;        // Tab for debug
         in = toupper(in);                   // apple-1 had only UPPERCASE letters
         in |= 0x80;                         // msb must be 1                       
         cpu->memory[APPLE1_KBD] = in;       // char is moved to the MMIO register
@@ -851,7 +851,9 @@ bool CPU_apple_1_IO_sim(CPU* cpu) {
     // ---- display -----
     char ch = cpu->memory[APPLE1_DSP];
     if(IS_NEGATIVE(ch)){
-        putchar(ch &= 0x7F);                // set msb to 0 to be a normal ASCII
+        char to_output = ch & 0x7F;
+        if(to_output == '\r') to_output = '\n';
+        putchar(to_output);                // set msb to 0 to be a normal ASCII
         fflush(stdout);
         cpu->memory[APPLE1_DSP] &= 0x7F;    // mark display ready
     }
@@ -866,10 +868,10 @@ bool CPU_apple_1_IO_sim(CPU* cpu) {
 void CPU_keyboard(CPU* cpu){
 #ifdef _WIN64
     char C_terminal_input;
-    if (_kbhit()) {                                         // check if a key was pressed (non-blocking)
-        C_terminal_input = _getch();                        // read character without echo
-        if(C_terminal_input == 0x1B)       CPU_nmi(cpu);    // ESC for NMI
-        else if (C_terminal_input == 0x09) CPU_reset(cpu);  // Tab for reset
+    if (_kbhit()) {                                           // check if a key was pressed (non-blocking)
+        C_terminal_input = _getch();                          // read character without echo
+        if(C_terminal_input == 0x1B)       CPU_nmi(cpu);      // ESC for NMI
+        else if (C_terminal_input == 0x09) CPU_reset(cpu);    // Tab for reset
         else{
             cpu->memory[KEB_DATA] = C_terminal_input;         // put the char on the MMIO register
             cpu->memory[KEB_CTRL] = 1;                        // keyboard_ctrl is set to 1
