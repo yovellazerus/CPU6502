@@ -816,7 +816,7 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];
-        if(opcode == 0xFF) return; // for debug
+        if(opcode == 0xFF){printf("PC = %.4x", cpu->PC); return;}  // for debug
 
         // decode:
         Instruction instruction = Opcode_to_Instruction_table[opcode];

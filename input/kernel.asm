@@ -20,6 +20,11 @@
 ;; macros:
 ;; ================================================================================
 
+.macro sys
+    brk
+    .byte $00
+.endmacro
+
 ; copy 8 bytes from src to dest
 .macro MOV64 src, dest
     ldx #0
@@ -161,6 +166,7 @@ login_password_msg:     .byte "Password: ", 0
 
 welcome_msg:            .byte "**** welcome to the 6502 kernel monitor ****", $0A, 0
 prompt_msg:             .byte "> ", 0
+user_exit_msg:          .byte "user program exited with code: ", 0
 
 error_prefix_msg:       .byte "ERROR: ", 0
 error_underFlow_msg:    .byte "underFlow", 0
@@ -242,7 +248,7 @@ monitor:
     ldx #<welcome_msg
     ldy #>welcome_msg
     jsr string_print
-@loop:                  ;; inf loop
+monitor_loop:          ;; inf loop, global label for exit syscall
     ldx #<user
     ldy #>user
     jsr string_print
@@ -252,11 +258,11 @@ monitor:
 
     lda argc            ;; if no input
     cmp #0
-    beq @loop 
+    beq monitor_loop
 
     jsr execute_line  
 
-    jmp @loop
+    jmp monitor_loop
 
 ;; =====================================================================================================
 ;; login protocol: 
@@ -316,6 +322,10 @@ get_user_and_password:
 
     jsr get_line
     jsr parse_line      ;; argv[0] = user input
+
+    lda argc            ;; no space in user names
+    cmp #1
+    bne @bad_user
 
     lda users_count     ;; number of users
     sta rcx
@@ -572,6 +582,13 @@ print_prompt:
 ;; =====================================================================================================
 
 MP_dump:
+
+    ; lda #1
+    ; sta rax
+    ; lda #'A'
+    ; sta rdi
+    ; sys                         ;; sys_exit test
+
     ldy #0              
     ldx #0              
 @next_arg:
@@ -606,27 +623,30 @@ reset:
     ldx #$FF               ;; BIOS init's 
     txs
     cld
-    cli
+    sei
     lda #STACK_START_H
     sta rsp+1
     lda #STACK_START_L
     sta rsp
-    jsr bios_clear
 
-    ldx #8                  ;; sizeof(user) == 8
+    ldx #16                     ;; sizeof(user + password) == 16, password is after user
     lda #0
 @user_init:
-    sta user,x
+    sta user,x                  
     dex
     bne @user_init
 
     MOV64 welcome_msg, $B000    ;; macro test, macros are amazing!!!!
 
+    cli                         ;; from here, start of interactive part
+
+    jsr bios_clear  
+
     jsr login
 
     jmp monitor                 ;; not returning, inf loop
 
-bios_nmi_handler:
+nmi_handler:
     pha
     txa
     pha
@@ -642,7 +662,7 @@ bios_nmi_handler:
     pla
     rti
 
-bios_irq_handler:
+irq_handler:
     pha
     txa
     pha
@@ -652,15 +672,11 @@ bios_irq_handler:
     tsx            
     lda $0104,x
     and #$10       ;; test bit 4 (B flag)
-    beq bios_irq_is_irq     
+    bne brk_handler     
 
-    jsr bios_brk_handler
-    jmp bios_irq_end
+    ;; TODO: do staff for a hardware irq...
 
-bios_irq_is_irq:
-    ;; TODO: do staff...
-
-bios_irq_end:
+irq_end:
     pla
     tay
     pla
@@ -668,9 +684,60 @@ bios_irq_end:
     pla
     rti
 
-bios_brk_handler:
-    ;; TODO: do staff...
-    rts
+brk_handler:
+    
+    ldx rax
+
+    lda #>sys_dispatch_table    ;; table high byte in rax+1
+    sta rax+1
+    lda #<sys_dispatch_table    ;; table low byte in rax
+    sta rax
+                      
+    cpx #0
+    beq @dispatch
+@mul:
+    clc
+    lda rax
+    adc #4
+    sta rax
+    dex
+    bne @mul
+
+@dispatch:
+    jmp (rax)
+brk_end:
+    jmp irq_end
+
+sys_dispatch_table:         ;; entry size: 4 bytes
+dispatch_foo: 
+    jmp sys_foo             ;; 0
+    .byte $00 
+dispatch_exit:              ;; 1
+    jmp sys_exit
+    .byte $00
+
+sys_foo:
+    lda #'f'
+    jsr bios_putchar
+    lda #'o'
+    jsr bios_putchar
+    lda #'o'
+    jsr bios_putchar
+    lda #$0A
+    jsr bios_putchar
+    jmp brk_end
+
+;; void exit(byte err_code)
+;; TODO: prints exit code as ASCII for now...
+sys_exit:
+    ldx #<user_exit_msg
+    ldy #>user_exit_msg
+    jsr string_print
+    lda rdi
+    jsr bios_putchar
+    lda #$0A
+    jsr bios_putchar
+    jmp monitor_loop
 
 ;; void putchar(A : char)
 bios_putchar:
@@ -700,6 +767,6 @@ bios_waitchar:
     rts
 
 .segment "VECTORS"
-.word bios_nmi_handler
+.word nmi_handler
 .word reset
-.word bios_irq_handler
+.word irq_handler

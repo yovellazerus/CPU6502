@@ -1528,8 +1528,13 @@ void instruction_JMP_Absolute(CPU* cpu)
     CPU_tick(cpu, 3);
 
 }
+
+
 void instruction_JMP_Indirect(CPU* cpu)
 {
+    word indirect = cpu->memory[cpu->PC++];
+    indirect |= cpu->memory[cpu->PC++] << 8;
+
     /*
     An original 6502 has does not correctly fetch the target address
     if the indirect vector falls on a page boundary 
@@ -1538,17 +1543,14 @@ void instruction_JMP_Indirect(CPU* cpu)
     This is fixed in some later chips like the 65SC02
     so for compatibility always ensure the indirect vector is not at the end of the page.
     */
-
-    word indirect = cpu->memory[cpu->PC++];
-    indirect += cpu->memory[cpu->PC++] << 8;
-
     byte lo = cpu->memory[indirect];
-    byte hi = cpu->memory[(indirect & 0xFF00) | ((indirect + 1) & 0x00FF)] << 8;
+    byte hi = cpu->memory[(indirect & 0xFF00) | ((indirect + 1) & 0x00FF)];
 
-    cpu->PC = lo + hi;
+    cpu->PC = lo | (hi << 8);
+
     CPU_tick(cpu, 5);
-
 }
+
 void instruction_JSR(CPU* cpu)
 {
     word addr = cpu->memory[cpu->PC++];
