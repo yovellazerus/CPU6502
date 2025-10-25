@@ -33,7 +33,8 @@ _start:
 
     ;;**** load the KERNEL form the disk! ***;;
 
-    .byte $FF
+halt:
+    jmp halt
 
 ;; =====================================================================================================
 ;; BOOT read only segment

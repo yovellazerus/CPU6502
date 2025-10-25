@@ -4,6 +4,14 @@
 ;-------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------
+;  Debug:
+;-------------------------------------------------------------------------
+
+.macro HALT
+    .byte $FF
+.endmacro
+
+;-------------------------------------------------------------------------
 ;  Memory declaration
 ;-------------------------------------------------------------------------
 
@@ -82,6 +90,15 @@ BACKSPACE:      DEY                     ;Backup text index
 NEXTCHAR:       LDA     KBDCR           ;Wait for key press
                 BPL     NEXTCHAR        ;No key yet!
                 LDA     KBD             ;Load character. B7 should be '1'
+
+                ;; my softer trick simulating "read-to-clear"
+                PHA
+                LDA KBD        ; load the byte from KBD
+                AND #%01111111 ; clear bit 7
+                STA KBD        ; store it back
+                PLA
+                ;; end of my part
+
                 STA     IN,Y            ;Add to text buffer
                 JSR     ECHO            ;Display character
                 CMP     #CR

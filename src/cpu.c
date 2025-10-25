@@ -805,7 +805,7 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
         if(!CPU_power(cpu)) return;
 
         // apple-1 IO for WosMon:
-        // CPU_apple_1_IO_sim(cpu);
+        // if(!CPU_apple_1_IO_sim(cpu)) return;
 
         // arch0 I/O
         CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
@@ -833,6 +833,36 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
 // MMIO: (NOTE: needs to move to the r/w function for the VM implementation)
 //===================================================================================================
 
+// NOTE: no uniform buss r/w, read-to-clear is not fully implemented
+bool CPU_apple_1_IO_sim(CPU* cpu) {
+#ifdef _WIN64
+    // ---- keyboard -----
+    char in;
+    if (_kbhit()) {                                         
+        in = _getch();
+        if(in == 0x1B) return false;        // ESC for debug
+        in = toupper(in);                   // apple-1 had only UPPERCASE letters
+        in |= 0x80;                         // msb must be 1                       
+        cpu->memory[APPLE1_KBD] = in;       // char is moved to the MMIO register
+        cpu->memory[APPLE1_KBDCR] |= 0x80;  // signal that a key was prest
+        fflush(stdin);
+    }
+
+    // ---- display -----
+    char ch = cpu->memory[APPLE1_DSP];
+    if(IS_NEGATIVE(ch)){
+        putchar(ch &= 0x7F);                // set msb to 0 to be a normal ASCII
+        fflush(stdout);
+        cpu->memory[APPLE1_DSP] &= 0x7F;    // mark display ready
+    }
+    return true;
+#endif
+}
+
+// ===============================================================================================
+// arc0 MMIO:
+// ===============================================================================================
+
 void CPU_keyboard(CPU* cpu){
 #ifdef _WIN64
     char C_terminal_input;
@@ -859,48 +889,6 @@ void CPU_screen(CPU* cpu){
     if(cpu->memory[SCR_CTRL] == 2){                   // clear the screen
         system("cls");
         cpu->memory[SCR_CTRL] = 0;
-    }
-#endif
-}
-
-// NOTE: no uniform buss r/w, "key_ready" emulates read-to-clear behavior for now
-void CPU_apple_1_IO_sim(CPU* cpu){
-#ifdef _WIN64
-
-    //***************************************************************/
-    // apple-1 keyboard: 
-    //***************************************************************/
-
-    static bool key_ready = false;  // tracks if key is pending consumption
-
-    char from_terminal;
-    if (_kbhit() && !key_ready) {                                         
-        from_terminal = _getch(); 
-        // Force uppercase (Apple-1 keyboard was uppercase only)
-        if (from_terminal >= 'a' && from_terminal <= 'z') from_terminal -= 0x20;                       
-        cpu->memory[APPLE1_KBD] = (from_terminal & 0x7F) | 0x80;            // set msb to 1 to signal that a key was prest
-        cpu->memory[APPLE1_KBDCR] = 0x80;                                 // set msb to 1 when a key is prest 
-
-        key_ready = true;
-    }
-
-    // Emulate read-to-clear behavior
-    if (key_ready && !(cpu->memory[APPLE1_KBD] & 0x80)) {
-        // CPU has read the key, clear the ready flags
-        cpu->memory[APPLE1_KBDCR] &= 0x7F;
-        key_ready = false;
-    }
-
-    //***************************************************************/
-    // apple-1 screen:
-    //***************************************************************/
-
-    byte from_mmio = cpu->memory[APPLE1_DSP];
-    if (((cpu->memory[APPLE1_DSPCR] & 0x80) == 0) && ((from_mmio & 0x80) == 0)) {   // if msb==0 putchar
-        putchar(from_mmio & 0x7F);      // put msb of data to 0 to emit a normal ASCII char 
-        fflush(stdout);
-        // After displaying, mark display as ready again
-        cpu->memory[APPLE1_DSPCR] = 0x80;
     }
 #endif
 }

@@ -32,11 +32,43 @@ MIC_PRESENT    = $FF
 
 POWER_OFF    = $FF
 
+;; ******************************************************************************************************
+;; System V AMD64 ABI (x86-64 calling convention)
+;; Registers: zero page registers x86-64 style
+;; Callee-saved: rbx, rbp, r12, r13, r14, r15
+;; Caller-saved: rax, rcx, rdx, rsi, rdi, r8-r11
+;; Args: rdi, rsi, rdx, rcx, r8, r9 (first 6 int/pointer)
+;; Return: rax
+
+;; EXCEPTIONS:
+;; Stack: NO caller aligns to 16 bytes before call
+;; Note: with documented exceptions to fit the 6502 architecture
+;; ******************************************************************************************************
+
+
 ;; =====================================================================================================
-;; zp registers
+;; Zero page registers x86-64 style:
 ;; =====================================================================================================
 
-str = $00
+ZP_X86_64 = $00
+REG_SIZE  = 8
+
+rax = ZP_X86_64 + REG_SIZE*0 
+rbx = ZP_X86_64 + REG_SIZE*1 
+rcx = ZP_X86_64 + REG_SIZE*2 
+rdx = ZP_X86_64 + REG_SIZE*3 
+rsi = ZP_X86_64 + REG_SIZE*4 
+rdi = ZP_X86_64 + REG_SIZE*5 
+rbp = ZP_X86_64 + REG_SIZE*6 
+rsp = ZP_X86_64 + REG_SIZE*7 
+r8  = ZP_X86_64 + REG_SIZE*8 
+r9  = ZP_X86_64 + REG_SIZE*9 
+r10 = ZP_X86_64 + REG_SIZE*10 
+r11 = ZP_X86_64 + REG_SIZE*11 
+r12 = ZP_X86_64 + REG_SIZE*12 
+r13 = ZP_X86_64 + REG_SIZE*13 
+r14 = ZP_X86_64 + REG_SIZE*14 
+r15 = ZP_X86_64 + REG_SIZE*15
 
 ;; =====================================================================================================
 ;; MMIO registers

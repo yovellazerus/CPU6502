@@ -1597,8 +1597,16 @@ void instruction_BEQ(CPU* cpu)
 
 void instruction_BMI(CPU* cpu)
 {
-    UNUSED;
-
+    byte disp = cpu->memory[cpu->PC++];
+    word old_pc = cpu->PC;
+    if(CPU_getFlag(cpu, 'n')){
+        cpu->PC += (int8_t) disp;
+        CPU_tick(cpu, 1);
+        if(IS_CROSS_PAGES(old_pc, cpu->PC)){
+            CPU_tick(cpu, 1);
+        }
+    }
+    CPU_tick(cpu, 2);
 }
 void instruction_BNE(CPU* cpu)
 {
@@ -1613,11 +1621,21 @@ void instruction_BNE(CPU* cpu)
     }
     CPU_tick(cpu, 2);
 }
+
 void instruction_BPL(CPU* cpu)
 {
-    UNUSED;
-
+    byte disp = cpu->memory[cpu->PC++];
+    word old_pc = cpu->PC;
+    if(!CPU_getFlag(cpu, 'n')){
+        cpu->PC += (int8_t) disp;
+        CPU_tick(cpu, 1);
+        if(IS_CROSS_PAGES(old_pc, cpu->PC)){
+            CPU_tick(cpu, 1);
+        }
+    }
+    CPU_tick(cpu, 2);
 }
+
 void instruction_BVC(CPU* cpu)
 {
     UNUSED;

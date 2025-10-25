@@ -82,16 +82,16 @@ bios_reset:
 .segment "BIOS"
 ;; void putstring(X: strL, Y: strH)
 bios_putstring:
-    stx str       
-    sty str+1        
+    stx rdi       
+    sty rdi+1        
     ldy #0
 @loop:
-    lda (str),y
+    lda (rdi),y
     beq @done   
     jsr bios_putchar
     iny             
     bne @loop  
-    inc str+1        
+    inc rdi+1        
     jmp @loop
 @done:
     rts

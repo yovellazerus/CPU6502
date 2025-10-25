@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "ansi_codes.h"
@@ -366,6 +367,6 @@ void CPU_screen(CPU* cpu);
 void CPU_disk(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]);
 
 // for WosMon:
-void CPU_apple_1_IO_sim(CPU* cpu);
+bool CPU_apple_1_IO_sim(CPU* cpu);
 
 #endif // CPU_H_
