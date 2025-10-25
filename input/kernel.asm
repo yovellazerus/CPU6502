@@ -20,7 +20,9 @@
 ;; macros:
 ;; ================================================================================
 
-.macro sys
+.macro SYS sys_number
+    lda sys_number
+    sta rax
     brk
     .byte $00
 .endmacro
@@ -28,12 +30,12 @@
 ; copy 8 bytes from src to dest
 .macro MOV64 src, dest
     ldx #0
-@loop:
+@mov_loop:
     lda src,x
     sta dest,x
     inx
     cpx #8
-    bne @loop
+    bne @mov_loop
 .endmacro
 
 
@@ -180,7 +182,37 @@ MP_exit_str:            .byte "exit", 0
 
 .segment "LIB"
 
-;; void string_print(str s) the arg "s" is in X,Y
+;; void putchar(char c)
+;; input in A
+putchar:
+    pha
+    sta scr_data     
+    lda #SCR_WRITE
+    sta scr_ctrl
+    pla
+    rts
+
+;; void clear(void)
+clear:
+    pha
+    lda #SCR_CLEAR
+    sta scr_ctrl
+    pla
+    rts
+
+;; char waitchar()
+;; output in A
+waitchar:
+    lda keb_ctrl
+    cmp #KEB_READY
+    bne waitchar 
+    lda #0
+    sta keb_ctrl
+    lda keb_data
+    rts
+
+;; void string_print(str s) 
+;; input in X, Y
 string_print:
     stx r8       
     sty r8+1        
@@ -188,7 +220,7 @@ string_print:
 print_loop:
     lda (r8),y
     beq print_done   
-    jsr bios_putchar
+    jsr putchar
     iny             
     bne print_loop  
     inc r8+1        
@@ -196,7 +228,7 @@ print_loop:
 print_done:
     rts
 
-;; A : bool string_cmp(str a, str b)
+;; byte string_cmp(str a, str b)
 ;; note: 0 if eq 1 if diff no <,> for now
 string_cmp:
     lda rdi
@@ -265,146 +297,6 @@ monitor_loop:          ;; inf loop, global label for exit syscall
     jmp monitor_loop
 
 ;; =====================================================================================================
-;; login protocol: 
-;; users table entry must be:
-;; 8B user-name(ctr), 8B password(ctr)
-;; NOTE: only for upp to 16 users!
-;; =====================================================================================================
-
-login:
-@loop:
-    jsr get_user_and_password
-    cmp #0
-    beq @loop
-    jsr verify_password
-    cmp #0
-    beq @loop
-    ;; password is right!
-    rts
-
-verify_password:
-    ldx #<login_password_msg
-    ldy #>login_password_msg
-    jsr string_print
-
-    jsr get_line
-    jsr parse_line
-
-    ldx #<argv
-    ldy #>argv
-    stx rdi
-    sty rdi+1
-    ldx #<password
-    ldy #>password
-    stx rsi
-    sty rsi+1
-    jsr string_cmp
-    cmp #0
-    bne @bad_exit
-@good_exit:
-    lda #1
-    rts
-
-@bad_exit:
-    ldx #<error_prefix_msg
-    ldy #>error_prefix_msg
-    jsr string_print
-    ldx #<error_wrong_password
-    ldy #>error_wrong_password
-    jsr string_print
-    lda #0
-    rts
-
-get_user_and_password:
-    ldx #<login_user_msg
-    ldy #>login_user_msg
-    jsr string_print
-
-    jsr get_line
-    jsr parse_line      ;; argv[0] = user input
-
-    lda argc            ;; no space in user names
-    cmp #1
-    bne @bad_user
-
-    lda users_count     ;; number of users
-    sta rcx
-@search_loop:
-    ldx #<argv          ;; a = argv[0]
-    ldy #>argv
-    stx rdi
-    sty rdi+1
-
-    lda #0              
-    sta rdx
-    lda rcx             
-    sta r8              ;; r8 = rcx(i)
-    dec r8              ;; r8--
-@mul:
-    lda rdx
-    clc
-    adc #16
-    sta rdx
-    dec r8
-    bne @mul
-
-
-    ldx #<users_table   ;; rdx = (rcx(i) - 1) * 16
-    txa
-    clc
-    adc rdx
-    tax                 ;; b = users_table[rdx]
-    ldy #>users_table
-    stx rsi
-    sty rsi+1
-    jsr string_cmp
-    cmp #0
-    bne @next_entry     ;; a != b
-
-    ;; a == b
-    ldy #0
-    lda rsi
-    clc
-    adc #8
-    sta rsi
-@copy_password:         ;; in rsi is the pointer of the password
-    lda (rsi),y
-    sta password,y
-    cmp #0
-    beq @copy_user
-    iny
-    jmp @copy_password
-    
-@copy_user:
-    MOV64 argv, user
-    lda #1              
-    jmp @end
-
-@next_entry:
-    dec rcx
-    bne @search_loop    ;; if loop finish than bad user name
-
-@bad_user:
-    ldx #<error_prefix_msg
-    ldy #>error_prefix_msg
-    jsr string_print
-    ldx #<error_unknown_user_msg
-    ldy #>error_unknown_user_msg
-    jsr string_print
-    lda #'"'
-    jsr bios_putchar
-    ldx #<argv
-    ldy #>argv
-    jsr string_print
-    lda #'"'
-    jsr bios_putchar
-    lda #$0A
-    jsr bios_putchar
-    lda #0
-@end:
-    rts
-
-;; =====================================================================================================
 ;; monitor helper functions:
 ;; =====================================================================================================
 
@@ -412,8 +304,8 @@ get_line:
     ldx #0
     stx line_size
 @loop:
-    jsr bios_waitchar   ;; echo the input
-    jsr bios_putchar
+    jsr waitchar   ;; echo the input
+    jsr putchar
     cmp #$0D            ;; is 'cr'?
     beq @end            ;; yes
     stx line_size       ;; no, next char
@@ -422,7 +314,7 @@ get_line:
     jmp @loop
 @end:
     lda #$0A            ;; adding new line and null to the line
-    jsr bios_putchar
+    jsr putchar
     stx line_size
     sta line,x
     inx
@@ -552,14 +444,14 @@ error:
     ldy #>error_unknown_MP_msg
     jsr string_print
     lda #' '
-    jsr bios_putchar
+    jsr putchar
     lda #'"'
-    jsr bios_putchar
+    jsr putchar
     ldx #<argv
     ldy #>argv
     jsr string_print
     lda #'"'
-    jsr bios_putchar
+    jsr putchar
     jmp @end
 @underFlow:
     ldx #<error_underFlow_msg
@@ -568,7 +460,7 @@ error:
     jmp @end
 @end:
     lda #$0A
-    jsr bios_putchar
+    jsr putchar
     rts
 
 print_prompt:
@@ -583,12 +475,6 @@ print_prompt:
 
 MP_dump:
 
-    ; lda #1
-    ; sta rax
-    ; lda #'A'
-    ; sta rdi
-    ; sys                         ;; sys_exit test
-
     ldy #0              
     ldx #0              
 @next_arg:
@@ -597,14 +483,14 @@ MP_dump:
 @print_arg:
     lda argv,y 
     beq @end_of_arg      
-    jsr bios_putchar      
+    jsr putchar      
     iny                 
     jmp @print_arg
 @end_of_arg:
     lda #$0A
-    jsr bios_putchar
+    jsr putchar
     lda #$0D
-    jsr bios_putchar   
+    jsr putchar   
     iny                 
     inx                 
     jmp @next_arg
@@ -612,15 +498,15 @@ MP_dump:
     rts
 
 MP_clear:
-    jsr bios_clear
+    jsr clear
     rts
 
 MP_exit:
     jmp reset
 
-.segment "BIOS"
+.segment "INIT"
 reset:
-    ldx #$FF               ;; BIOS init's 
+    ldx #$FF               ;; init the system
     txs
     cld
     sei
@@ -636,15 +522,164 @@ reset:
     dex
     bne @user_init
 
-    MOV64 welcome_msg, $B000    ;; macro test, macros are amazing!!!!
-
     cli                         ;; from here, start of interactive part
 
-    jsr bios_clear  
+    jsr clear  
 
     jsr login
 
     jmp monitor                 ;; not returning, inf loop
+
+;; =====================================================================================================
+;; login protocol: 
+;; users table entry must be:
+;; 8B user-name(ctr), 8B password(ctr)
+;; NOTE: only for upp to 16 users!
+;; =====================================================================================================
+
+login:
+@loop:
+    jsr get_user_and_password
+    cmp #0
+    beq @loop
+    jsr verify_password
+    cmp #0
+    beq @loop
+    ;; password is right!
+    rts
+
+verify_password:
+    ldx #<login_password_msg
+    ldy #>login_password_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line
+
+    lda argc            ;; no space in password's
+    cmp #1
+    bne @bad_exit
+
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+    ldx #<password
+    ldy #>password
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @bad_exit
+@good_exit:
+    lda #1
+    rts
+
+@bad_exit:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_wrong_password
+    ldy #>error_wrong_password
+    jsr string_print
+    lda #0
+    rts
+
+get_user_and_password:
+    ldx #<login_user_msg
+    ldy #>login_user_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line      ;; argv[0] = user input
+
+    lda argc            ;; no space in user names
+    cmp #1
+    bne @bad_user
+
+    lda users_count     ;; number of users
+    sta rcx
+@search_loop:
+    ldx #<argv          ;; a = argv[0]
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+
+    lda #0              
+    sta rdx
+    lda rcx             
+    sta r8              ;; r8 = rcx(i)
+    dec r8              ;; r8--
+@mul:
+    lda rdx
+    clc
+    adc #16
+    sta rdx
+    dec r8
+    bne @mul
+
+
+    ldx #<users_table   ;; rdx = (rcx(i) - 1) * 16
+    txa
+    clc
+    adc rdx
+    tax                 ;; b = users_table[rdx]
+    ldy #>users_table
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @next_entry     ;; a != b
+
+                        
+    ldy #0              ;; a == b
+    lda rsi
+    clc
+    adc #8
+    sta rsi
+@copy_password:         ;; in rsi is the pointer of the password
+    lda (rsi),y
+    sta password,y
+    cmp #0
+    beq @copy_user
+    iny
+    jmp @copy_password
+    
+@copy_user:
+    MOV64 argv, user
+    lda #1              
+    jmp @end
+
+@next_entry:
+    dec rcx
+    bne @search_loop    ;; if loop finish than bad user name
+
+@bad_user:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_unknown_user_msg
+    ldy #>error_unknown_user_msg
+    jsr string_print
+    lda #'"'
+    jsr putchar
+    lda #0              ;; remove new-line from the line buffer
+    ldx line_size
+    sta line, x
+    ldx #<line
+    ldy #>line
+    jsr string_print
+    lda #'"'
+    jsr putchar
+    lda #$0A
+    jsr putchar
+    lda #0
+@end:
+    rts
+
+;; ====================================================================================================
+;; interrupt handlers and syscalls: 
+;; ====================================================================================================
 
 nmi_handler:
     pha
@@ -688,10 +723,10 @@ brk_handler:
     
     ldx rax
 
-    lda #>sys_dispatch_table    ;; table high byte in rax+1
-    sta rax+1
     lda #<sys_dispatch_table    ;; table low byte in rax
     sta rax
+    lda #>sys_dispatch_table    ;; table high byte in rax+1
+    sta rax+1
                       
     cpx #0
     beq @dispatch
@@ -718,53 +753,32 @@ dispatch_exit:              ;; 1
 
 sys_foo:
     lda #'f'
-    jsr bios_putchar
+    jsr putchar
     lda #'o'
-    jsr bios_putchar
+    jsr putchar
     lda #'o'
-    jsr bios_putchar
+    jsr putchar
     lda #$0A
-    jsr bios_putchar
+    jsr putchar
     jmp brk_end
 
 ;; void exit(byte err_code)
 ;; TODO: prints exit code as ASCII for now...
 sys_exit:
+    ldx #$FF
+    txs
+    lda #STACK_START_H
+    sta rsp+1
+    lda #STACK_START_L
+    sta rsp
     ldx #<user_exit_msg
     ldy #>user_exit_msg
     jsr string_print
     lda rdi
-    jsr bios_putchar
+    jsr putchar
     lda #$0A
-    jsr bios_putchar
+    jsr putchar
     jmp monitor_loop
-
-;; void putchar(A : char)
-bios_putchar:
-    pha
-    sta scr_data     
-    lda #SCR_WRITE
-    sta scr_ctrl
-    pla
-    rts
-
-;; void clear(void)
-bios_clear:
-    pha
-    lda #SCR_CLEAR
-    sta scr_ctrl
-    pla
-    rts
-
-;; A : char waitchar()
-bios_waitchar:
-    lda keb_ctrl
-    cmp #KEB_READY
-    bne bios_waitchar 
-    lda #0
-    sta keb_ctrl
-    lda keb_data
-    rts
 
 .segment "VECTORS"
 .word nmi_handler
