@@ -804,15 +804,15 @@ void CPU_run(CPU* cpu, byte disk[DISK_BLOCK_COUNT][BLOCK_SIZE]){
         // power control
         if(!CPU_power(cpu)) return;
 
-        // apple-1 IO for WosMon:
-        if(!CPU_apple_1_IO_sim(cpu)) return;
+        // // apple-1 IO for WosMon:
+        // if(!CPU_apple_1_IO_sim(cpu)) return;
 
-        // // arch0 I/O
-        // CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
-        // CPU_screen(cpu);
+        // arch0 I/O
+        CPU_keyboard(cpu); // IRQ/NMI and RESET throw the keyboard
+        CPU_screen(cpu);
 
-        // // disk
-        // CPU_disk(cpu, disk);
+        // disk
+        CPU_disk(cpu, disk);
 
         // fetch:
         Opcode opcode = cpu->memory[cpu->PC++];

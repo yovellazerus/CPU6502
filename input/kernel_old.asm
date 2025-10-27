@@ -1,6 +1,6 @@
 
 ;*******************************************************************************
-;*******          ROM BASE OS - Core Firmware for the 6502           ***********
+;*******          ROM BASE OS — Core Firmware for the 6502           ***********
 ;*******************************************************************************
 
 ;; ******************************************************************************************************
@@ -144,14 +144,27 @@ KERNEL_RAM   = $C200
 
 line         = KERNEL_RAM + $0000
 argv         = KERNEL_RAM + $0100
-nmi_hook     = KERNEL_RAM + $0200
-irq_hook     = KERNEL_RAM + $0203
+user         = KERNEL_RAM + $0200
+password     = KERNEL_RAM + $0208
 
 ;; ================================================================================
 ;;; kernel code and data is here
 ;; ================================================================================
 
+.segment "DATA"
+
+users_table:
+user_root:              .byte "root",   0, 0, 0, 0,    "1967@1A", 0
+user_alice:             .byte "alice",  0, 0, 0,       "abcdefg", 0
+user_bob:               .byte "bob"  ,  0, 0, 0, 0, 0, "1234567", 0
+user_carmen:            .byte "carmen", 0, 0,          "!@#$%^&", 0
+
+users_count:            .byte 04
+
 .segment "RODATA"
+
+login_user_msg:         .byte "User: ", 0
+login_password_msg:     .byte "Password: ", 0
 
 welcome_msg:            .byte "**** welcome to the 6502 kernel monitor ****", $0A, 0
 prompt_msg:             .byte "> ", 0
@@ -160,6 +173,7 @@ user_exit_msg:          .byte "user program exited with code: ", 0
 error_prefix_msg:       .byte "ERROR: ", 0
 error_underFlow_msg:    .byte "underFlow", 0
 error_unknown_user_msg: .byte "unknown user: ", 0
+error_wrong_password:   .byte "wrong password", $0A, 0
 error_unknown_MP_msg:   .byte "unknown monitor service", 0
 
 MP_dump_str:            .byte "dump", 0
@@ -168,18 +182,9 @@ MP_exit_str:            .byte "exit", 0
 
 .segment "LIB"
 
-jmp_table:
-
-putchar:    jmp sys_putchar
-clear:      jmp sys_clear  
-waitchar:   jmp sys_waitchar
-puts:       jmp sys_puts
-strcmp:     jmp sys_strcmp
-
-
-;; void sys_putchar(char c)
+;; void putchar(char c)
 ;; input in A
-sys_putchar:
+putchar:
     pha
     sta scr_data     
     lda #SCR_WRITE
@@ -187,45 +192,45 @@ sys_putchar:
     pla
     rts
 
-;; void sys_clear(void)
-sys_clear:
+;; void clear(void)
+clear:
     pha
     lda #SCR_CLEAR
     sta scr_ctrl
     pla
     rts
 
-;; char sys_waitchar()
+;; char waitchar()
 ;; output in A
-sys_waitchar:
+waitchar:
     lda keb_ctrl
     cmp #KEB_READY
-    bne sys_waitchar 
+    bne waitchar 
     lda #0
     sta keb_ctrl
     lda keb_data
     rts
 
-;; void sys_puts(str s) 
+;; void string_print(str s) 
 ;; input in X, Y
-sys_puts:
+string_print:
     stx r8       
     sty r8+1        
     ldy #0
-@loop:
+print_loop:
     lda (r8),y
-    beq @done  
-    jsr sys_putchar
+    beq print_done   
+    jsr putchar
     iny             
-    bne @loop  
+    bne print_loop  
     inc r8+1        
-    jmp @loop
-@done:
+    jmp print_loop
+print_done:
     rts
 
-;; byte sys_strcmp(str a, str b)
+;; byte string_cmp(str a, str b)
 ;; note: 0 if eq 1 if diff no <,> for now
-sys_strcmp:
+string_cmp:
     lda rdi
     sta r8
     lda rdi+1
@@ -274,8 +279,11 @@ sys_strcmp:
 monitor:
     ldx #<welcome_msg
     ldy #>welcome_msg
-    jsr sys_puts
-monitor_loop:          ;; inf loop, global label for exit service
+    jsr string_print
+monitor_loop:          ;; inf loop, global label for exit syscall
+    ldx #<user
+    ldy #>user
+    jsr string_print
     jsr print_prompt
     jsr get_line
     jsr parse_line
@@ -296,8 +304,8 @@ get_line:
     ldx #0
     stx line_size
 @loop:
-    jsr sys_waitchar   ;; echo the input
-    jsr sys_putchar
+    jsr waitchar   ;; echo the input
+    jsr putchar
     cmp #$0D            ;; is 'cr'?
     beq @end            ;; yes
     stx line_size       ;; no, next char
@@ -306,7 +314,7 @@ get_line:
     jmp @loop
 @end:
     lda #$0A            ;; adding new line and null to the line
-    jsr sys_putchar
+    jsr putchar
     stx line_size
     sta line,x
     inx
@@ -380,7 +388,7 @@ execute_line:
     ldy #>MP_dump_str
     stx rsi
     sty rsi+1
-    jsr sys_strcmp
+    jsr string_cmp
     cmp #0
     bne @not_dump
     jsr MP_dump
@@ -394,7 +402,7 @@ execute_line:
     ldy #>MP_clear_str
     stx rsi
     sty rsi+1
-    jsr sys_strcmp
+    jsr string_cmp
     cmp #0
     bne @not_clear
     jsr MP_clear
@@ -408,7 +416,7 @@ execute_line:
     ldy #>MP_exit_str
     stx rsi
     sty rsi+1
-    jsr sys_strcmp
+    jsr string_cmp
     cmp #0
     bne @not_exit
     jsr MP_exit
@@ -425,7 +433,7 @@ execute_line:
 error:
     ldx #<error_prefix_msg
     ldy #>error_prefix_msg
-    jsr sys_puts
+    jsr string_print
     cmp #ERROR_UNDERFLOW
     beq @underFlow
     cmp #ERROR_UNKNOWN_MP
@@ -434,31 +442,31 @@ error:
 @unknown_MP:
     ldx #<error_unknown_MP_msg
     ldy #>error_unknown_MP_msg
-    jsr sys_puts
+    jsr string_print
     lda #' '
-    jsr sys_putchar
+    jsr putchar
     lda #'"'
-    jsr sys_putchar
+    jsr putchar
     ldx #<argv
     ldy #>argv
-    jsr sys_puts
+    jsr string_print
     lda #'"'
-    jsr sys_putchar
+    jsr putchar
     jmp @end
 @underFlow:
     ldx #<error_underFlow_msg
     ldy #>error_underFlow_msg
-    jsr sys_puts
+    jsr string_print
     jmp @end
 @end:
     lda #$0A
-    jsr sys_putchar
+    jsr putchar
     rts
 
 print_prompt:
     ldx #<prompt_msg
     ldy #>prompt_msg
-    jsr sys_puts
+    jsr string_print
     rts
 
 ;; =====================================================================================================
@@ -475,14 +483,14 @@ MP_dump:
 @print_arg:
     lda argv,y 
     beq @end_of_arg      
-    jsr sys_putchar      
+    jsr putchar      
     iny                 
     jmp @print_arg
 @end_of_arg:
     lda #$0A
-    jsr sys_putchar
+    jsr putchar
     lda #$0D
-    jsr sys_putchar   
+    jsr putchar   
     iny                 
     inx                 
     jmp @next_arg
@@ -490,49 +498,187 @@ MP_dump:
     rts
 
 MP_clear:
-    jsr sys_clear
+    jsr clear
     rts
 
 MP_exit:
     jmp reset
 
-.segment "STARTUP"
+.segment "INIT"
 reset:
-    ;; init the system memory
-    ;; TODO: consider more memory init's
+    ldx #$FF               ;; init the system
+    txs
     cld
     sei
-    ldx #$FF
-    txs
     lda #STACK_START_H
     sta rsp+1
     lda #STACK_START_L
     sta rsp
 
-    ;; install the built-in NMI/IRQ/BRK handlers
-    ldx #<nmi_handler
-    ldy #>nmi_handler
-    lda #$4C                    ;; jmp absolute
-    sta nmi_hook+0
-    stx nmi_hook+1
-    sty nmi_hook+2
-
-    ldx #<irq_handler
-    ldy #>irq_handler
-    sta irq_hook+0
-    stx irq_hook+1
-    sty irq_hook+2
+    ldx #16                     ;; sizeof(user + password) == 16, password is after user
+    lda #0
+@user_init:
+    sta user,x                  
+    dex
+    bne @user_init
 
     cli                         ;; from here, start of interactive part
 
-    jsr sys_clear  
+    jsr clear  
 
-    jmp monitor                 ;; inf loop
+    jsr login
 
-    brk
+    jmp monitor                 ;; not returning, inf loop
+
+;; =====================================================================================================
+;; login protocol: 
+;; users table entry must be:
+;; 8B user-name(ctr), 8B password(ctr)
+;; NOTE: only for upp to 16 users!
+;; =====================================================================================================
+
+login:
+@loop:
+    jsr get_user_and_password
+    cmp #0
+    beq @loop
+    jsr verify_password
+    cmp #0
+    beq @loop
+    ;; password is right!
+    rts
+
+verify_password:
+    ldx #<login_password_msg
+    ldy #>login_password_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line
+
+    lda argc            ;; no space in password's
+    cmp #1
+    bne @bad_exit
+
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+    ldx #<password
+    ldy #>password
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @bad_exit
+@good_exit:
+    lda #1
+    rts
+
+@bad_exit:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_wrong_password
+    ldy #>error_wrong_password
+    jsr string_print
+    lda #0
+    rts
+
+get_user_and_password:
+    ldx #<login_user_msg
+    ldy #>login_user_msg
+    jsr string_print
+
+    jsr get_line
+    jsr parse_line      ;; argv[0] = user input
+
+    lda argc            ;; no space in user names
+    cmp #1
+    bne @bad_user
+
+    lda users_count     ;; number of users
+    sta rcx
+@search_loop:
+    ldx #<argv          ;; a = argv[0]
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+
+    lda #0              
+    sta rdx
+    lda rcx             
+    sta r8              ;; r8 = rcx(i)
+    dec r8              ;; r8--
+@mul:
+    lda rdx
+    clc
+    adc #16
+    sta rdx
+    dec r8
+    bne @mul
+
+
+    ldx #<users_table   ;; rdx = (rcx(i) - 1) * 16
+    txa
+    clc
+    adc rdx
+    tax                 ;; b = users_table[rdx]
+    ldy #>users_table
+    stx rsi
+    sty rsi+1
+    jsr string_cmp
+    cmp #0
+    bne @next_entry     ;; a != b
+
+                        
+    ldy #0              ;; a == b
+    lda rsi
+    clc
+    adc #8
+    sta rsi
+@copy_password:         ;; in rsi is the pointer of the password
+    lda (rsi),y
+    sta password,y
+    cmp #0
+    beq @copy_user
+    iny
+    jmp @copy_password
+    
+@copy_user:
+    MOV64 argv, user
+    lda #1              
+    jmp @end
+
+@next_entry:
+    dec rcx
+    bne @search_loop    ;; if loop finish than bad user name
+
+@bad_user:
+    ldx #<error_prefix_msg
+    ldy #>error_prefix_msg
+    jsr string_print
+    ldx #<error_unknown_user_msg
+    ldy #>error_unknown_user_msg
+    jsr string_print
+    lda #'"'
+    jsr putchar
+    lda #0              ;; remove new-line from the line buffer
+    ldx line_size
+    sta line, x
+    ldx #<line
+    ldy #>line
+    jsr string_print
+    lda #'"'
+    jsr putchar
+    lda #$0A
+    jsr putchar
+    lda #0
+@end:
+    rts
 
 ;; ====================================================================================================
-;; built-in interrupt handlers (the handlers address are loaded to RAM in startup, user can modify): 
+;; interrupt handlers and syscalls: 
 ;; ====================================================================================================
 
 nmi_handler:
@@ -574,10 +720,67 @@ irq_end:
     rti
 
 brk_handler:
-    ;; TODO: do staff for a software interrupts...
-    jmp irq_end
     
+    ldx rax
+
+    lda #<sys_dispatch_table    ;; table low byte in rax
+    sta rax
+    lda #>sys_dispatch_table    ;; table high byte in rax+1
+    sta rax+1
+                      
+    cpx #0
+    beq @dispatch
+@mul:
+    clc
+    lda rax
+    adc #4
+    sta rax
+    dex
+    bne @mul
+
+@dispatch:
+    jmp (rax)
+brk_end:
+    jmp irq_end
+
+sys_dispatch_table:         ;; entry size: 4 bytes
+dispatch_foo: 
+    jmp sys_foo             ;; 0
+    .byte $00 
+dispatch_exit:              ;; 1
+    jmp sys_exit
+    .byte $00
+
+sys_foo:
+    lda #'f'
+    jsr putchar
+    lda #'o'
+    jsr putchar
+    lda #'o'
+    jsr putchar
+    lda #$0A
+    jsr putchar
+    jmp brk_end
+
+;; void exit(byte err_code)
+;; TODO: prints exit code as ASCII for now...
+sys_exit:
+    ldx #$FF
+    txs
+    lda #STACK_START_H
+    sta rsp+1
+    lda #STACK_START_L
+    sta rsp
+    ldx #<user_exit_msg
+    ldy #>user_exit_msg
+    jsr string_print
+    lda rdi
+    jsr putchar
+    lda #$0A
+    jsr putchar
+    jmp monitor_loop
+
 .segment "VECTORS"
-.word nmi_hook
+.word nmi_handler
 .word reset
-.word irq_hook
+.word irq_handler
