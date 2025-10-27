@@ -20,21 +20,14 @@
 ;; macros:
 ;; ================================================================================
 
-.macro SYS sys_number
-    lda sys_number
-    sta rax
-    brk
-    .byte $00
-.endmacro
-
-; copy 8 bytes from src to dest
-.macro MOV64 src, dest
+; copy size number of bytes from src to dest
+.macro MOV src, dest, size
     ldx #0
 @mov_loop:
     lda src,x
     sta dest,x
     inx
-    cpx #8
+    cpx #size
     bne @mov_loop
 .endmacro
 
@@ -160,22 +153,13 @@ user_exit_msg:          .byte "user program exited with code: ", 0
 error_prefix_msg:       .byte "ERROR: ", 0
 error_underFlow_msg:    .byte "underFlow", 0
 error_unknown_user_msg: .byte "unknown user: ", 0
-error_unknown_MP_msg:   .byte "unknown monitor service", 0
+error_unknown_mp_msg:   .byte "unknown monitor service", 0
 
-MP_dump_str:            .byte "dump", 0
-MP_clear_str:           .byte "clear", 0
-MP_exit_str:            .byte "exit", 0
+mp_dump_str:            .byte "dump", 0
+mp_clear_str:           .byte "clear", 0
+mp_exit_str:            .byte "exit", 0
 
 .segment "LIB"
-
-jmp_table:
-
-putchar:    jmp sys_putchar
-clear:      jmp sys_clear  
-waitchar:   jmp sys_waitchar
-puts:       jmp sys_puts
-strcmp:     jmp sys_strcmp
-
 
 ;; void sys_putchar(char c)
 ;; input in A
@@ -376,42 +360,42 @@ execute_line:
     ldy #>argv
     stx rdi
     sty rdi+1
-    ldx #<MP_dump_str
-    ldy #>MP_dump_str
+    ldx #<mp_dump_str
+    ldy #>mp_dump_str
     stx rsi
     sty rsi+1
     jsr sys_strcmp
     cmp #0
     bne @not_dump
-    jsr MP_dump
+    jsr mp_dump
     jmp @end
 @not_dump:
     ldx #<argv
     ldy #>argv
     stx rdi
     sty rdi+1
-    ldx #<MP_clear_str
-    ldy #>MP_clear_str
+    ldx #<mp_clear_str
+    ldy #>mp_clear_str
     stx rsi
     sty rsi+1
     jsr sys_strcmp
     cmp #0
     bne @not_clear
-    jsr MP_clear
+    jsr mp_clear
     jmp @end
 @not_clear:
     ldx #<argv
     ldy #>argv
     stx rdi
     sty rdi+1
-    ldx #<MP_exit_str
-    ldy #>MP_exit_str
+    ldx #<mp_exit_str
+    ldy #>mp_exit_str
     stx rsi
     sty rsi+1
     jsr sys_strcmp
     cmp #0
     bne @not_exit
-    jsr MP_exit
+    jsr mp_exit
     jmp @end
 @not_exit:
 
@@ -429,11 +413,11 @@ error:
     cmp #ERROR_UNDERFLOW
     beq @underFlow
     cmp #ERROR_UNKNOWN_MP
-    beq @unknown_MP
+    beq @unknown_mp
 
-@unknown_MP:
-    ldx #<error_unknown_MP_msg
-    ldy #>error_unknown_MP_msg
+@unknown_mp:
+    ldx #<error_unknown_mp_msg
+    ldy #>error_unknown_mp_msg
     jsr sys_puts
     lda #' '
     jsr sys_putchar
@@ -465,7 +449,7 @@ print_prompt:
 ;; monitor sub programs:
 ;; =====================================================================================================
 
-MP_dump:
+mp_dump:
 
     ldy #0              
     ldx #0              
@@ -489,11 +473,11 @@ MP_dump:
 @done:
     rts
 
-MP_clear:
+mp_clear:
     jsr sys_clear
     rts
 
-MP_exit:
+mp_exit:
     jmp reset
 
 .segment "STARTUP"
@@ -576,6 +560,16 @@ irq_end:
 brk_handler:
     ;; TODO: do staff for a software interrupts...
     jmp irq_end
+
+.segment "DISPATCH"
+
+putchar:    jmp sys_putchar
+clear:      jmp sys_clear  
+waitchar:   jmp sys_waitchar
+puts:       jmp sys_puts
+strcmp:     jmp sys_strcmp
+
+brk
     
 .segment "VECTORS"
 .word nmi_hook
