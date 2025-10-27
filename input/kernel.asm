@@ -278,14 +278,32 @@ get_line:
     ldx #0
     stx r8
 @loop:
-    jsr sys_waitchar   ;; echo the input
+    jsr sys_waitchar    ;; echo the input
+    cmp #$0D            ;; '\r'
+    beq @end  
+    cmp #$08            ;; '\b'
+    bne @not_bs
+
+    lda r8
+    beq @loop           ;; if index == 0, ignore '\b'
+    lda #$08            ;; curser back
     jsr sys_putchar
-    cmp #$0D            ;; is 'cr'?
-    beq @end            ;; yes
-    
-    stx r8       ;; no, next char
+    lda #' '
+    jsr sys_putchar
+    lda #$08            ;; curser back
+    jsr sys_putchar
+    dex
+    stx r8
+    lda #$00
+    sta line,x
+    jmp @loop
+         
+@not_bs:
+    jsr sys_putchar    
+    stx r8              ;; normal char
     sta line,x
     inx
+    beq @end            ;; check for line overflow
     jmp @loop
 @end:
     lda #$0A            ;; adding new line and null to the line
