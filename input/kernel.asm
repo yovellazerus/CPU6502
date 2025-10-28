@@ -42,6 +42,7 @@ STACK_START_H    = $0F
 STACK_START_L    = $FF
 ERROR_UNDERFLOW  = $01
 ERROR_UNKNOWN_MP = $02
+ERROR_NO_ARG     = $03
 
 ;; arch0 MMIO constants
 
@@ -152,10 +153,12 @@ user_exit_msg:          .byte "program exited with code: ", 0
 error_prefix_msg:       .byte "ERROR: ", 0
 error_underFlow_msg:    .byte "underFlow", 0
 error_unknown_mp_msg:   .byte "unknown monitor service", 0
+error_no_arg_msg:       .byte "no arguments were provided", 0
 
 mp_dump_str:            .byte "dump", 0
 mp_clear_str:           .byte "clear", 0
 mp_exit_str:            .byte "exit", 0
+mp_run_str:             .byte "run", 0
 
 .segment "LIB"
 
@@ -415,6 +418,20 @@ execute_line:
     jsr mp_exit
     jmp @end
 @not_exit:
+    ldx #<argv
+    ldy #>argv
+    stx rdi
+    sty rdi+1
+    ldx #<mp_run_str
+    ldy #>mp_run_str
+    stx rsi
+    sty rsi+1
+    jsr sys_strcmp
+    cmp #0
+    bne @not_run
+    jsr mp_run
+    jmp @end
+@not_run:
 
 @error:
     lda #ERROR_UNKNOWN_MP
@@ -422,15 +439,20 @@ execute_line:
 @end:
     rts
 
-;; void error(A : err) "err" in A
+;; void error(byte err)
+;; input in A
 error:
+    pha
     ldx #<error_prefix_msg
     ldy #>error_prefix_msg
     jsr sys_puts
+    pla
     cmp #ERROR_UNDERFLOW
     beq @underFlow
     cmp #ERROR_UNKNOWN_MP
     beq @unknown_mp
+    cmp #ERROR_NO_ARG
+    beq @no_arg
 
 @unknown_mp:
     ldx #<error_unknown_mp_msg
@@ -451,6 +473,11 @@ error:
     ldy #>error_underFlow_msg
     jsr sys_puts
     jmp @end
+@no_arg:
+    ldx #<error_no_arg_msg
+    ldy #>error_no_arg_msg
+    jsr sys_puts
+    jmp @end
 @end:
     lda #$0A
     jsr sys_putchar
@@ -459,6 +486,22 @@ error:
 print_prompt:
     ldx #<prompt_msg
     ldy #>prompt_msg
+    jsr sys_puts
+    rts
+
+;; TODO: find a file...
+find_file:
+    lda #<user_demo
+    sta rax
+    lda #>user_demo
+    sta rax+1
+    rts
+
+hello_msg: .byte "Hello User!", $0A, 0
+
+user_demo:
+    ldx #<hello_msg
+    ldy #>hello_msg
     jsr sys_puts
     rts
 
@@ -488,6 +531,24 @@ mp_dump:
     inx                 
     jmp @next_arg
 @done:
+    rts
+
+mp_run:
+    lda argc
+    cmp #1
+    beq @no_arg
+    lda #<argv
+    clc
+    adc #4       ;; len("run") == 3
+    sta rdi
+    lda #>argv
+    sta rdi+1
+    jsr find_file
+    jmp (rax)
+    rts
+@no_arg:
+    lda #ERROR_NO_ARG
+    jsr error
     rts
 
 mp_clear:

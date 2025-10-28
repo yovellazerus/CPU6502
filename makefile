@@ -3,8 +3,8 @@
 # ====================================================================================
 
 CC      = gcc
-CA      = ca65.exe
-LD      = ld65.exe
+CA      = .\cc65-2.19\bin\ca65.exe
+LD      = .\cc65-2.19\bin\ld65.exe
 CFLAGS  =
 OBJ     = src\main.o src\cpu.o src\instruction.o
 TARGET  = bin\cpu6502.exe
