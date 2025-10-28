@@ -3,142 +3,7 @@
 ;*************               ROM BASE OS - Core Firmware for the 6502           *************************
 ;********************************************************************************************************
 
-;; ******************************************************************************************************
-;; System V AMD64 ABI (x86-64 calling convention)
-;; Registers: zero page registers x86-64 style (register size can be modify by the "REG_SIZE" constant)
-;; Callee-saved: rbx, rbp, r12, r13, r14, r15
-;; Caller-saved: rax, rcx, rdx, rsi, rdi, r8-r11
-;; Args: rdi, rsi, rdx, rcx, r8, r9 (first 6 int/pointer)
-;; Return: rax
-
-;; EXCEPTIONS:
-;; Stack: NO caller aligns to 16 bytes before call
-;; Note: with documented exceptions to fit the 6502 architecture
-;; ******************************************************************************************************
-
-;; =====================================================================================================
-;; macros:
-;; =====================================================================================================
-
-; copy size number of bytes from src to dest
-.macro MOV src, dest, size
-    ldx #0
-@mov_loop:
-    lda src,x
-    sta dest,x
-    inx
-    cpx #size
-    bne @mov_loop
-.endmacro
-
-
-;; =====================================================================================================
-;; consts:
-;; =====================================================================================================
-
-;; KERNEL constants
-
-STACK_START_H    = $0F
-STACK_START_L    = $FF
-ERROR_UNDERFLOW  = $01
-ERROR_UNKNOWN_MP = $02
-ERROR_NO_ARG     = $03
-
-;; arch0 MMIO constants
-
-DISK_READ    = 1
-DISK_READY   = 1
-BOOT_FOUND   = 1
-SCR_WRITE    = 1
-SCR_CLEAR    = 2
-KEB_READY    = 1
-DISK_FOUND   = $FF
-KEB_FOUND    = $FF
-SCR_FOUND    = $FF
-SPK_FOUND    = $FF
-MIC_FOUND    = $FF
-DISK_ERR     = 0
-KEB_ERR      = 1
-SCR_ERR      = 2
-SPK_ERR      = 3
-MIC_ERR      = 4
-POWER_OFF    = $FF
-
-;; =====================================================================================================
-;; Zero page registers x86-64 style:
-;; =====================================================================================================
-
-ZP_X86_64 = $00
-REG_SIZE  = 4
-
-rax = ZP_X86_64 + REG_SIZE*0 
-rbx = ZP_X86_64 + REG_SIZE*1 
-rcx = ZP_X86_64 + REG_SIZE*2 
-rdx = ZP_X86_64 + REG_SIZE*3 
-rsi = ZP_X86_64 + REG_SIZE*4 
-rdi = ZP_X86_64 + REG_SIZE*5 
-rbp = ZP_X86_64 + REG_SIZE*6 
-rsp = ZP_X86_64 + REG_SIZE*7 
-r8  = ZP_X86_64 + REG_SIZE*8 
-r9  = ZP_X86_64 + REG_SIZE*9 
-r10 = ZP_X86_64 + REG_SIZE*10 
-r11 = ZP_X86_64 + REG_SIZE*11 
-r12 = ZP_X86_64 + REG_SIZE*12 
-r13 = ZP_X86_64 + REG_SIZE*13 
-r14 = ZP_X86_64 + REG_SIZE*14 
-r15 = ZP_X86_64 + REG_SIZE*15 
-
-;; =====================================================================================================
-;; KERNEL zero page vars:
-;; =====================================================================================================
-
-KERNEL_ZP    = ZP_X86_64 + REG_SIZE*16
-
-argc         = KERNEL_ZP + $00
-
-;; =====================================================================================================
-;; MMIO registers:
-;; =====================================================================================================
-
-;; wild-card devices
-null         = $C000
-power        = $C001
-rnd          = $C002
-;; KERNEL status
-boot_status  = $C003
-;; dick ctrl
-disk_cmd     = $C004
-disk_addrl   = $C005
-disk_addrh   = $C006
-disk_status  = $C007
-;; I/O:
-keb_data     = $C008
-keb_ctrl     = $C009
-scr_data     = $C00A
-scr_ctrl     = $C00B
-spk_data     = $C00C
-spk_ctrl     = $C00D
-mic_data     = $C00E
-mic_ctrl     = $C00F
-;; MMU
-bsl          = $C010
-bsh          = $C011
-ssl          = $C012
-ssh          = $C013
-
-;; dick data
-disk_data    = $C100 ;; 256 byte sectors
-
-;; =====================================================================================================
-;; kernel working RAM:
-;; =====================================================================================================
-
-KERNEL_RAM   = $C200
-
-line         = KERNEL_RAM + $0000
-argv         = KERNEL_RAM + $0100
-nmi_hook     = KERNEL_RAM + $0200
-irq_hook     = KERNEL_RAM + $0203
+.include "arch0.inc"
 
 ;; =====================================================================================================
 ;;; kernel read only data is here:
@@ -166,9 +31,9 @@ mp_run_str:             .byte "run", 0
 ;; input in A
 sys_putchar:
     pha
-    sta scr_data     
+    sta mmio_scr_data     
     lda #SCR_WRITE
-    sta scr_ctrl
+    sta mmio_scr_ctrl
     pla
     rts
 
@@ -176,19 +41,19 @@ sys_putchar:
 sys_clear:
     pha
     lda #SCR_CLEAR
-    sta scr_ctrl
+    sta mmio_scr_ctrl
     pla
     rts
 
 ;; char sys_waitchar()
 ;; output in A
 sys_waitchar:
-    lda keb_ctrl
+    lda mmio_keb_ctrl
     cmp #KEB_READY
     bne sys_waitchar 
     lda #0
-    sta keb_ctrl
-    lda keb_data
+    sta mmio_keb_ctrl
+    lda mmio_keb_data
     rts
 
 ;; void sys_puts(str s) 
@@ -206,6 +71,24 @@ sys_puts:
     inc r8+1        
     jmp @loop
 @done:
+    rts
+
+;; void sys_load_sector(u16 sector_id)
+;; read disk sector to disk_buffer
+;; input in X, Y
+sys_load_sector:
+
+    stx mmio_disk_addrl
+    sty mmio_disk_addrh
+    lda #DISK_READ
+    sta mmio_disk_cmd
+@wait_disk:
+    lda mmio_disk_status
+    cmp #DISK_READY
+    bne @wait_disk
+
+    MOV mmio_disk_data, disk_buffer, #$FF
+
     rts
 
 ;; byte sys_strcmp(str a, str b)
@@ -266,7 +149,6 @@ monitor_loop:          ;; inf loop, global label for exit service
     jsr parse_line
 
     lda argc            ;; if no input
-    cmp #0
     beq monitor_loop
 
     jsr execute_line  
@@ -491,18 +373,17 @@ print_prompt:
 
 ;; TODO: find a file...
 find_file:
-    lda #<user_demo
-    sta rax
-    lda #>user_demo
+
+    ldx #3
+    ldy #0
+    jsr sys_load_sector
+
+    MOV disk_buffer, user_entry, #$FF
+
+    lda #<user_entry
+    sta rax+0
+    lda #>user_entry
     sta rax+1
-    rts
-
-hello_msg: .byte "Hello User!", $0A, 0
-
-user_demo:
-    ldx #<hello_msg
-    ldy #>hello_msg
-    jsr sys_puts
     rts
 
 ;; =====================================================================================================
@@ -540,7 +421,7 @@ mp_run:
     lda #<argv
     clc
     adc #4       ;; len("run") == 3
-    sta rdi
+    sta rdi+0
     lda #>argv
     sta rdi+1
     jsr find_file
@@ -607,9 +488,9 @@ nmi_handler:
     pha
     tya
     pha
-    ;; TODO: do staff... NMI power-off the cpu for now...
+    ;; TODO: do staff... NMI mmio_power-off the cpu for now...
     lda #POWER_OFF
-    sta power
+    sta mmio_power
     pla
     tay
     pla
@@ -649,11 +530,12 @@ brk_handler:
 
 .segment "DISPATCH"
 
-putchar:    jmp sys_putchar
-clear:      jmp sys_clear  
-waitchar:   jmp sys_waitchar
-puts:       jmp sys_puts
-strcmp:     jmp sys_strcmp
+putchar:        jmp sys_putchar
+clear:          jmp sys_clear  
+waitchar:       jmp sys_waitchar
+puts:           jmp sys_puts
+strcmp:         jmp sys_strcmp
+load_sector:    jmp sys_load_sector
 
 brk
 

@@ -1,40 +1,6 @@
-
-;; *****************************************************************************************************
-;; A heder file for my 6502 base computer aka arch0.
-;; constants are UPPERCASE, vars and labels(functions) are lowercase.
-;; *****************************************************************************************************
-
-
-;; =====================================================================================================
-;; constants
-;; =====================================================================================================
-
-DISK_IDLE    = 0
-DISK_READ    = 1
-DISK_WRITE   = 2
-
-DISK_BAD     = 0
-DISK_READY   = 1
-DISK_ERR     = 2
-
-BOOT_FOUND   = 1
-
-SCR_WRITE    = 1
-SCR_CLEAR    = 2
-
-KEB_READY    = 1
-
-DISK_PRESENT   = $FF
-KEB_PRESENT    = $FF
-SCR_PRESENT    = $FF
-SPK_PRESENT    = $FF
-MIC_PRESENT    = $FF
-
-POWER_OFF    = $FF
-
 ;; ******************************************************************************************************
 ;; System V AMD64 ABI (x86-64 calling convention)
-;; Registers: zero page registers x86-64 style
+;; Registers: zero page registers x86-64 style (register size can be modify by the "REG_SIZE" constant)
 ;; Callee-saved: rbx, rbp, r12, r13, r14, r15
 ;; Caller-saved: rax, rcx, rdx, rsi, rdi, r8-r11
 ;; Args: rdi, rsi, rdx, rcx, r8, r9 (first 6 int/pointer)
@@ -45,13 +11,62 @@ POWER_OFF    = $FF
 ;; Note: with documented exceptions to fit the 6502 architecture
 ;; ******************************************************************************************************
 
+;; =====================================================================================================
+;; macros:
+;; =====================================================================================================
+
+; copy size number of bytes from src to dest
+.macro MOV src, dest, size
+    ldx #0
+@mov_loop:
+    lda src,x
+    sta dest,x
+    inx
+    cpx size
+    bne @mov_loop
+.endmacro
+
+
+;; =====================================================================================================
+;; consts:
+;; =====================================================================================================
+
+;; KERNEL constants
+
+STACK_START_H    = $0F
+STACK_START_L    = $FF
+ERROR_UNDERFLOW  = $01
+ERROR_UNKNOWN_MP = $02
+ERROR_NO_ARG     = $03
+
+;; arch0 MMIO constants
+
+DISK_READ    = 1
+DISK_WRITE   = 2
+DISK_READY   = 1
+BOOT_FOUND   = 1
+DISK_BAD     = 2
+SCR_WRITE    = 1
+SCR_CLEAR    = 2
+KEB_READY    = 1
+DISK_FOUND   = $FF
+KEB_FOUND    = $FF
+SCR_FOUND    = $FF
+SPK_FOUND    = $FF
+MIC_FOUND    = $FF
+DISK_ERR     = 0
+KEB_ERR      = 1
+SCR_ERR      = 2
+SPK_ERR      = 3
+MIC_ERR      = 4
+POWER_OFF    = $FF
 
 ;; =====================================================================================================
 ;; Zero page registers x86-64 style:
 ;; =====================================================================================================
 
 ZP_X86_64 = $00
-REG_SIZE  = 8
+REG_SIZE  = 4
 
 rax = ZP_X86_64 + REG_SIZE*0 
 rbx = ZP_X86_64 + REG_SIZE*1 
@@ -68,46 +83,59 @@ r11 = ZP_X86_64 + REG_SIZE*11
 r12 = ZP_X86_64 + REG_SIZE*12 
 r13 = ZP_X86_64 + REG_SIZE*13 
 r14 = ZP_X86_64 + REG_SIZE*14 
-r15 = ZP_X86_64 + REG_SIZE*15
+r15 = ZP_X86_64 + REG_SIZE*15 
 
 ;; =====================================================================================================
-;; MMIO registers
+;; KERNEL zero page vars:
+;; =====================================================================================================
+
+KERNEL_ZP    = ZP_X86_64 + REG_SIZE*16
+
+argc         = KERNEL_ZP + $00
+
+;; =====================================================================================================
+;; MMIO registers:
 ;; =====================================================================================================
 
 ;; wild-card devices
-null         = $C000
-power        = $C001
-rnd          = $C002
+mmio_null         = $C000
+mmio_power        = $C001
+mmio_rnd          = $C002
 ;; KERNEL status
-boot_status  = $C003
+mmio_boot_status  = $C003
 ;; dick ctrl
-disk_cmd     = $C004
-disk_addrl   = $C005
-disk_addrh   = $C006
-disk_status  = $C007
+mmio_disk_cmd     = $C004
+mmio_disk_addrl   = $C005
+mmio_disk_addrh   = $C006
+mmio_disk_status  = $C007
 ;; I/O:
-keb_data     = $C008
-keb_ctrl     = $C009
-scr_data     = $C00A
-scr_ctrl     = $C00B
-spk_data     = $C00C
-spk_ctrl     = $C00D
-mic_data     = $C00E
-mic_ctrl     = $C00F
+mmio_keb_data     = $C008
+mmio_keb_ctrl     = $C009
+mmio_scr_data     = $C00A
+mmio_scr_ctrl     = $C00B
+mmio_spk_data     = $C00C
+mmio_spk_ctrl     = $C00D
+mmio_mic_data     = $C00E
+mmio_mic_ctrl     = $C00F
 ;; MMU
-bsl          = $C010
-bsh          = $C011
-ssl          = $C012
-ssh          = $C013
+mmio_bsl          = $C010
+mmio_bsh          = $C011
+mmio_ssl          = $C012
+mmio_ssh          = $C013
 
 ;; dick data
-disk_data    = $C100 ;; 256 byte blocks
+mmio_disk_data    = $C100 ;; 256 byte sectors
 
 ;; =====================================================================================================
-;; KERNEL fix entries
+;; kernel working RAM:
 ;; =====================================================================================================
 
-boot_entry         = $C200
-kernel_entry       = $C300
-kernel_nmi         = $C400
-kernel_irq         = $C500
+KERNEL_RAM   = $C200
+
+line         = KERNEL_RAM + $0000
+argv         = KERNEL_RAM + $0100
+nmi_hook     = KERNEL_RAM + $0200
+irq_hook     = KERNEL_RAM + $0203
+disk_buffer  = KERNEL_RAM + $0206
+user_entry   = KERNEL_RAM + $0306
+boot_entry   = KERNEL_RAM + $0406

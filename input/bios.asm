@@ -19,13 +19,13 @@ bios_reset:
     txs
 
     lda #SCR_CLEAR  ;; clear the screen
-    sta scr_ctrl
+    sta mmio_scr_ctrl
 
     ldx #<bios_msg
     ldy #>bios_msg
     jsr bios_putstring
 
-    lda boot_status
+    lda mmio_boot_status
     cmp #BOOT_FOUND
     beq @hot_reset
 
@@ -34,7 +34,7 @@ bios_reset:
     ldy #>cold_msg
     jsr bios_putstring
 
-    lda disk_status
+    lda mmio_disk_status
     cmp #DISK_BAD
     bne @disk_found
 
@@ -46,24 +46,24 @@ bios_reset:
 
 @disk_found:
     lda #0              ;; boot sector is block: $0000 of the disk
-    sta disk_addrl
-    sta disk_addrh
+    sta mmio_disk_addrl
+    sta mmio_disk_addrh
     lda #DISK_READ
-    sta disk_cmd
+    sta mmio_disk_cmd
 @wait_disk:
-    lda disk_status
+    lda mmio_disk_status
     cmp #DISK_READY
     bne @wait_disk
 
     ldx $FF             ;; copy BOOT from disk data to it's entry point
 @copy_boot:
-    lda disk_data,x
+    lda mmio_disk_data,x
     sta boot_entry,x
     dex
     bne @copy_boot
 
     lda #BOOT_FOUND
-    sta boot_status
+    sta mmio_boot_status
 
     ldx #<ready_msg
     ldy #>ready_msg
@@ -98,9 +98,9 @@ bios_putstring:
 
 ;; void putchar(A : char)
 bios_putchar:
-    sta scr_data     
+    sta mmio_scr_data     
     lda #SCR_WRITE
-    sta scr_ctrl
+    sta mmio_scr_ctrl
     rts
 
 ;; =====================================================================================================
@@ -118,6 +118,6 @@ error_msg:       .byte "ERROR: NO BOOTABLE DEVICE.", $0A, 0
 ;; =====================================================================================================
 
 .segment "VECTORS"
-.word kernel_nmi
+.word nmi_hook
 .word bios_reset
-.word kernel_irq
+.word irq_hook

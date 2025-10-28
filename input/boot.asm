@@ -15,19 +15,19 @@ _start:
 
     ldx $FF             ;; copy from msg to disk data
 @copy:
-    lda disk_data,x
+    lda mmio_disk_data,x
     sta write_msg,x
     dex
     bne @copy 
 
     lda #0              ;; writing to disk test
-    sta disk_addrl
+    sta mmio_disk_addrl
     lda #1
-    sta disk_addrh
+    sta mmio_disk_addrh
     lda #DISK_WRITE
-    sta disk_cmd
+    sta mmio_disk_cmd
 @wait_disk:
-    lda disk_status
+    lda mmio_disk_status
     cmp #DISK_READY
     bne @wait_disk
 
