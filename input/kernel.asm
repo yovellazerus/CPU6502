@@ -144,8 +144,8 @@ sys_exit:
 sys_execute:
     jsr sys_open
     bne @no_file
-    MOV disk_buffer, user_entry, #$FF
-    jmp user_entry
+    MOV file_buffer, user_entry, #$FF
+    jmp (rax)
     jsr sys_exit
 @no_file:
     lda #NO_USER_PROGRAM
@@ -172,11 +172,11 @@ sys_open:
     stx rsi+0
     sty rsi+1
     jsr sys_strcmp
-    bne @found
+    beq @found
 @loop:
     lda rcx
     clc
-    adc #16
+    adc #32        ;; dir entry size: file name 16B, sector number 2B, 14B unused
     beq @not_found
     sta rcx
 
@@ -189,12 +189,27 @@ sys_open:
     stx rsi+0
     sty rsi+1
     jsr sys_strcmp
-    beq @loop
+    bne @loop
 
 @found:
-    lda rcx+0
+    ldy #16
+    lda (rcx),y
+    tax
+    ldy #17
+    lda (rcx),y
+    tay
+    jsr sys_load_sector
+    
+    ldx #$FF
+@copy:
+    lda disk_buffer,x
+    sta file_buffer,x
+    dex
+    bne @copy
+
+    lda #<file_buffer
     sta rax+0
-    lda rcx+1
+    lda #>file_buffer
     sta rax+1
     lda #0   ;; ok
     rts

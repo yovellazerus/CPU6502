@@ -26,6 +26,10 @@
     bne @mov_loop
 .endmacro
 
+.macro  HALT
+    .byte $FF
+.endmacro
+
 
 ;; =====================================================================================================
 ;; consts:
@@ -95,6 +99,8 @@ r15 = ZP_X86_64 + REG_SIZE*15
 KERNEL_ZP    = ZP_X86_64 + REG_SIZE*16
 
 argc         = KERNEL_ZP + $00
+nmi_hook     = KERNEL_ZP + $01
+irq_hook     = KERNEL_ZP + $04
 
 ;; =====================================================================================================
 ;; MMIO registers:
@@ -139,8 +145,7 @@ KERNEL_RAM   = $C200
 
 line         = KERNEL_RAM + $0000
 argv         = KERNEL_RAM + $0100
-nmi_hook     = KERNEL_RAM + $0200
-irq_hook     = KERNEL_RAM + $0203
-disk_buffer  = KERNEL_RAM + $0206
-boot_entry   = KERNEL_RAM + $0306
-root_dir     = KERNEL_RAM + $0406
+disk_buffer  = KERNEL_RAM + $0200
+boot_entry   = KERNEL_RAM + $0300
+root_dir     = KERNEL_RAM + $0400
+file_buffer  = KERNEL_RAM + $0500
