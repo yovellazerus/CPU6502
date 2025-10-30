@@ -11,19 +11,17 @@
 
 .segment "RODATA"
 
-welcome_msg:            .byte "**** welcome to the 6502 kernel monitor ****", $0A, 0
-prompt_msg:             .byte "> ", 0
-user_exit_msg:          .byte "program exited with code: ", 0
+welcome_msg:                     .byte "**** welcome to 6502 kernel monitor ****", $0A, 0
+prompt_msg:                      .byte "> ", 0
+         
+error_prefix_msg:                .byte "ERROR: ", 0
+error_underFlow_msg:             .byte "underFlow", 0
+error_unknown_mp_msg:            .byte "unknown monitor service", 0
+error_no_arg_msg:                .byte "no arguments were provided", 0
+error_no_user_program_msg:       .byte "no user program: ", 0
 
-error_prefix_msg:       .byte "ERROR: ", 0
-error_underFlow_msg:    .byte "underFlow", 0
-error_unknown_mp_msg:   .byte "unknown monitor service", 0
-error_no_arg_msg:       .byte "no arguments were provided", 0
-
-mp_dump_str:            .byte "dump", 0
-mp_clear_str:           .byte "clear", 0
-mp_exit_str:            .byte "exit", 0
-mp_run_str:             .byte "run", 0
+mp_dump_str:                     .byte "dump", 0
+mp_clear_str:                    .byte "clear", 0
 
 .segment "LIB"
 
@@ -56,7 +54,7 @@ sys_waitchar:
     lda mmio_keb_data
     rts
 
-;; void sys_puts(str s) 
+;; void sys_puts(char* s) 
 ;; input in X, Y
 sys_puts:
     stx r8       
@@ -77,7 +75,6 @@ sys_puts:
 ;; read disk sector to disk_buffer
 ;; input in X, Y
 sys_load_sector:
-
     stx mmio_disk_addrl
     sty mmio_disk_addrh
     lda #DISK_READ
@@ -91,19 +88,17 @@ sys_load_sector:
 
     rts
 
-;; byte sys_strcmp(str a, str b)
+;; bool sys_strcmp(str a, str b)
 ;; note: 0 if eq 1 if diff no <,> for now
 sys_strcmp:
     lda rdi
     sta r8
     lda rdi+1
     sta r8+1
-
     lda rsi
     sta r9
     lda rsi+1
     sta r9+1
-
 @loop:
     ldy #0
     lda (r8),Y
@@ -133,6 +128,81 @@ sys_strcmp:
     lda #1
     rts
 
+;; void sys_exit(unsigned char code)
+;; end user "proses" do not return
+sys_exit:
+    ldx #$FF
+    txs
+    lda #STACK_START_H
+    sta rsp+1
+    lda #STACK_START_L
+    sta rsp
+    jmp monitor
+
+;; void sys_execute(char* path)
+;; start user "proses", user program return to this function 
+sys_execute:
+    jsr sys_open
+    bne @no_file
+    MOV disk_buffer, user_entry, #$FF
+    jmp user_entry
+    jsr sys_exit
+@no_file:
+    lda #NO_USER_PROGRAM
+    rts
+
+;; void* sys_open(char* path), status is return in A
+;; open a file, file start address is in rax
+sys_open:
+    ldx #01     ;; loading $0001 sector, were the root dir is for now
+    ldy #00
+    jsr sys_load_sector
+
+    MOV disk_buffer, root_dir, #$FF
+
+    ldx #<root_dir
+    ldy #>root_dir
+    stx rcx+0
+    sty rcx+1
+
+    stx rdi+0
+    sty rdi+1
+    ldx #<argv
+    ldy #>argv
+    stx rsi+0
+    sty rsi+1
+    jsr sys_strcmp
+    bne @found
+@loop:
+    lda rcx
+    clc
+    adc #16
+    beq @not_found
+    sta rcx
+
+    ldx rcx+0
+    ldy rcx+1
+    stx rdi+0
+    sty rdi+1
+    ldx #<argv
+    ldy #>argv
+    stx rsi+0
+    sty rsi+1
+    jsr sys_strcmp
+    beq @loop
+
+@found:
+    lda rcx+0
+    sta rax+0
+    lda rcx+1
+    sta rax+1
+    lda #0   ;; ok
+    rts
+@not_found:
+    lda #NO_FILE_FOUND
+    rts
+    
+
 .segment "MONITOR"
 
 ;; =====================================================================================================
@@ -140,20 +210,32 @@ sys_strcmp:
 ;; =====================================================================================================
 
 monitor:
-    ldx #<welcome_msg
-    ldy #>welcome_msg
-    jsr sys_puts
-monitor_loop:          ;; inf loop, global label for exit service
     jsr print_prompt
     jsr get_line
     jsr parse_line
 
     lda argc            ;; if no input
-    beq monitor_loop
+    beq monitor
 
-    jsr execute_line  
+    jsr monitor_program
+    beq monitor
 
-    jmp monitor_loop
+    lda #<argv
+    sta rdi+0
+    lda #>argv
+    sta rdi+1
+    jsr sys_execute 
+    beq monitor
+
+    jsr error
+    lda #'"'
+    jsr sys_putchar
+    ldx #<argv
+    ldy #>argv
+    jsr sys_puts
+    jsr sys_putchar
+
+    jmp monitor
 
 ;; =====================================================================================================
 ;; monitor helper functions:
@@ -257,7 +339,7 @@ parse_token:
     sta argv,y          
     rts
 
-execute_line:
+monitor_program:
     ldx #<argv
     ldy #>argv
     stx rdi
@@ -286,42 +368,14 @@ execute_line:
     jsr mp_clear
     jmp @end
 @not_clear:
-    ldx #<argv
-    ldy #>argv
-    stx rdi
-    sty rdi+1
-    ldx #<mp_exit_str
-    ldy #>mp_exit_str
-    stx rsi
-    sty rsi+1
-    jsr sys_strcmp
-    cmp #0
-    bne @not_exit
-    jsr mp_exit
-    jmp @end
-@not_exit:
-    ldx #<argv
-    ldy #>argv
-    stx rdi
-    sty rdi+1
-    ldx #<mp_run_str
-    ldy #>mp_run_str
-    stx rsi
-    sty rsi+1
-    jsr sys_strcmp
-    cmp #0
-    bne @not_run
-    jsr mp_run
-    jmp @end
-@not_run:
 
 @error:
     lda #ERROR_UNKNOWN_MP
-    jsr error
+    rts
 @end:
     rts
 
-;; void error(byte err)
+;; void error(char err)
 ;; input in A
 error:
     pha
@@ -360,6 +414,12 @@ error:
     ldy #>error_no_arg_msg
     jsr sys_puts
     jmp @end
+@no_user_program:
+    ldx #<error_no_user_program_msg
+    ldy #>error_no_user_program_msg
+    jsr sys_puts
+    jmp @end
+
 @end:
     lda #$0A
     jsr sys_putchar
@@ -371,27 +431,11 @@ print_prompt:
     jsr sys_puts
     rts
 
-;; TODO: find a file...
-find_file:
-
-    ldx #3
-    ldy #0
-    jsr sys_load_sector
-
-    MOV disk_buffer, user_entry, #$FF
-
-    lda #<user_entry
-    sta rax+0
-    lda #>user_entry
-    sta rax+1
-    rts
-
 ;; =====================================================================================================
 ;; monitor sub programs:
 ;; =====================================================================================================
 
 mp_dump:
-
     ldy #0              
     ldx #0              
 @next_arg:
@@ -414,30 +458,9 @@ mp_dump:
 @done:
     rts
 
-mp_run:
-    lda argc
-    cmp #1
-    beq @no_arg
-    lda #<argv
-    clc
-    adc #4       ;; len("run") == 3
-    sta rdi+0
-    lda #>argv
-    sta rdi+1
-    jsr find_file
-    jmp (rax)
-    rts
-@no_arg:
-    lda #ERROR_NO_ARG
-    jsr error
-    rts
-
 mp_clear:
     jsr sys_clear
     rts
-
-mp_exit:
-    jmp reset
 
 ;; =====================================================================================================
 ;; called during RESET:
@@ -470,9 +493,12 @@ reset:
     stx irq_hook+1
     sty irq_hook+2
 
-    cli                         ;; from here, start of interactive part
+    jsr sys_clear
+    ldx #<welcome_msg
+    ldy #>welcome_msg
+    jsr sys_puts
 
-    jsr sys_clear  
+    cli                         ;; from here, start of interactive part
 
     jmp monitor                 ;; inf loop
 
@@ -536,6 +562,9 @@ waitchar:       jmp sys_waitchar
 puts:           jmp sys_puts
 strcmp:         jmp sys_strcmp
 load_sector:    jmp sys_load_sector
+exit:           jmp sys_exit
+execute:        jmp sys_execute
+open:           jmp sys_open
 
 brk
 

@@ -28,11 +28,12 @@ input\bios.bin: input\bios.asm input\bios.cfg
 	$(LD) input\bios.o -C input\bios.cfg -o bin\bios.bin
 	$(RM) input\bios.o >nul 2>&1
 
-input\disk.bin: input\boot.asm input\hello.asm input\disk.cfg
+input\disk.bin: input\boot.asm input\root.asm input\hello.asm input\disk.cfg
 	$(CA) input\boot.asm -o input\boot.o
+	$(CA) input\root.asm -o input\root.o
 	$(CA) input\hello.asm -o input\hello.o
-	$(LD) input\boot.o input\hello.o -C input\disk.cfg -o bin\disk.bin
-	$(RM) input\boot.o input\hello.o >nul 2>&1
+	$(LD) input\boot.o input\root.o input\hello.o -C input\disk.cfg -o bin\disk.bin
+	$(RM) input\boot.o input\root.o input\hello.o >nul 2>&1
 
 input\wosmon.bin: input\wosmon.asm input\wosmon.cfg
 	$(CA) input\wosmon.asm -o input\wosmon.o

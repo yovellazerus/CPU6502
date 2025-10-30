@@ -35,9 +35,12 @@
 
 STACK_START_H    = $0F
 STACK_START_L    = $FF
+
 ERROR_UNDERFLOW  = $01
 ERROR_UNKNOWN_MP = $02
 ERROR_NO_ARG     = $03
+NO_USER_PROGRAM  = $04
+NO_FILE_FOUND    = $05
 
 ;; arch0 MMIO constants
 
@@ -130,6 +133,8 @@ mmio_disk_data    = $C100 ;; 256 byte sectors
 ;; kernel working RAM:
 ;; =====================================================================================================
 
+user_entry   = $0200   ;; hard coded at the start of the RAM for now
+
 KERNEL_RAM   = $C200
 
 line         = KERNEL_RAM + $0000
@@ -137,5 +142,5 @@ argv         = KERNEL_RAM + $0100
 nmi_hook     = KERNEL_RAM + $0200
 irq_hook     = KERNEL_RAM + $0203
 disk_buffer  = KERNEL_RAM + $0206
-user_entry   = KERNEL_RAM + $0306
-boot_entry   = KERNEL_RAM + $0406
+boot_entry   = KERNEL_RAM + $0306
+root_dir     = KERNEL_RAM + $0406

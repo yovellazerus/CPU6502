@@ -1,9 +1,8 @@
 
-.include "arch0.inc"
 .include "syscalls.inc"
 
 .segment "USER"
-.org user_entry     ;; my hack for now to "trick" ld65
+.org _ENTRY         ;; my hack for now to "trick" ld65
                     ;; to put user labels in address for is intend RAM potions,
                     ;; and not relative to DISK
 main:

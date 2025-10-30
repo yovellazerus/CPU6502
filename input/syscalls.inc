@@ -3,9 +3,14 @@
 ;; *******                "syscalls" dispatch for the ROM base kernel                         **********
 ;; *****************************************************************************************************
 
-_PUTCHAR      = $FF00
-_CLEAR        = $FF03
-_WAITCHAR     = $FF06
-_PUTS         = $FF09
-_STRCMP       = $FF0B
-_LOAD_SECTOR  = $FF0E    
+_ENTRY         = $0200   ;; hard coded at the start of RAM for now
+
+_PUTCHAR       = $FF00
+_CLEAR         = $FF03
+_WAITCHAR      = $FF06
+_PUTS          = $FF09
+_STRCMP        = $FF0B
+_LOAD_SECTOR   = $FF0E
+_EXIT          = $FF11
+_EXECUTE       = $FF14 
+_OPEN          = $FF16  
