@@ -10,8 +10,380 @@
 	.importzp	sp, sreg, regsave, regbank
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
-	.forceimport	_start
+	.forceimport	__STARTUP__
+	.export		_SCR_DATA
+	.export		_SCR_CTRL
+	.export		_putchar
+	.export		_putstring
+	.export		_hello
+	.export		_msg
 	.export		_main
+
+.segment	"DATA"
+
+_SCR_DATA:
+	.word	$C00A
+_SCR_CTRL:
+	.word	$C00B
+_msg:
+	.addr	L0046
+
+.segment	"RODATA"
+
+L0046:
+	.byte	$48,$65,$6C,$6C,$6F,$20,$57,$6F,$72,$6C,$64,$21,$0A,$00
+
+; ---------------------------------------------------------------
+; void __near__ putchar (unsigned char)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_putchar: near
+
+.segment	"CODE"
+
+;
+; void putchar(char c){
+;
+	jsr     pusha
+;
+; *SCR_DATA = c;
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	ldy     #$00
+	lda     (sp),y
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; }
+;
+	jmp     incsp1
+
+.endproc
+
+; ---------------------------------------------------------------
+; void __near__ putstring (__near__ unsigned char *)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_putstring: near
+
+.segment	"CODE"
+
+;
+; void putstring(char* str){
+;
+	jsr     pushax
+;
+; while(*str){
+;
+	jmp     L000B
+;
+; putchar(*str);
+;
+L0009:	ldy     #$01
+	lda     (sp),y
+	sta     ptr1+1
+	dey
+	lda     (sp),y
+	sta     ptr1
+	lda     (ptr1),y
+	jsr     _putchar
+;
+; str++;
+;
+	ldy     #$01
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	clc
+	adc     #$01
+	bcc     L0010
+	inx
+L0010:	jsr     stax0sp
+;
+; while(*str){
+;
+L000B:	ldy     #$01
+	lda     (sp),y
+	sta     ptr1+1
+	dey
+	lda     (sp),y
+	sta     ptr1
+	lda     (ptr1),y
+	bne     L0009
+;
+; }
+;
+	jmp     incsp2
+
+.endproc
+
+; ---------------------------------------------------------------
+; void __near__ hello (void)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_hello: near
+
+.segment	"CODE"
+
+;
+; *SCR_DATA = 'H';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$48
+	ldy     #$00
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'e';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$65
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'l';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$6C
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'l';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$6C
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'o';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$6F
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = ' ';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$20
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'W';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$57
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'o';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$6F
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'r';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$72
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'l';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$6C
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = 'd';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$64
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = '!';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$21
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; *SCR_DATA = '\n';
+;
+	lda     _SCR_DATA+1
+	sta     ptr1+1
+	lda     _SCR_DATA
+	sta     ptr1
+	lda     #$0A
+	sta     (ptr1),y
+;
+; *SCR_CTRL = SCR_WRITE;
+;
+	lda     _SCR_CTRL+1
+	sta     ptr1+1
+	lda     _SCR_CTRL
+	sta     ptr1
+	lda     #$01
+	sta     (ptr1),y
+;
+; }
+;
+	rts
+
+.endproc
 
 ; ---------------------------------------------------------------
 ; void __near__ main (void)
@@ -21,69 +393,27 @@
 
 .proc	_main: near
 
-.segment	"BSS"
-
-L0002:
-	.res	2,$00
-L0004:
-	.res	2,$00
-
 .segment	"CODE"
 
 ;
-; volatile unsigned char *SCR_DATA = (unsigned char *)MMIO_SCR_DATA;
+; putstring(msg);
 ;
-	ldx     #$C0
-	lda     #$0A
-	sta     L0002
-	stx     L0002+1
+	lda     _msg
+	ldx     _msg+1
+	jsr     _putstring
 ;
-; volatile unsigned char *SCR_CTRL = (unsigned char *)MMIO_SCR_CTRL;
+; putchar('X');
 ;
-	lda     #$0B
-	sta     L0004
-	stx     L0004+1
+	lda     #$58
+	jsr     _putchar
 ;
-; *SCR_DATA = 'H';
+; hello();
 ;
-	lda     L0002+1
-	sta     ptr1+1
-	lda     L0002
-	sta     ptr1
-	lda     #$48
-	ldy     #$00
-	sta     (ptr1),y
-;
-; *SCR_CTRL = SCR_WRITE;
-;
-	lda     L0004+1
-	sta     ptr1+1
-	lda     L0004
-	sta     ptr1
-	lda     #$01
-	sta     (ptr1),y
-;
-; *SCR_DATA = 'I';
-;
-	lda     L0002+1
-	sta     ptr1+1
-	lda     L0002
-	sta     ptr1
-	lda     #$49
-	sta     (ptr1),y
-;
-; *SCR_CTRL = SCR_WRITE;
-;
-	lda     L0004+1
-	sta     ptr1+1
-	lda     L0004
-	sta     ptr1
-	lda     #$01
-	sta     (ptr1),y
+	jsr     _hello
 ;
 ; for (;;) {
 ;
-L0010:	jmp     L0010
+L0050:	jmp     L0050
 
 .endproc
 
