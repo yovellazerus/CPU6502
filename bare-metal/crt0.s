@@ -18,14 +18,35 @@
 
 .exportzp sp    = $08
 
+; stax0sp:
+;         ldy #$00          
+;         sta (sp),y   
+;         dec sp
+;         bne @done
+;         dec sp+1
+; @done:
+;         rts
+
 stax0sp:
-        ldy #$00          
-        sta (sp),y   
+        ; push A
         dec sp
-        bne @done
+        bne @no_borrowA
         dec sp+1
-@done:
+@no_borrowA:
+        ldy #$00
+        sta (sp),y
+
+        ; push X
+        dec sp
+        bne @no_borrowX
+        dec sp+1
+@no_borrowX:
+        txa
+        ldy #$00
+        sta (sp),y
+
         rts
+
 
 
 pusha:
