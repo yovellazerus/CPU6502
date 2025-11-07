@@ -13,60 +13,27 @@ void putchar(char c){
     *SCR_CTRL = SCR_WRITE;
 }
 
-void putstring(char* str){
-    while(*str){
-        putchar(*str);
-        str++;
-    }
-}
-
 void hello(void){
-    *SCR_DATA = 'H';
-    *SCR_CTRL = SCR_WRITE;
 
-    *SCR_DATA = 'e';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'l';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'l';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'o';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = ' ';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'W';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'o';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'r';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'l';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = 'd';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = '!';
-    *SCR_CTRL = SCR_WRITE;
-
-    *SCR_DATA = '\n';
-    *SCR_CTRL = SCR_WRITE;
+    putchar('H');
+    putchar('e');
+    putchar('l');
+    putchar('l');
+    putchar('o');
+    putchar(' ');
+    putchar('W');
+    putchar('o');
+    putchar('r');
+    putchar('l');
+    putchar('d');
+    putchar('!');
+    putchar('\n');
 }
 
 char* msg = "Hello World!\n";
 
 void main(void) {
 
-    putstring(msg);
-    putchar('X');
     hello();
     
     for (;;) {

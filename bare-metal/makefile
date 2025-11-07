@@ -1,6 +1,6 @@
-CC65 = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-2.19\bin\cc65.exe
-CA65 = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-2.19\bin\ca65.exe
-LD65 = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-2.19\bin\ld65.exe
+CC65 = cc65.exe
+CA65 = ca65.exe
+LD65 = ld65.exe
 
 all: main.bin
 
@@ -17,4 +17,4 @@ main.bin: linker.cfg crt0.o main.o
 	$(LD65) -C linker.cfg -o main.bin crt0.o main.o
 
 clean:
-	rm -f *.o *.s main.bin
+	rm -f *.o main.bin

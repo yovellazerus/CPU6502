@@ -7,7 +7,6 @@
 .export pushax
 .export incsp1
 .export incsp2
-.export stax0sp
 
 .import _main
 
@@ -16,79 +15,54 @@
 .exportzp ptr3  = $04
 .exportzp ptr4  = $06
 
-.exportzp sp    = $08
+.exportzp c_sp    = $08
 
-stax0sp:
-        ldy #$00          
-        sta (sp),y   
-        dec sp
-        bne @done
-        dec sp+1
-@done:
-        rts
-
-; stax0sp:
-;         ; push A
-;         dec sp
-;         bne @no_borrowA
-;         dec sp+1
-; @no_borrowA:
-;         ldy #$00
-;         sta (sp),y
-
-;         ; push X
-;         dec sp
-;         bne @no_borrowX
-;         dec sp+1
-; @no_borrowX:
-;         txa
-;         ldy #$00
-;         sta (sp),y
-
+; addeq0sp:
+;         inc $0100
 ;         rts
 
 pusha:
-        dec sp
+        dec c_sp
         bne @no_borrow
-        dec sp+1
+        dec c_sp+1
 @no_borrow:
         ldy #$00
-        sta (sp),y
+        sta (c_sp),y
         rts
 
 pushax:
-        dec sp
+        dec c_sp
         bne @no_borrowA
-        dec sp+1
+        dec c_sp+1
 @no_borrowA:
         ldy #$00
-        sta (sp),y
+        sta (c_sp),y
 
         ; push X
-        dec sp
+        dec c_sp
         bne @no_borrowX
-        dec sp+1
+        dec c_sp+1
 @no_borrowX:
         txa
         ldy #$00
-        sta (sp),y
+        sta (c_sp),y
         rts
 
 incsp1:
-        inc sp
+        inc c_sp
         bne @done1
-        inc sp+1
+        inc c_sp+1
 @done1:
         rts
 
 incsp2:
-        inc sp
+        inc c_sp
         bne @no_borrow1
-        inc sp+1
+        inc c_sp+1
 @no_borrow1:
-        inc sp
+        inc c_sp
         bne @no_borrow2
-        inc sp+1
+        inc c_sp+1
 @no_borrow2:
         rts
 
@@ -108,9 +82,9 @@ __STARTUP__:
     ldx #$FF
     txs
     lda #SP_START_H
-    sta sp+1
+    sta c_sp+1
     lda #SP_START_L
-    sta sp+0
+    sta c_sp+0
     jsr _main       ; call main()
 Forever:
     jmp Forever
