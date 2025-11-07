@@ -18,36 +18,34 @@
 
 .exportzp sp    = $08
 
-; stax0sp:
-;         ldy #$00          
-;         sta (sp),y   
-;         dec sp
-;         bne @done
-;         dec sp+1
-; @done:
-;         rts
-
 stax0sp:
-        ; push A
+        ldy #$00          
+        sta (sp),y   
         dec sp
-        bne @no_borrowA
+        bne @done
         dec sp+1
-@no_borrowA:
-        ldy #$00
-        sta (sp),y
-
-        ; push X
-        dec sp
-        bne @no_borrowX
-        dec sp+1
-@no_borrowX:
-        txa
-        ldy #$00
-        sta (sp),y
-
+@done:
         rts
 
+; stax0sp:
+;         ; push A
+;         dec sp
+;         bne @no_borrowA
+;         dec sp+1
+; @no_borrowA:
+;         ldy #$00
+;         sta (sp),y
 
+;         ; push X
+;         dec sp
+;         bne @no_borrowX
+;         dec sp+1
+; @no_borrowX:
+;         txa
+;         ldy #$00
+;         sta (sp),y
+
+;         rts
 
 pusha:
         dec sp
@@ -94,6 +92,10 @@ incsp2:
 @no_borrow2:
         rts
 
+;; software stack:
+SP_START_H   = $7F
+SP_START_L   = $FF
+
 ;; from arch0:
 mmio_power   = $C001
 POWER_OFF    = $FF
@@ -103,8 +105,12 @@ POWER_OFF    = $FF
 __STARTUP__:
     sei
     cld
-    ldx #$ff
+    ldx #$FF
     txs
+    lda #SP_START_H
+    sta sp+1
+    lda #SP_START_L
+    sta sp+0
     jsr _main       ; call main()
 Forever:
     jmp Forever
