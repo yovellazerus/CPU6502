@@ -3,8 +3,8 @@
 # ====================================================================================
 
 CC      = gcc
-CA      = ca65.exe
-LD      = ld65.exe
+CA      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ca65.exe
+LD      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ld65.exe
 CFLAGS  =
 OBJ     = src\main.o src\cpu.o src\instruction.o
 TARGET  = bin\cpu6502.exe
