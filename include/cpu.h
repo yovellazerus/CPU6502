@@ -16,7 +16,7 @@
 #endif
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define UNUSED (void)cpu; fprintf(stderr, COLOR_RED "ERROR: function: `%s` is not implemented." COLOR_RESET, __func__); exit(1);
+#define UNUSED fprintf(stderr, COLOR_RED "ERROR: function: `%s` opcode: 0x%.2X is not implemented in PC=0x%.4X.\n" COLOR_RESET, __func__, cpu->memory[cpu->PC - 1], cpu->PC - 1); exit(1);
 
 #define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
 #define LOW_BYTE(WORD) ((byte)(WORD))
@@ -343,6 +343,7 @@ void CPU_dumpProgram(CPU* cpu, word entry_point, size_t program_size, FILE* file
 bool CPU_debug(CPU* cpu);
 
 // helpers functions for cpu 
+void CPU_setFlag(CPU* cpu, char flag, bool value);
 bool CPU_offFlag(CPU* cpu, char flag);
 bool CPU_onFlag(CPU* cpu, char flag);
 bool CPU_getFlag(CPU* cpu, char flag);

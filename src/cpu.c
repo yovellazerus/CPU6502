@@ -531,6 +531,43 @@ bool CPU_debug(CPU* cpu){
 // NOTE: need to extend to uniform r/w bus function for pure 6502 cpu implementation
 //====================================================================================================
 
+void CPU_setFlag(CPU* cpu, char flag, bool value)
+{
+    switch(flag) {
+        case 'c':
+            if(value) cpu->P |= 0x01;
+            else      cpu->P &= ~0x01;
+            break;
+        case 'z':
+            if(value) cpu->P |= 0x02;
+            else      cpu->P &= ~0x02;
+            break;
+        case 'i':
+            if(value) cpu->P |= 0x04;
+            else      cpu->P &= ~0x04;
+            break;
+        case 'd':
+            if(value) cpu->P |= 0x08;
+            else      cpu->P &= ~0x08;
+            break;
+        case 'b':
+            if(value) cpu->P |= 0x10;
+            else      cpu->P &= ~0x10;
+            break;
+        case 'v':
+            if(value) cpu->P |= 0x40;
+            else      cpu->P &= ~0x40;
+            break;
+        case 'n':
+            if(value) cpu->P |= 0x80;
+            else      cpu->P &= ~0x80;
+            break;
+        default:
+            fprintf(stderr, COLOR_RED "ERROR: unknown cpu flag %c\n" COLOR_RESET, flag);
+            break;
+    }
+}
+
 bool CPU_getFlag(CPU* cpu, char flag){
     switch (flag){
         case 'n':

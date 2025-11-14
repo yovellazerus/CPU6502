@@ -11,6 +11,7 @@ __STARTUP__:
 @loop:
     jmp @loop       ; infinite loop after main returns
 
+irq:
 nmi:
     lda #$FF
     sta $C001
@@ -19,4 +20,4 @@ nmi:
 .segment "VECTORS"
 .word nmi
 .word __STARTUP__
-.word $0000
+.word irq
