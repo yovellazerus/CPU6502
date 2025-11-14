@@ -16,7 +16,7 @@
 #endif
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-#define UNUSED (void)cpu; fprintf(stderr, COLOR_RED "ERROR: function: %s is not implemented." COLOR_RESET, __func__); exit(1);
+#define UNUSED (void)cpu; fprintf(stderr, COLOR_RED "ERROR: function: `%s` is not implemented." COLOR_RESET, __func__); exit(1);
 
 #define HIGH_BYTE(WORD) ((byte)(WORD >> 8))
 #define LOW_BYTE(WORD) ((byte)(WORD))

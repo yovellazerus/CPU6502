@@ -7,7 +7,7 @@ __STARTUP__:
     ldx #$FF
     txs             ; set up stack pointer
     cld             ; clear decimal mode
-    jsr _main        ; call main()
+    jsr _main       ; call main()
 @loop:
     jmp @loop       ; infinite loop after main returns
 
