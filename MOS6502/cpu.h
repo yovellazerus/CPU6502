@@ -3,21 +3,10 @@
 
 #include "common.h"
 
-typedef byte (*FNread)(void*, word);
-typedef void (*FNwrite)(void*, word, byte);
-typedef void (*FNdestroy)(void*);
-typedef void (*FNdump)(void*);
-typedef void (*FNreset)(void*);
-
 typedef struct {
     void* ctx;
-    // must be present
-    FNdestroy destroy;
-    FNread read;
-    // optional can be NULL
-    FNwrite write;
-    FNdump dump;
-    FNreset reset;
+    byte (*read)(void*, word);
+    void (*write)(void*, word, byte);
 } Bus_t;
 
 typedef struct CPU_t CPU_t;
@@ -216,6 +205,27 @@ typedef enum {
 
 } Opcode_t;
 
+typedef enum {
+    Addressing_mode_Brk = 0,
+    Addressing_mode_Relative,
+    Addressing_mode_Implied,
+    Addressing_mode_Immediate,
+    Addressing_mode_Accumulator,
+
+    Addressing_mode_Absolute,
+    Addressing_mode_AbsoluteX,
+    Addressing_mode_AbsoluteY,
+
+    Addressing_mode_ZeroPage,
+    Addressing_mode_ZeroPageX,
+    Addressing_mode_ZeroPageY,
+
+    Addressing_mode_Indirect,
+    Addressing_mode_IndirectX,
+    Addressing_mode_IndirectY,
+
+} Addressing_mode_t;
+
 typedef void (*Instruction_t)(CPU_t*);
 
 extern Instruction_t Opcode_to_Instruction_table[0xff + 1];
@@ -226,7 +236,7 @@ byte   CPU_read(CPU_t* cpu, word addr);
 void   CPU_write(CPU_t* cpu, word addr, byte value);
 bool   CPU_step(CPU_t* cpu);
 void   CPU_error(CPU_t* cpu, const char* fmt, ...);
-void   CPU_dump(const CPU_t* cpu, FILE* file);
+void   CPU_dump_registers(CPU_t* cpu, FILE* file);
 void   CPU_reset(CPU_t* cpu);
 void   CPU_nmi(CPU_t* cpu);
 void   CPU_irq(CPU_t* cpu);

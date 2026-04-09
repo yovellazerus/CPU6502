@@ -1,6 +1,19 @@
 
 #include "instruction.h"
 
+// from cpu.c
+extern void helper_load(CPU_t* cpu, char reg, Addressing_mode_t amod);
+extern void helper_store(CPU_t* cpu, char reg, Addressing_mode_t amod);
+extern void helper_and(CPU_t* cpu, Addressing_mode_t amod);
+extern void helper_eor(CPU_t* cpu, Addressing_mode_t amod);
+extern void helper_ora(CPU_t* cpu, Addressing_mode_t amod);
+
+extern byte get_register(CPU_t* cpu, char reg);
+extern void set_register(CPU_t* cpu, char reg, byte value);
+
+extern void push(CPU_t* cpu, byte value);
+extern byte pop(CPU_t* cpu);
+
 Instruction_t Opcode_to_Instruction_table[0xff + 1] = {
     // Load/Store
     [Opcode_LDA_Immediate]   = instruction_LDA_Immediate,
@@ -195,362 +208,334 @@ Instruction_t Opcode_to_Instruction_table[0xff + 1] = {
 
 };
 
-void instruction_LDA_Immediate(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_Immediate);
-*/
-void instruction_LDA_ZeroPage(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_ZeroPage);
+void instruction_LDA_Immediate(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_Immediate);
+}
+void instruction_LDA_ZeroPage(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_ZeroPage);
 
-*/
-void instruction_LDA_ZeroPageX(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_ZeroPageX);
+}
+void instruction_LDA_ZeroPageX(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_ZeroPageX);
 
-*/
-void instruction_LDA_Absolute(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_Absolute);
+}
+void instruction_LDA_Absolute(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_Absolute);
 
-*/
-void instruction_LDA_AbsoluteX(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_AbsoluteX);
+}
+void instruction_LDA_AbsoluteX(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_AbsoluteX);
 
-*/
-void instruction_LDA_AbsoluteY(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_AbsoluteY);
+}
+void instruction_LDA_AbsoluteY(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_AbsoluteY);
 
-*/
-void instruction_LDA_IndirectX(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_IndirectX);
+}
+void instruction_LDA_IndirectX(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_IndirectX);
 
-*/
-void instruction_LDA_IndirectY(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_load(cpu, 'A', Add_IndirectY);
+}
+void instruction_LDA_IndirectY(CPU_t* cpu) 
+{
+    helper_load(cpu, 'A', Addressing_mode_IndirectY);
 
-*/
+}
 
-void instruction_LDX_Immediate(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'X', Add_Immediate);
+void instruction_LDX_Immediate(CPU_t* cpu)
+{
+    helper_load(cpu, 'X', Addressing_mode_Immediate);
 
-*/
-void instruction_LDX_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'X', Add_ZeroPage);
+}
+void instruction_LDX_ZeroPage(CPU_t* cpu)
+{
+    helper_load(cpu, 'X', Addressing_mode_ZeroPage);
 
-*/
-void instruction_LDX_ZeroPageY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'X', Add_ZeroPageY);
+}
+void instruction_LDX_ZeroPageY(CPU_t* cpu)
+{
+    helper_load(cpu, 'X', Addressing_mode_ZeroPageY);
 
-*/
-void instruction_LDX_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'X', Add_Absolute);
+}
+void instruction_LDX_Absolute(CPU_t* cpu)
+{
+    helper_load(cpu, 'X', Addressing_mode_Absolute);
 
-*/
-void instruction_LDX_AbsoluteY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'X', Add_AbsoluteY);
+}
+void instruction_LDX_AbsoluteY(CPU_t* cpu)
+{
+    helper_load(cpu, 'X', Addressing_mode_AbsoluteY);
 
-*/
+}
 
-void instruction_LDY_Immediate(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'Y', Add_Immediate);
+void instruction_LDY_Immediate(CPU_t* cpu)
+{
+    helper_load(cpu, 'Y', Addressing_mode_Immediate);
 
-*/
-void instruction_LDY_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'Y', Add_ZeroPage);
+}
+void instruction_LDY_ZeroPage(CPU_t* cpu)
+{
+    helper_load(cpu, 'Y', Addressing_mode_ZeroPage);
 
-*/
-void instruction_LDY_ZeroPageX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'Y', Add_ZeroPageX);
+}
+void instruction_LDY_ZeroPageX(CPU_t* cpu)
+{
+    helper_load(cpu, 'Y', Addressing_mode_ZeroPageX);
 
-*/
-void instruction_LDY_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'Y', Add_Absolute);
+}
+void instruction_LDY_Absolute(CPU_t* cpu)
+{
+    helper_load(cpu, 'Y', Addressing_mode_Absolute);
 
-*/
-void instruction_LDY_AbsoluteX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_load(cpu, 'Y', Add_Absolute);
+}
+void instruction_LDY_AbsoluteX(CPU_t* cpu)
+{
+    helper_load(cpu, 'Y', Addressing_mode_Absolute);
 
-*/
+}
 
-void instruction_STA_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_ZeroPage);
-*/
-void instruction_STA_ZeroPageX(CPU_t* cpu) { UNUSED(); } 
-/*
-    helper_store(cpu, 'A', Add_ZeroPageX);
-*/
-void instruction_STA_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_Absolute);
+void instruction_STA_ZeroPage(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_ZeroPage);
+}
+void instruction_STA_ZeroPageX(CPU_t* cpu) 
+{
+    helper_store(cpu, 'A', Addressing_mode_ZeroPageX);
+}
+void instruction_STA_Absolute(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_Absolute);
 
-*/
-void instruction_STA_AbsoluteX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_AbsoluteX);
+}
+void instruction_STA_AbsoluteX(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_AbsoluteX);
 
-*/
-void instruction_STA_AbsoluteY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_AbsoluteY);
+}
+void instruction_STA_AbsoluteY(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_AbsoluteY);
 
-*/
-void instruction_STA_IndirectX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_IndirectX);
+}
+void instruction_STA_IndirectX(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_IndirectX);
 
-*/
-void instruction_STA_IndirectY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'A', Add_IndirectY);
+}
+void instruction_STA_IndirectY(CPU_t* cpu)
+{
+    helper_store(cpu, 'A', Addressing_mode_IndirectY);
 
-*/
+}
 
-void instruction_STX_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'X', Add_ZeroPage);
+void instruction_STX_ZeroPage(CPU_t* cpu)
+{
+    helper_store(cpu, 'X', Addressing_mode_ZeroPage);
 
-*/
-void instruction_STX_ZeroPageY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'X', Add_ZeroPageY);
+}
+void instruction_STX_ZeroPageY(CPU_t* cpu)
+{
+    helper_store(cpu, 'X', Addressing_mode_ZeroPageY);
 
-*/
-void instruction_STX_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'X', Add_Absolute);
+}
+void instruction_STX_Absolute(CPU_t* cpu)
+{
+    helper_store(cpu, 'X', Addressing_mode_Absolute);
 
-*/
+}
 
-void instruction_STY_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'Y', Add_ZeroPage);
+void instruction_STY_ZeroPage(CPU_t* cpu)
+{
+    helper_store(cpu, 'Y', Addressing_mode_ZeroPage);
 
-*/
-void instruction_STY_ZeroPageX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'Y', Add_ZeroPageX);
+}
+void instruction_STY_ZeroPageX(CPU_t* cpu)
+{
+    helper_store(cpu, 'Y', Addressing_mode_ZeroPageX);
 
-*/
-void instruction_STY_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_store(cpu, 'Y', Add_Absolute);
+}
+void instruction_STY_Absolute(CPU_t* cpu)
+{
+    helper_store(cpu, 'Y', Addressing_mode_Absolute);
 
-*/
+}
 
 // Register Transfers
-void instruction_TAX(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->X = cpu->A;
-    CPU_tick(cpu, 2);
-    CPU_updateFlags(cpu, 'X', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'X', 'z', 0, 0);
+void instruction_TAX(CPU_t* cpu)
+{
+    set_register(cpu, 'X', get_register(cpu, 'A'));
+}
+void instruction_TAY(CPU_t* cpu)
+{
+    set_register(cpu, 'Y', get_register(cpu, 'A'));
 
-*/
-void instruction_TAY(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->Y = cpu->A;
-    CPU_tick(cpu, 2);
-    CPU_updateFlags(cpu, 'Y', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'Y', 'z', 0, 0);
+}
+void instruction_TSX(CPU_t* cpu)
+{
+    set_register(cpu, 'X', get_register(cpu, 'S'));
 
-*/
-void instruction_TSX(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->X = cpu->SP;
-    CPU_tick(cpu, 2);
-    CPU_updateFlags(cpu, 'X', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'X', 'z', 0, 0);
+}
+void instruction_TXA(CPU_t* cpu)
+{
+    set_register(cpu, 'A', get_register(cpu, 'X'));
+}
+void instruction_TXS(CPU_t* cpu)
+{
+    set_register(cpu, 'S', get_register(cpu, 'X'));
 
-*/
-void instruction_TXA(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->A = cpu->X;
-    CPU_tick(cpu, 2);
-    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
-*/
-void instruction_TXS(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->SP = cpu->X;
-    CPU_tick(cpu, 2);
-    // not modify the flags register 
+}
+void instruction_TYA(CPU_t* cpu)
+{
+    set_register(cpu, 'A', get_register(cpu, 'Y'));
 
-*/
-void instruction_TYA(CPU_t* cpu) { UNUSED(); }
-/*
-    cpu->A = cpu->Y;
-    CPU_tick(cpu, 2);
-    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
-
-*/
+}
 
 // Stack
-void instruction_PHA(CPU_t* cpu) { UNUSED(); }
-/*
-    CPU_push(cpu, 'A');
-    CPU_tick(cpu, 3);
+void instruction_PHA(CPU_t* cpu)
+{
+    push(cpu, get_register(cpu, 'A'));
 
-*/
-void instruction_PHP(CPU_t* cpu) { UNUSED(); }
-/*
-    CPU_push(cpu, 'P');
-    CPU_tick(cpu, 3);
+}
+void instruction_PHP(CPU_t* cpu)
+{
+    push(cpu, get_register(cpu, 'P'));
 
-*/
-void instruction_PLA(CPU_t* cpu) { UNUSED(); }
-/*
-    CPU_pop(cpu, 'A');
-    CPU_tick(cpu, 4);
-    CPU_updateFlags(cpu, 'A', 'n', 0, 0);
-    CPU_updateFlags(cpu, 'A', 'z', 0, 0);
+}
+void instruction_PLA(CPU_t* cpu)
+{
+    set_register(cpu, 'A', pop(cpu));
 
-*/
-void instruction_PLP(CPU_t* cpu) { UNUSED(); }
-/*
-    CPU_pop(cpu, 'P');
-    CPU_tick(cpu, 4);
-*/
-
+}
+void instruction_PLP(CPU_t* cpu)
+{
+    set_register(cpu, 'P', pop(cpu));
+}
 // Logical
-void instruction_AND_Immediate(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_Immediate);
+void instruction_AND_Immediate(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_Immediate);
 
-*/
-void instruction_AND_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_ZeroPage);
+}
+void instruction_AND_ZeroPage(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_ZeroPage);
 
-*/
-void instruction_AND_ZeroPageX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_ZeroPageX);
+}
+void instruction_AND_ZeroPageX(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_ZeroPageX);
 
-*/
-void instruction_AND_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_Absolute);
+}
+void instruction_AND_Absolute(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_Absolute);
 
-*/
-void instruction_AND_AbsoluteX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_AbsoluteX);
+}
+void instruction_AND_AbsoluteX(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_AbsoluteX);
 
-*/
-void instruction_AND_AbsoluteY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_AbsoluteY);
+}
+void instruction_AND_AbsoluteY(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_AbsoluteY);
 
-*/
-void instruction_AND_IndirectX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_IndirectX);
+}
+void instruction_AND_IndirectX(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_IndirectX);
 
-*/
-void instruction_AND_IndirectY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_and(cpu, Add_IndirectY);
+}
+void instruction_AND_IndirectY(CPU_t* cpu)
+{
+    helper_and(cpu, Addressing_mode_IndirectY);
 
-*/
+}
 
-void instruction_EOR_Immediate(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_Immediate);
+void instruction_EOR_Immediate(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_Immediate);
 
-*/
-void instruction_EOR_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_ZeroPage);
+}
+void instruction_EOR_ZeroPage(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_ZeroPage);
 
-*/
-void instruction_EOR_ZeroPageX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_ZeroPageX);
+}
+void instruction_EOR_ZeroPageX(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_ZeroPageX);
 
-*/
-void instruction_EOR_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_Absolute);
+}
+void instruction_EOR_Absolute(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_Absolute);
 
-*/
-void instruction_EOR_AbsoluteX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_AbsoluteX);
+}
+void instruction_EOR_AbsoluteX(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_AbsoluteX);
 
-*/
-void instruction_EOR_AbsoluteY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_AbsoluteY);
+}
+void instruction_EOR_AbsoluteY(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_AbsoluteY);
 
-*/
-void instruction_EOR_IndirectX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_IndirectX);
+}
+void instruction_EOR_IndirectX(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_IndirectX);
 
-*/
-void instruction_EOR_IndirectY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_eor(cpu, Add_IndirectY);
+}
+void instruction_EOR_IndirectY(CPU_t* cpu)
+{
+    helper_eor(cpu, Addressing_mode_IndirectY);
 
-*/
+}
 
-void instruction_ORA_Immediate(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_Immediate);
+void instruction_ORA_Immediate(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_Immediate);
 
-*/
-void instruction_ORA_ZeroPage(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_ZeroPage);
+}
+void instruction_ORA_ZeroPage(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_ZeroPage);
 
-*/
-void instruction_ORA_ZeroPageX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_ZeroPageX);
+}
+void instruction_ORA_ZeroPageX(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_ZeroPageX);
 
-*/
-void instruction_ORA_Absolute(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_Absolute);
+}
+void instruction_ORA_Absolute(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_Absolute);
 
-*/
-void instruction_ORA_AbsoluteX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_AbsoluteX);
+}
+void instruction_ORA_AbsoluteX(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_AbsoluteX);
 
-*/
-void instruction_ORA_AbsoluteY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_AbsoluteY);
-
-*/
-void instruction_ORA_IndirectX(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_IndirectX);
-
-*/
-void instruction_ORA_IndirectY(CPU_t* cpu) { UNUSED(); }
-/*
-    helper_ora(cpu, Add_IndirectY);
-
-*/
+}
+void instruction_ORA_AbsoluteY(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_AbsoluteY);
+}
+void instruction_ORA_IndirectX(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_IndirectX);
+}
+void instruction_ORA_IndirectY(CPU_t* cpu)
+{
+    helper_ora(cpu, Addressing_mode_IndirectY);
+}
 
 void instruction_BIT_ZeroPage(CPU_t* cpu) { UNUSED(); }
 /*
@@ -924,7 +909,7 @@ void instruction_JSR(CPU_t* cpu) { UNUSED(); }
     addr += cpu->memory[cpu->PC++] << 8;
 
     cpu->PC -= 1; // emulate (PC - 1) push
-    CPU_push(cpu, 'C');
+    push(cpu, 'C');
     cpu->PC = addr;
 
     CPU_tick(cpu, 6);
@@ -932,7 +917,7 @@ void instruction_JSR(CPU_t* cpu) { UNUSED(); }
 */
 void instruction_RTS(CPU_t* cpu) { UNUSED(); }
 /*
-    CPU_pop(cpu, 'C');
+    pop(cpu, 'C');
     cpu->PC++;
     CPU_tick(cpu, 6);
 */
@@ -1020,10 +1005,10 @@ void instruction_BRK(CPU_t* cpu) { UNUSED(); }
  
     CPU_onFlag(cpu, 'i');
     cpu->PC += 1;
-    CPU_push(cpu, 'C');
+    push(cpu, 'C');
     byte old_P = cpu->P;
     CPU_onFlag(cpu, 'b');
-    CPU_push(cpu, 'P');
+    push(cpu, 'P');
     cpu->P = old_P;
 
     cpu->PC = addr;
@@ -1036,8 +1021,8 @@ void instruction_NOP(CPU_t* cpu) { UNUSED(); }
 */
 void instruction_RTI(CPU_t* cpu) { UNUSED(); }
 /*
-    CPU_pop(cpu, 'P');
-    CPU_pop(cpu, 'C');
+    pop(cpu, 'P');
+    pop(cpu, 'C');
     CPU_tick(cpu, 6);
 */
 
