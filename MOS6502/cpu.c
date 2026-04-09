@@ -1,13 +1,6 @@
 
 #include "cpu.h"
 
-typedef struct {
-    FNdestroy destroy;
-    FNread read;
-    FNwrite write;
-    FNdump dump;
-} Bus_t;
-
 struct CPU_t
 {
     byte A;
@@ -18,7 +11,7 @@ struct CPU_t
     word PC;
 
     // memory read/write abstraction
-    Bus_t* bus;
+    Bus_t bus;
 };
 
 static void CPU_push(CPU_t* cpu, byte value){
@@ -49,6 +42,10 @@ static void CPU_setFlag(CPU_t* cpu, char flag, bool value)
         case 'd':
             if(value) cpu->P |= 0x08;
             else      cpu->P &= ~0x08;
+            break;
+        case 'u': // undefine, on all the time
+            if(value) cpu->P |= 0x20;
+            else      cpu->P &= ~0x20;
             break;
         case 'b':
             if(value) cpu->P |= 0x10;
@@ -114,40 +111,29 @@ static void  CPU_update_NZ(CPU_t* cpu, byte r){
 	CPU_setFlag(cpu, 'n', r >> 7);
 }
 
-CPU_t* CPU_create(  FNdestroy destroy,
-                    FNread read,
-                    FNwrite write,
-                    FNdump dump){
-    if(!destroy || !read || ! write || !dump) return NULL;
+CPU_t* CPU_create(Bus_t bus){
+    if(!bus.read || !bus.write) return NULL;
     CPU_t* res = (CPU_t*)malloc(sizeof(*res));
     if(!res) return NULL;
-    Bus_t* bus = (Bus_t*)malloc(sizeof(*bus));
-    if(!bus){
-        free(res);
-        return NULL;
-    }
+    memset(res, 0, sizeof(*res));
     res->bus = bus;
-    res->bus->read = read;
-    res->bus->write = write;
-    res->bus->destroy = destroy;
-    res->bus->dump = dump;
     return res;
 }
 
 void CPU_destroy(CPU_t* cpu){
     if(!cpu) return;
-    cpu->bus->destroy();
+    if(cpu->bus.destroy) cpu->bus.destroy(cpu->bus.ctx);
     free(cpu);
 }
 
 byte CPU_read(CPU_t* cpu, word addr){
     if(!cpu) return 0xff; // open bus
-    return cpu->bus->read(addr);
+    return cpu->bus.read(cpu->bus.ctx, addr);
 }
 
 void CPU_write(CPU_t* cpu, word addr, byte value){
     if(!cpu) return;
-    cpu->bus->write(addr, value);
+    cpu->bus.write(cpu->bus.ctx, addr, value);
 }
 
 bool CPU_step(CPU_t* cpu){
@@ -177,7 +163,7 @@ void CPU_error(CPU_t* cpu, const char* fmt, ...){
 
 void  CPU_dump(const CPU_t* cpu, FILE* file){
     if(!cpu || !file) return;
-    cpu->bus->dump();
+    if(cpu->bus.dump) cpu->bus.dump(cpu->bus.ctx);
     fprintf(file, "CPU: {\n");
     fprintf(file, "A: %d (0x%.2x)\n", cpu->A, cpu->A);
     fprintf(file, "X: %d (0x%.2x)\n", cpu->X, cpu->X);

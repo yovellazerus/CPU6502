@@ -3,10 +3,22 @@
 
 #include "common.h"
 
-typedef void (*FNdestroy)(void);
-typedef byte (*FNread)(word);
-typedef void (*FNwrite)(word, byte);
-typedef void (*FNdump)(void);
+typedef byte (*FNread)(void*, word);
+typedef void (*FNwrite)(void*, word, byte);
+typedef void (*FNdestroy)(void*);
+typedef void (*FNdump)(void*);
+typedef void (*FNreset)(void*);
+
+typedef struct {
+    void* ctx;
+    // must be present
+    FNdestroy destroy;
+    FNread read;
+    // optional can be NULL
+    FNwrite write;
+    FNdump dump;
+    FNreset reset;
+} Bus_t;
 
 typedef struct CPU_t CPU_t;
 
@@ -208,10 +220,7 @@ typedef void (*Instruction_t)(CPU_t*);
 
 extern Instruction_t Opcode_to_Instruction_table[0xff + 1];
 
-CPU_t* CPU_create(  FNdestroy destroy,
-                    FNread read,
-                    FNwrite write,
-                    FNdump dump);
+CPU_t* CPU_create(Bus_t bus);
 void   CPU_destroy(CPU_t* cpu);
 byte   CPU_read(CPU_t* cpu, word addr);
 void   CPU_write(CPU_t* cpu, word addr, byte value);
