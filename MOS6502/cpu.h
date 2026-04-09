@@ -49,9 +49,6 @@
 #define COLOR_BG_BRIGHT_CYAN    "\x1b[106m"
 #define COLOR_BG_BRIGHT_WHITE   "\x1b[107m"
 
-typedef uint8_t byte;
-typedef uint16_t word;
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define UNUSED() do                                                          \
@@ -67,6 +64,9 @@ typedef uint16_t word;
 #define CPU_ERROR(cpu, msg, ...) CPU_error(cpu, msg, ##__VA_ARGS__);                       \
                             fprintf(stderr, COLOR_RED "in: (%s : %s : %d)\n" COLOR_RESET,  \
                                     __FILE__, __func__, __LINE__)
+
+typedef uint8_t byte;
+typedef uint16_t word;
 
 typedef struct {
     void* ctx;
