@@ -1,13 +1,13 @@
+
 #include <stdint.h>
 
-#define MMIO_SCR_DATA 0xC00A
-#define MMIO_SCR_CTRL 0xC00B
+#define UART_TX 0xfe10
 
-#define SCR_WRITE 1
+#define MMIO(register) *(volatile uint8_t*)(register)
 
 void putchar(char c){
-    *(volatile uint8_t*)MMIO_SCR_DATA = c;
-    *(volatile uint8_t*)MMIO_SCR_CTRL = SCR_WRITE;
+    while(MMIO(UART_TX)) {/* busy wait */};
+    MMIO(UART_TX) = c;
 }
 
 void puts(const char* str){
@@ -16,7 +16,6 @@ void puts(const char* str){
         str++;
     }
 }
-
 
 void main(void) {
     

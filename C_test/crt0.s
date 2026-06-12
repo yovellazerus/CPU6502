@@ -4,17 +4,14 @@
 
 __STARTUP__:
     sei             ; disable interrupts
+    cld             ; clear decimal mode
     ldx #$FF
     txs             ; set up stack pointer
-    cld             ; clear decimal mode
     jsr _main       ; call main()
-@loop:
-    jmp @loop       ; infinite loop after main returns
+    jmp *
 
 irq:
 nmi:
-    lda #$FF
-    sta $C001
     rti
 
 .segment "VECTORS"
