@@ -5,6 +5,7 @@
 CC      = gcc
 CA      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ca65.exe
 LD      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ld65.exe
+CL      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\cl65.exe
 CFLAGS  = 
 OBJ     = .\main.o .\MCS6502.o
 TARGET  = .\machine.exe
@@ -28,11 +29,14 @@ $(TARGET): $(OBJ)
 	$(LD) .\rom.o -C .\rom.cfg -o .\rom.bin
 	$(RM) .\rom.o >nul 2>&1
 
-.\kernel.bin: .\boot.asm .\kernel.asm .\kernel.cfg
-	$(CA) .\kernel.asm -o .\kernel.o
-	$(CA) .\boot.asm -o .\boot.o
-	$(LD) .\boot.o .\kernel.o -C .\kernel.cfg -o .\kernel.bin
-	$(RM) .\boot.o .\kernel.o >nul 2>&1
+# .\kernel.bin: .\boot.asm .\kernel.asm .\kernel.cfg
+# 	$(CA) .\kernel.asm -o .\kernel.o
+# 	$(CA) .\boot.asm -o .\boot.o
+# 	$(LD) .\boot.o .\kernel.o -C .\kernel.cfg -o .\kernel.bin
+# 	$(RM) .\boot.o .\kernel.o >nul 2>&1
+
+.\kernel.bin: crt0.s boot.asm ..\kernel\main.c
+	$(CL) -t none -C kernel.cfg -o kernel.bin crt0.s boot.asm ..\kernel\main.c
 
 .\%.o: .\%.c
 	$(CC) $(CFLAGS) -c $< -o $@
