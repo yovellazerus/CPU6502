@@ -1,5 +1,5 @@
 
-.include "../machin/common.inc"
+.include "../machine/machine.inc"
 
 .import __KERNEL_LOAD__
 .import __KERNEL_SIZE__
@@ -22,26 +22,13 @@ entry:
     lda #>__KERNEL_LOAD__
     sta scb+1
 
+    lda #<msg_load_progress
+    ldx #>msg_load_progress
+    jsr print
+
 load_kernel:
 
-    lda #<msg_load_progress1
-    ldx #>msg_load_progress1
-    jsr print
-
-    lda scb+2
-    jsr printHex8
-
-    lda #' '
-    jsr putchar
-
-    lda #<msg_load_progress2
-    ldx #>msg_load_progress2
-    jsr print
-
-    lda #>((__KERNEL_LOAD__ + __KERNEL_SIZE__) / 2 - 1)
-    jsr printHex8
-
-    lda #$0D
+    lda #'.'
     jsr putchar
 
     lda #<scb
@@ -182,16 +169,15 @@ table_hex:
     .byte "0123456789ABCDEF"
 
        
-msg_banner:          .byte "**** boot loader v1.0: ****", $0A, 0
-msg_load_progress1:  .byte "loading sector:  $", 0
-msg_load_progress2:  .byte "/ $", 0
-msg_to_kernel:       .byte $0A, "done!", $0A, "bootloader: jumping to kernel...", $0A, 0
+msg_banner:          .byte "**** boot loader v1.0: ****", $0a, 0
+msg_load_progress:   .byte "loading kernel:", $0a, 0
+msg_to_kernel:       .byte $0a, "done!", $0a, "bootloader: jumping to kernel...", $0a, 0
 
 scb:
     .word __KERNEL_LOAD__   ;; buffer
     .word 0                 ;; lba
 
 .segment "HOOK"
-nmi_reg: .res 2
-irq_reg: .res 2
-brk_reg: .res 2
+nmi_hook: .res 2
+irq_hook: .res 2
+brk_hook: .res 2

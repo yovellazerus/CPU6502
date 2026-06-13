@@ -5,7 +5,7 @@
 ;; using a simple MMIO-based disk interface.
 ;; *****************************************************************************************************
 
-.include "common.inc"
+.include "machine.inc"
 
 .segment "STARTUP"
 reset:

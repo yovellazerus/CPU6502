@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdarg.h>
 
 // ======= memory map ==============================================================================
@@ -20,16 +21,134 @@
 #define ROM_BASE     0xff00
 #define ROM_SIZE     0x0100
 
-#define MMIO(register) *(volatile uint8_t*)(register)
+#define MMIO8(register)  *(volatile uint8_t*)(register)
+#define MMIO16(register) *(volatile uint16_t*)(register)
+#define MMIO32(register) *(volatile uint32_t*)(register)
 
 // ======= utils ======================================================================================
 
+void panic(const char *fmt, ...);
+
+char * strcpy(char *s, const char *t)
+{
+    char *os;
+
+    os = s;
+    while ((*s++ = *t++) != 0)
+        ;
+    return os;
+}
+
+int
+strcmp(const char *p, const char *q)
+{
+    while (*p && *p == *q)
+        p++, q++;
+    return (uint8_t)*p - (uint8_t)*q;
+}
+
+uint16_t strlen(const char *s)
+{
+    int n;
+
+    for (n = 0; s[n] && n < (uint16_t)-1; n++)
+        ;
+    return n;
+}
+
+void* memset(void *dst, int c, uint16_t n)
+{
+    char *cdst = (char *)dst;
+    int i;
+    for (i = 0; i < n; i++) {
+        cdst[i] = c;
+    }
+    return dst;
+}
+
+char* strchr(const char* s, char c)
+{
+    for (; *s; s++)
+        if (*s == c)
+        return (char *)s;
+    return 0;
+}
+
+int atoi(const char *s)
+{
+    int n;
+    
+    n = 0;
+    while ('0' <= *s && *s <= '9')
+      n = n * 10 + *s++ - '0';
+    return n;
+}
+
+void* memmove(void *vdst, const void *vsrc, int n)
+{
+    char *dst;
+    const char *src;
+
+    dst = vdst;
+    src = vsrc;
+    if (src > dst) {
+        while (n-- > 0)
+        *dst++ = *src++;
+    } else {
+        dst += n;
+        src += n;
+        while (n-- > 0)
+        *--dst = *--src;
+    }
+    return vdst;
+}
+
+int memcmp(const void *s1, const void *s2, uint16_t n)
+{
+    const char *p1 = s1, *p2 = s2;
+    while (n-- > 0) {
+        if (*p1 != *p2) {
+        return *p1 - *p2;
+        }
+        p1++;
+        p2++;
+    }
+    return 0;
+}
+
+void* memcpy(void *dst, const void *src, uint16_t n)
+{
+    return memmove(dst, src, n);
+}
+
 static char digits[] = "0123456789ABCDEF";
+
+// static char getc(void)
+// {
+    
+// }
+
+// char* gets(char *buf, int max)
+// {
+//     int i;
+//     char c;
+
+//     for (i = 0; i + 1 < max;) {
+//         c = getc();
+//         if (c < 1)
+//             break;
+//         buf[i++] = c;
+//         if (c == '\n' || c == '\r')
+//             break;
+//     }
+//     buf[i] = '\0';
+//     return buf;
+// }
 
 static void putc(char c)
 {
-    while(MMIO(UART_TX)) {/* busy wait */};
-    MMIO(UART_TX) = c;
+    while(MMIO8(UART_TX)) {/* busy wait */};
+    MMIO8(UART_TX) = c;
 }
 
 static void printint(long xx, int base, int sgn)
@@ -136,14 +255,20 @@ void vprintf(const char *fmt, va_list ap)
     }
 }
 
-void
-printf(const char *fmt, ...)
+void printf(const char *fmt, ...)
 {
   va_list ap;
-
   va_start(ap, fmt);
   vprintf(fmt, ap);
   va_end(ap);
+}
+
+void panic(const char *fmt, ...){
+    va_list ap;
+    va_start(ap, fmt);
+    printf("PANIC: ");
+    vprintf(fmt, ap);
+    va_end(ap);
 }
 
 // ======= main =====================================================================================
@@ -155,6 +280,6 @@ void main(void) {
     printf("number: %d, hex: 0x%x, unsigned: %u, char: %c, string: \"%s\", pointer: %p %%\n",
                     x,      0xffcb,        0xffff,     'G',    "hello world!",      &x  
     );
-
-    while (1);  // loop forever
+    
+    while (true) {/* halt */}
 }
