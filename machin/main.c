@@ -14,10 +14,7 @@
 /* ======== header ===========================================================*/
 
 #define RAM_BASE     0x0000
-#define RAM_SIZE     0xf000
-
-#define SCREEN_BUF   0xf000
-#define SCREEN_SIZE  0x0c00
+#define RAM_SIZE     0xfc00
 
 #define DISK_BUF     0xfc00 // 512 bytes
 #define DISK_STAT    0xfe00
@@ -26,6 +23,8 @@
 
 #define UART_TX      0xfe10
 #define UART_RX      0xfe11
+
+#define MMU_MAP      0xfe20 // 16 bytes
 
 #define ROM_BASE     0xff00
 #define ROM_SIZE     0x0100
@@ -37,15 +36,10 @@ typedef struct {
     uint8_t rx;
 } Uart;
 
-typedef struct {
-    uint8_t fb[SCREEN_SIZE];
-    // ...
-} Screen;
-
 enum {
     NO_DISK   = 0,
     CMD_READ  = 1,
-    STAT_REDY = 2,
+    STAT_READY = 2,
     BAD_LBA   = 3,
     MAX_LBA   = (64*1024 / 512),
 };
@@ -66,7 +60,6 @@ typedef struct {
     uint8_t* rom;
     Uart* uart;
     Disk* disk;
-    Screen* screen;
     // ...
 
 } Machin;
@@ -181,14 +174,6 @@ void Machin_write(uint16_t addr, uint8_t byte, void* ctx) {
         m->uart->tx = byte;
         return;
     }
-    
-    // ---------------- SCREEN buffer ----------------
-    if (addr >= SCREEN_BUF && addr < SCREEN_BUF + sizeof(m->screen->fb))
-    {
-        m->screen->fb[addr - SCREEN_BUF] = byte;
-        return;
-    }
-    
 }
 
 /* ======== functions ========================================================*/
@@ -203,9 +188,8 @@ Machin* Machin_create(const char* rom_path, const char* disk_path) {
     m->rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
     m->uart = (Uart*)calloc(1, sizeof(Uart));
     m->disk = (Disk*)calloc(1, sizeof(Disk));
-    m->screen = (Screen*)calloc(1, sizeof(Screen));
 
-    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->screen){
+    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu){
         Machin_destroy(m);
         return NULL;
     }
@@ -234,9 +218,6 @@ Machin* Machin_create(const char* rom_path, const char* disk_path) {
        m->disk->status = ~NO_DISK; 
     }
     
-    // screen
-    // ...
-
     // CPU
     MCS6502Init(
         m->cpu,
@@ -259,7 +240,6 @@ void Machin_destroy(Machin* m) {
     free(m->uart);
     if(m->disk->file) fclose(m->disk->file);
     free(m->disk);
-    free(m->screen);
     free(m->cpu);
     free(m);
     printf(COLOR_RESET);
@@ -272,10 +252,9 @@ void Machin_coredump(const Machin* m, const char* path) {
     if (!f) return;
 
     uint8_t mmio[256];
-    memset(mmio, 0xff, sizeof(mmio));
+    memset(mmio, 'd', sizeof(mmio));
     
     fwrite(m->ram, 1, RAM_SIZE, f);
-    fwrite(m->screen->fb, 1, SCREEN_SIZE, f);
     fwrite(m->disk->buffer, 1, 512, f);
     fwrite(mmio, 1, sizeof(mmio), f);
     fwrite(m->rom, 1, ROM_SIZE, f);
@@ -300,7 +279,7 @@ bool Machin_step(Machin* m){
             m->uart->rx = (uint8_t)c;
     }
     
-    // uart
+    // display
     if(m->uart->tx != 0){
         putchar(m->uart->tx);
         fflush(stdout);
@@ -318,7 +297,7 @@ bool Machin_step(Machin* m){
         else{
             fseek(m->disk->file, lba*512, SEEK_SET);
             fread(m->disk->buffer, 1, 512, m->disk->file);
-            m->disk->status = STAT_REDY;
+            m->disk->status = STAT_READY;
         }
     }
     
@@ -328,7 +307,7 @@ bool Machin_step(Machin* m){
     // debug
     if (r == MCS6502ExecResultInvalidOperation)
     {
-        fprintf(stderr, "\nDEBUG: invalid opcode\n");
+        fprintf(stderr, COLOR_RED "\nDEBUG: invalid opcode\n" COLOR_GREEN);
         return false;
     }
     else if (r == MCS6502ExecResultHalting)

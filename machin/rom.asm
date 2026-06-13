@@ -5,35 +5,7 @@
 ;; using a simple MMIO-based disk interface.
 ;; *****************************************************************************************************
 
-;; DEFINES
-NO_DISK   = 0
-CMD_READ  = 1
-STAT_REDY = 2
-
-;; ZP 
-SRC         = $00
-DST         = $02
-STR         = $04
-PTR         = $06
-BUF         = $08
-
-;; RAM
-RAM_BASE    = $0000
-BOOT        = $0200
-  
-;; MMIO
-SCREEN_BUF   = $f000 ;; 12*256 bytes
-DISK_BUF     = $fc00 ;; 512 bytes
-DISK_STAT    = $fe00
-DISK_CMD     = $fe01
-DISK_LBA     = $fe02
-UART_TX      = $fe10
-UART_RX      = $fe11
-NMI_REG      = $fe20
-IRQ_REG      = $fe20
-BRK_REG      = $fe20
-ROM_BASE     = $ff00
-VECTORS      = $fffa
+.include "common.inc"
 
 .segment "STARTUP"
 reset:
@@ -49,10 +21,6 @@ reset:
     lda DISK_STAT
     cmp #NO_DISK
     beq bad_disk
-
-    lda #<msg_loading
-    ldx #>msg_loading
-    jsr print
 
     ;; ------ loading boot from disk -----
 
@@ -73,9 +41,53 @@ bad_disk:
     jmp *
 
 nmi:
+    pha
+    txa
+    pha
+    tya
+    pha
+    tsx
+
+    jmp (NMI_REG)
+
+rom_nmi_return:
+
+    sta MMU_MAP+15
+
+    txs
+    pla
+    tay
+    pla
+    tax
+    pla
     rti
 
 irq:
+    pha
+    txa
+    pha
+    tya
+    pha
+    tsx
+
+    lda $0103, x
+    and #$10
+    bne @irq
+    jmp (BRK_REG)
+
+@irq:
+    jmp (IRQ_REG)
+
+rom_irq_return:
+
+    sta MMU_MAP+15
+
+    txs
+    pla
+    tay
+    pla
+    tax
+    pla
     rti
 
 ;;
@@ -104,7 +116,7 @@ read_sector:
 
 wait:
     lda DISK_STAT
-    cmp #STAT_REDY
+    cmp #STAT_READY
     bne wait
 
     lda #<DISK_BUF
@@ -158,14 +170,11 @@ print_end:
 msg_banner:
   .byte "ROM:", $0a, 0
 
-msg_loading:
-  .byte "loading boot sector", $0a, 0
-
 msg_boot:
-  .byte "jumping to boot", $0a, 0
+  .byte "BOOTING...", $0a, 0
 
 msg_no_disk:
-  .byte "no boot-able device", $0a, 0
+  .byte "ERROR: NO BOOT", $0a, 0
 
 boot_scb:
     .word BOOT  ;; buffer
