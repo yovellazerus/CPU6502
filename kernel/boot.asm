@@ -1,5 +1,5 @@
 
-.include "common.inc"
+.include "../machin/common.inc"
 
 .import __KERNEL_LOAD__
 .import __KERNEL_SIZE__

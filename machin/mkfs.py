@@ -32,4 +32,4 @@ def mkfs(img_path, disk_path):
     
 
 if __name__ == "__main__":
-    mkfs(".\\kernel.bin", ".\\disk.bin")
+    mkfs("..\\kernel\\kernel.bin", ".\\disk.bin")

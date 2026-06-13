@@ -18,7 +18,7 @@ RM      = del /Q /F
 # ====================================================================================
 #  Main build rule
 # ====================================================================================
-all: $(TARGET) .\rom.bin .\kernel.bin
+all: $(TARGET) .\rom.bin ..\kernel\kernel.bin
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
@@ -29,14 +29,8 @@ $(TARGET): $(OBJ)
 	$(LD) .\rom.o -C .\rom.cfg -o .\rom.bin
 	$(RM) .\rom.o >nul 2>&1
 
-# .\kernel.bin: .\boot.asm .\kernel.asm .\kernel.cfg
-# 	$(CA) .\kernel.asm -o .\kernel.o
-# 	$(CA) .\boot.asm -o .\boot.o
-# 	$(LD) .\boot.o .\kernel.o -C .\kernel.cfg -o .\kernel.bin
-# 	$(RM) .\boot.o .\kernel.o >nul 2>&1
-
-.\kernel.bin: crt0.s boot.asm ..\kernel\main.c
-	$(CL) -t none -C kernel.cfg -o kernel.bin crt0.s boot.asm ..\kernel\main.c
+..\kernel\kernel.bin:  ..\kernel\crt0.s ..\kernel\boot.asm ..\kernel\main.c
+	$(CL) -t none -C ..\kernel\kernel.cfg -o ..\kernel\kernel.bin ..\kernel\crt0.s ..\kernel\boot.asm ..\kernel\main.c
 
 .\%.o: .\%.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -48,4 +42,6 @@ clean:
 	-$(RM) $(OBJ) $(TARGET) >nul 2>&1
 	-$(RM) .\*.o >nul 2>&1
 	-$(RM) .\*.bin >nul 2>&1
-	-$(RM) .\*.bin >nul 2>&1
+	-$(RM) ..\kernel\*.o >nul 2>&1
+	-$(RM) ..\kernel\*.bin >nul 2>&1
+	
