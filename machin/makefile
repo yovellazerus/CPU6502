@@ -17,7 +17,7 @@ RM      = del /Q /F
 # ====================================================================================
 #  Main build rule
 # ====================================================================================
-all: $(TARGET) .\rom.bin .\disk.bin
+all: $(TARGET) .\rom.bin .\kernel.bin
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
@@ -28,10 +28,10 @@ $(TARGET): $(OBJ)
 	$(LD) .\rom.o -C .\rom.cfg -o .\rom.bin
 	$(RM) .\rom.o >nul 2>&1
 
-.\disk.bin: .\boot.asm .\kernel.asm .\disk.cfg
+.\kernel.bin: .\boot.asm .\kernel.asm .\kernel.cfg
 	$(CA) .\kernel.asm -o .\kernel.o
 	$(CA) .\boot.asm -o .\boot.o
-	$(LD) .\boot.o .\kernel.o -C .\disk.cfg -o .\disk.bin
+	$(LD) .\boot.o .\kernel.o -C .\kernel.cfg -o .\kernel.bin
 	$(RM) .\boot.o .\kernel.o >nul 2>&1
 
 .\%.o: .\%.c

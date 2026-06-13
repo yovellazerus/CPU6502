@@ -1,8 +1,12 @@
 
 .include "common.inc"
 
-.segment "KERNEL"
-.org KERNEL_ENTRY
+.import __KERNEL_LOAD__
+.import __KERNEL_SIZE__
+.import __KERNEL_ENTRY__
+
+.segment "CODE"
+
 _start:
     lda #<msg_banner 
     ldx #>msg_banner
@@ -87,7 +91,12 @@ print_loop:
 print_end:
   rts
 
+
+.segment "DATA"
+
 msg_banner: .byte "**** kernel v1.0 ****", $0A, 0
 
-;; pad the kernel img to KERNEL_SIZE
-.res KERNEL_SIZE - (* - KERNEL_ENTRY), 'k'
+.segment "RODATA"
+
+.segment "BSS"
+

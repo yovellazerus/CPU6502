@@ -1,8 +1,11 @@
 
 .include "common.inc"
 
+.import __KERNEL_LOAD__
+.import __KERNEL_SIZE__
+.import __KERNEL_ENTRY__
+
 .segment "BOOT"
-.org BOOT
 entry:
 
     lda #<msg_banner
@@ -14,21 +17,43 @@ entry:
     lda #0
     sta scb+3
 
-    lda #<KERNEL_ENTRY
+    lda #<__KERNEL_LOAD__
     sta scb+0
-    lda #>KERNEL_ENTRY-$02
+    lda #>__KERNEL_LOAD__
     sta scb+1
 
 load_kernel:
+
+    lda #<msg_load_progress1
+    ldx #>msg_load_progress1
+    jsr print
+
+    lda scb+2
+    jsr printHex8
+
+    lda #' '
+    jsr putchar
+
+    lda #<msg_load_progress2
+    ldx #>msg_load_progress2
+    jsr print
+
+    lda #>((__KERNEL_LOAD__ + __KERNEL_SIZE__) / 2 - 1)
+    jsr printHex8
+
+    lda #$0D
+    jsr putchar
 
     lda #<scb
     ldx #>scb
     jsr read_sector
 
     ; next LBA
+
     inc scb+2
     bne :+
     inc scb+3
+
 :
 
     ; next destination buffer (+512)
@@ -42,7 +67,7 @@ load_kernel:
     sta scb+1
 
     lda scb+1
-    cmp #>(KERNEL_ENTRY + KERNEL_SIZE)
+    cmp #>(__KERNEL_LOAD__ + __KERNEL_SIZE__)
     bne load_kernel
 
     lda #<msg_to_kernel
@@ -50,7 +75,7 @@ load_kernel:
     jsr print
 
 to_kernel:
-    jmp KERNEL_ENTRY
+    jmp __KERNEL_ENTRY__
 
 ;;
 ;; void read_sector(SCB* scb)
@@ -128,10 +153,45 @@ print_loop:
   bne print_loop
 print_end:
   rts
+
+;;
+;; void printHex8(unsigned char byte)
+;;
+printHex8:
+    pha             
+    lsr A           
+    lsr A
+    lsr A
+    lsr A
+    jsr printHex4 
+    pla          
+    and #$0F     
+    jsr printHex4 
+    rts
+
+;;
+;; void printHex4(unsigned char nibble)
+;;
+printHex4:
+    tay             
+    lda table_hex, y
+    jsr putchar   
+    rts
+
+table_hex:
+    .byte "0123456789ABCDEF"
+
        
-msg_banner:    .byte "**** boot loader v1.0: ****", $0A, 0
-msg_to_kernel: .byte "bootloader: jumping to kernel...", $0A, 0
+msg_banner:          .byte "**** boot loader v1.0: ****", $0A, 0
+msg_load_progress1:  .byte "loading sector:  $", 0
+msg_load_progress2:  .byte "/ $", 0
+msg_to_kernel:       .byte $0A, "done!", $0A, "bootloader: jumping to kernel...", $0A, 0
 
 scb:
-    .word KERNEL_ENTRY  ;; buffer
-    .word 0             ;; lba
+    .word __KERNEL_LOAD__   ;; buffer
+    .word 0                 ;; lba
+
+.segment "HOOK"
+nmi_reg: .res 2
+irq_reg: .res 2
+brk_reg: .res 2
