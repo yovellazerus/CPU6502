@@ -1,10 +1,23 @@
 
-;; DEFINES
-NO_DISK   = 0
-CMD_READ  = 1
-STAT_READY = 2
+;; ================================================================================================
+;; constants
+;; ================================================================================================
 
-UART_TX_READY = 2
+UART_STATUS_RX_READY = $01
+UART_STATUS_TX_READY = $02
+
+DISK_CMD_NONE   = 0
+DISK_CMD_READ   = 1
+DISK_CMD_WRITE  = 2
+
+DISK_STATUS_NONE  = 0
+DISK_STATUS_BUSY  = 1
+DISK_STATUS_READY = 2
+DISK_STATUS_ERROR = 3
+
+;; ================================================================================================
+;; machine memory map
+;; ================================================================================================
 
 ;; ZP 
 SRC         = $00
@@ -17,10 +30,10 @@ BUF         = $08
 RAM_BASE     = $0000
 
 BOOT         = $f000
-INT_HOOKS    = $f000
-NMI_REG      = INT_HOOKS+0
-IRQ_REG      = INT_HOOKS+2
-BRK_REG      = INT_HOOKS+4
+INT_HOOKS    = $f1fa
+NMI_HOOK     = INT_HOOKS+0
+IRQ_HOOK     = INT_HOOKS+2
+BRK_HOOK     = INT_HOOKS+4
 
 ;; MMIO
 DISK_BUF     = $fc00 ;; 512 bytes
@@ -31,5 +44,7 @@ UART_TX      = $fe10
 UART_RX      = $fe11
 UART_STAT    = $fe12
 MMU_MAP      = $fe20
+
+;; ROM
 ROM_BASE     = $ff00
 VECTORS      = $fffa

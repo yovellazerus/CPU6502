@@ -10,7 +10,7 @@ entry:
 
     lda #<msg_banner
     ldx #>msg_banner
-    jsr puts
+    jsr print
 
     lda #1          ; current LBA
     sta scb+2
@@ -24,12 +24,12 @@ entry:
 
     lda #<msg_load_progress
     ldx #>msg_load_progress
-    jsr puts
+    jsr print
 
 load_kernel:
 
     lda #'.'
-    jsr putc
+    jsr putchar
 
     lda #<scb
     ldx #>scb
@@ -59,7 +59,7 @@ load_kernel:
 
     lda #<msg_to_kernel
     ldx #>msg_to_kernel
-    jsr puts
+    jsr print
 
 to_kernel:
     jmp __KERNEL_ENTRY__
@@ -85,12 +85,12 @@ read_sector:
     lda (PTR), y
     sta DISK_LBA+1
 
-    lda #CMD_READ
+    lda #DISK_CMD_READ
     sta DISK_CMD
 
 wait:
     lda DISK_STAT
-    cmp #STAT_READY
+    cmp #DISK_STATUS_READY
     bne wait
 
     lda #<DISK_BUF
@@ -117,29 +117,29 @@ copy_high_page:
     rts
 
 ;;
-;; void putc(char c)
+;; void putchar(char c)
 ;;
-putc:
+putchar:
   pha
 @loop:
   lda UART_STAT
-  and #UART_TX_READY
+  and #UART_STATUS_TX_READY
   beq @loop
   pla
   sta UART_TX
   rts
 
 ;;
-;; void puts(const char* str)
+;; void print(const char* str)
 ;;
-puts:
+print:
   sta STR+0
   stx STR+1
   ldy #0
 print_loop:
   lda (STR),y
   beq print_end
-  jsr putc
+  jsr putchar
   iny
   bne print_loop
 print_end:

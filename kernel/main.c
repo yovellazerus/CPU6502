@@ -119,33 +119,33 @@ void* memcpy(void *dst, const void *src, uint16_t n)
 
 static char digits[] = "0123456789ABCDEF";
 
-static char getc(void)
-{
-    while(!(MMIO8(UART_STAT) & UART_RX_READY)) {/* busy wait */};
-    return MMIO8(UART_RX);
-}
-
 static void putc(char c)
 {
     while(!(MMIO8(UART_STAT) & UART_TX_READY)) {/* busy wait */};
     MMIO8(UART_TX) = c;
 }
 
-uint16_t gets(char *buf, int max)
-{
-    uint16_t i;
-    char c;
+// static char getc(void)
+// {
+//     while(!(MMIO8(UART_STAT) & UART_RX_READY)) {/* busy wait */};
+//     return MMIO8(UART_RX);
+// }
 
-    for (i = 0; i + 1 < max;) {
-        c = getc();
-        putc(c);
-        buf[i++] = c;
-        if (c == '\n' || c == '\r' || c == '\0')
-            break;
-    }
-    buf[i] = '\0';
-    return i;
-}
+// uint16_t gets(char *buf, int max)
+// {
+//     uint16_t i;
+//     char c;
+
+//     for (i = 0; i + 1 < max;) {
+//         c = getc();
+//         putc(c);
+//         buf[i++] = c;
+//         if (c == '\n' || c == '\r' || c == '\0')
+//             break;
+//     }
+//     buf[i] = '\0';
+//     return i;
+// }
 
 static void printint(long xx, int base, int sgn)
 {

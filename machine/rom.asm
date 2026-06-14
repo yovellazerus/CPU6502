@@ -19,7 +19,7 @@ reset:
     jsr print
 
     lda DISK_STAT
-    cmp #NO_DISK
+    cmp #DISK_STATUS_NONE
     beq bad_disk
 
     ;; ------ loading boot from disk -----
@@ -48,7 +48,7 @@ nmi:
     pha
     tsx
 
-    jmp (NMI_REG)
+    jmp (NMI_HOOK)
 
 rom_nmi_return:
 
@@ -73,10 +73,10 @@ irq:
     lda $0103, x
     and #$10
     bne @irq
-    jmp (BRK_REG)
+    jmp (BRK_HOOK)
 
 @irq:
-    jmp (IRQ_REG)
+    jmp (IRQ_HOOK)
 
 rom_irq_return:
 
@@ -111,12 +111,12 @@ read_sector:
     lda (PTR), y
     sta DISK_LBA+1
 
-    lda #CMD_READ
+    lda #DISK_CMD_READ
     sta DISK_CMD
 
 wait:
     lda DISK_STAT
-    cmp #STAT_READY
+    cmp #DISK_STATUS_READY
     bne wait
 
     lda #<DISK_BUF
@@ -149,7 +149,7 @@ putchar:
   pha
 @loop:
   lda UART_STAT
-  and #UART_TX_READY
+  and #UART_STATUS_TX_READY
   beq @loop
   pla
   sta UART_TX

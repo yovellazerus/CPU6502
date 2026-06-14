@@ -29,6 +29,7 @@ __STARTUP__:
     sta ptr2+1
 
     lda #0
+    ldy #0
 bss_loop:
     sta (ptr1),y
     inc ptr1

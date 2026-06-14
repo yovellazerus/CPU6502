@@ -10,30 +10,16 @@
 
 #include "MCS6502.h"
 #include "ansi_codes.h"
+#include "machine.h"
 
-/* ======== header ===========================================================*/
-
-#define RAM_BASE     0x0000
-#define RAM_SIZE     0xfc00
-
-#define DISK_BUF     0xfc00 // 512 bytes
-#define DISK_STAT    0xfe00
-#define DISK_CMD     0xfe01
-#define DISK_LBA     0xfe02
-
-#define UART_TX      0xfe10
-#define UART_RX      0xfe11
-#define UART_STAT    0xfe12
-
-#define MMU_MAP      0xfe20 // 16 bytes
-
-#define ROM_BASE     0xff00
-#define ROM_SIZE     0x0100
-
-#define UART_RX_READY 0x01
-#define UART_TX_READY 0x02
+/* ======== MMIO devices ===========================================================*/
 
 typedef MCS6502ExecutionContext CPU;
+
+typedef enum {
+    UART_STATUS_RX_READY = 0x01,
+    UART_STATUS_TX_READY = 0x02,
+} Uart_Status;
 
 typedef struct {
     uint8_t tx;
@@ -41,22 +27,30 @@ typedef struct {
     uint8_t status;
 } Uart;
 
-enum {
-    NO_DISK   = 0,
-    CMD_READ  = 1,
-    STAT_READY = 2,
-    BAD_LBA   = 3,
-    MAX_LBA   = (64*1024 / 512),
-};
+typedef enum {
+    DISK_CMD_NONE   = 0,
+    DISK_CMD_READ   = 1,
+    DISK_CMD_WRITE  = 2,
+} Disk_Cmd;
+
+typedef enum {
+    DISK_STATUS_NONE  = 0,
+    DISK_STATUS_BUSY  = 1,
+    DISK_STATUS_READY = 2,
+    DISK_STATUS_ERROR = 3,
+} Disk_Status;
 
 typedef struct {
     FILE* file;
-    uint8_t buffer[512];
+    uint8_t buffer[DISK_SECTOR_SIZE];
     uint8_t cmd;
     uint8_t status;
     uint8_t lba_low;
     uint8_t lba_high;
+    int delay;   // cycles remaining for operation
 } Disk;
+
+/* ======== the Machine itself ===========================================================*/
 
 typedef struct {
       
@@ -67,15 +61,15 @@ typedef struct {
     Disk* disk;
     // ...
 
-} Machin;
+} Machine;
 
-uint8_t Machin_read(uint16_t addr, void* ctx);
-void    Machin_write(uint16_t addr, uint8_t byte, void* ctx);
+uint8_t Machine_read(uint16_t addr, void* ctx);
+void    Machine_write(uint16_t addr, uint8_t byte, void* ctx);
 
-Machin* Machin_create(const char* rom_path, const char* disk_path);
-void    Machin_destroy(Machin* m);
-void    Machin_coredump(const Machin* m, const char* path);
-bool    Machin_step(Machin* m);
+Machine* Machine_create(const char* rom_path, const char* disk_path);
+void    Machine_destroy(Machine* m);
+void    Machine_coredump(const Machine* m, const char* path);
+bool    Machine_step(Machine* m);
 
 /* ======== main =============================================================*/
 
@@ -84,11 +78,11 @@ int main(void)
     const char* disk_path = "disk.bin";
     const char* rom_path = "rom.bin";
     
-    Machin* m = Machin_create(rom_path, disk_path);
+    Machine* m = Machine_create(rom_path, disk_path);
     if(!m) return 1;
-    while(Machin_step(m));
-    Machin_coredump(m, "coredump.bin");
-    Machin_destroy(m);
+    while(Machine_step(m));
+    Machine_coredump(m, "coredump.bin");
+    Machine_destroy(m);
 
     return 0;
 }
@@ -96,9 +90,9 @@ int main(void)
 /* ======== read/write =======================================================*/
 
 // TODO: MMU...
-uint8_t Machin_read(uint16_t addr, void* ctx) {
+uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
-    Machin* m = (Machin*)ctx;
+    Machine* m = (Machine*)ctx;
 
     // ---------------- RAM ----------------
     if (addr < RAM_SIZE)
@@ -115,11 +109,17 @@ uint8_t Machin_read(uint16_t addr, void* ctx) {
     if (addr == DISK_STAT)
         return m->disk->status;
 
+    if (addr == DISK_LBA + 0)
+        return m->disk->lba_low;
+
+    if (addr == DISK_LBA + 1)
+        return m->disk->lba_high;
+
     // ---------------- UART ----------------
     if (addr == UART_RX)
     {
         uint8_t c = m->uart->rx;
-        m->uart->status &= ~UART_RX_READY;
+        m->uart->status &= ~UART_STATUS_RX_READY;
         return c;
     }
 
@@ -138,9 +138,9 @@ uint8_t Machin_read(uint16_t addr, void* ctx) {
 }
 
 // TODO: MMU...
-void Machin_write(uint16_t addr, uint8_t byte, void* ctx) {
+void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     if(!ctx) return;
-    Machin* m = (Machin*)ctx;
+    Machine* m = (Machine*)ctx;
 
     // ---------------- RAM ----------------
     if (addr < RAM_SIZE)
@@ -160,6 +160,13 @@ void Machin_write(uint16_t addr, uint8_t byte, void* ctx) {
     if (addr == DISK_CMD)
     {
         m->disk->cmd = byte;
+
+        if (byte == DISK_CMD_READ)
+        {
+            m->disk->status = DISK_STATUS_BUSY;
+            m->disk->delay = DISK_LATENCY; // arbitrary latency
+        }
+
         return;
     }
     
@@ -180,16 +187,16 @@ void Machin_write(uint16_t addr, uint8_t byte, void* ctx) {
     if (addr == UART_TX)
     {
         m->uart->tx = byte;
-        m->uart->status &= ~UART_TX_READY;
+        m->uart->status &= ~UART_STATUS_TX_READY;
         return;
     }
 }
 
 /* ======== functions ========================================================*/
 
-Machin* Machin_create(const char* rom_path, const char* disk_path) {
+Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
-    Machin* m = (Machin*)calloc(1, sizeof(Machin));
+    Machine* m = (Machine*)calloc(1, sizeof(Machine));
     if (!m) return NULL;
 
     m->cpu = (CPU*)calloc(1, sizeof(CPU));
@@ -199,20 +206,20 @@ Machin* Machin_create(const char* rom_path, const char* disk_path) {
     m->disk = (Disk*)calloc(1, sizeof(Disk));
 
     if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu){
-        Machin_destroy(m);
+        Machine_destroy(m);
         return NULL;
     }
         
     // ROM
     FILE* rom_img = fopen(rom_path, "rb");
     if(!rom_img){
-        Machin_destroy(m);
+        Machine_destroy(m);
         return NULL;
     }
     ssize_t rom_size = fread(m->rom, 1, ROM_SIZE, rom_img);
     if(rom_size > ROM_SIZE){
         fclose(rom_img);
-        Machin_destroy(m);
+        Machine_destroy(m);
         return NULL; 
     }
     fclose(rom_img);
@@ -221,17 +228,17 @@ Machin* Machin_create(const char* rom_path, const char* disk_path) {
     if(disk_path){
        m->disk->file = fopen(disk_path, "rb+");
        if(!m->disk->file){
-           Machin_destroy(m);
+           Machine_destroy(m);
            return NULL;
        }
-       m->disk->status = ~NO_DISK; 
+       m->disk->status = ~DISK_STATUS_NONE; 
     }
     
     // CPU
     MCS6502Init(
         m->cpu,
-        Machin_read,
-        Machin_write,
+        Machine_read,
+        Machine_write,
         m
     );
     MCS6502Reset(m->cpu);
@@ -242,7 +249,7 @@ Machin* Machin_create(const char* rom_path, const char* disk_path) {
     return m;
 }
 
-void Machin_destroy(Machin* m) {
+void Machine_destroy(Machine* m) {
     if (!m) return;
     free(m->ram);
     free(m->rom);
@@ -254,7 +261,7 @@ void Machin_destroy(Machin* m) {
     printf(COLOR_RESET);
 }
 
-void Machin_coredump(const Machin* m, const char* path) {
+void Machine_coredump(const Machine* m, const char* path) {
     if(!m || !path) return;
     
     FILE* f = fopen(path, "wb");
@@ -264,14 +271,14 @@ void Machin_coredump(const Machin* m, const char* path) {
     memset(mmio, 'd', sizeof(mmio));
     
     fwrite(m->ram, 1, RAM_SIZE, f);
-    fwrite(m->disk->buffer, 1, 512, f);
+    fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, f);
     fwrite(mmio, 1, sizeof(mmio), f);
     fwrite(m->rom, 1, ROM_SIZE, f);
     
     fclose(f);
 }
 
-bool Machin_step(Machin* m){
+bool Machine_step(Machine* m){
     if(!m) return false;
     
     // keyboard
@@ -286,46 +293,55 @@ bool Machin_step(Machin* m){
         
         if (c != -1){
             m->uart->rx = (uint8_t)c;
-            m->uart->status |= UART_RX_READY;
+            m->uart->status |= UART_STATUS_RX_READY;
         }
     }
 
     // display
-    if (!(m->uart->status & UART_TX_READY))
+    if (!(m->uart->status & UART_STATUS_TX_READY))
     {
         uint8_t byte = m->uart->tx;
         if(byte == '\r') byte = '\n';
         _putch(byte);
-        m->uart->status |= UART_TX_READY;
+        m->uart->status |= UART_STATUS_TX_READY;
     }
     
     // disk
-    // TODO: time delay
-    if(m->disk->cmd == CMD_READ){
-        m->disk->cmd = 0;
-        uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
-        if(lba > MAX_LBA){
-            m->disk->status = BAD_LBA;
-        }
-        else{
-            fseek(m->disk->file, lba*512, SEEK_SET);
-            fread(m->disk->buffer, 1, 512, m->disk->file);
-            m->disk->status = STAT_READY;
+    if (m->disk->status == DISK_STATUS_BUSY)
+    {
+        if (--m->disk->delay == 0)
+        {
+            uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
+
+            if (lba > DISK_MAX_LBA)
+            {
+                m->disk->status = DISK_STATUS_ERROR;
+            }
+            else
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+
+                m->disk->status = DISK_STATUS_READY;
+            }
         }
     }
     
     // CPU
-    MCS6502ExecResult r = MCS6502ExecNext(m->cpu);
+    for(int i = 0; i < CPU_PER_STEP; i++){
+
+        MCS6502ExecResult r = MCS6502ExecNext(m->cpu);
     
-    // debug
-    if (r == MCS6502ExecResultInvalidOperation)
-    {
-        fprintf(stderr, COLOR_RED "\nDEBUG: invalid opcode\n" COLOR_GREEN);
-        return false;
-    }
-    else if (r == MCS6502ExecResultHalting)
-    {
-        // ...
+        // debug
+        if (r == MCS6502ExecResultInvalidOperation)
+        {
+            fprintf(stderr, COLOR_RED "\nDEBUG: invalid opcode\n" COLOR_GREEN);
+            return false;
+        }
+        else if (r == MCS6502ExecResultHalting)
+        {
+            // ...
+        }
     }
     
     return true;
