@@ -3,33 +3,11 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-extern void* memset(void *, int, uint16_t);
-
-// ======= memory map ==============================================================================
-
-#define RAM_BASE     0x0000
-#define RAM_SIZE     0xfc00
-
-#define DISK_BUF     0xfc00 // 512 bytes
-#define DISK_STAT    0xfe00
-#define DISK_CMD     0xfe01
-#define DISK_LBA     0xfe02
-
-#define UART_TX      0xfe10
-#define UART_RX      0xfe11
-#define UART_STAT    0xfe12
-
-#define MMU_MAP      0xfe20 // 16 bytes
-
-#define ROM_BASE     0xff00
-#define ROM_SIZE     0x0100
+#include "../machine/machine.h"
 
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
-
-#define UART_RX_READY 0x01
-#define UART_TX_READY 0x02
 
 // ======= utils ======================================================================================
 
@@ -112,16 +90,33 @@ int memcmp(const void *s1, const void *s2, uint16_t n)
     return 0;
 }
 
+extern void* memset(void *dst, int value, uint16_t size);
+
 void* memcpy(void *dst, const void *src, uint16_t n)
 {
     return memmove(dst, src, n);
 }
 
-static char digits[] = "0123456789ABCDEF";
+// static void disk_read_sector(uint8_t* buffer, uint16_t lba){
+//     MMIO16(DISK_LBA) = lba;
+//     MMIO8(DISK_CMD) = DISK_CMD_READ;
+//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
+//     memcpy(buffer, (uint8_t*)DISK_BUF, DISK_SECTOR_SIZE);
+// }
 
+// static void disk_write_sector(uint8_t* buffer, uint16_t lba){
+//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
+//     MMIO16(DISK_LBA) = lba;
+//     MMIO8(DISK_CMD) = DISK_CMD_WRITE;
+//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
+//     memcpy((uint8_t*)DISK_BUF, buffer , DISK_SECTOR_SIZE);
+// }
+
+static char digits[] = "0123456789ABCDEF";
+  
 static void putc(char c)
 {
-    while(!(MMIO8(UART_STAT) & UART_TX_READY)) {/* busy wait */};
+    while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)) {/* busy wait */};
     MMIO8(UART_TX) = c;
 }
 
