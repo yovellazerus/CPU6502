@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
+extern void* memset(void *, int, uint16_t);
+
 // ======= memory map ==============================================================================
 
 #define RAM_BASE     0x0000
@@ -15,6 +17,7 @@
 
 #define UART_TX      0xfe10
 #define UART_RX      0xfe11
+#define UART_STAT    0xfe12
 
 #define MMU_MAP      0xfe20 // 16 bytes
 
@@ -24,6 +27,9 @@
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
+
+#define UART_RX_READY 0x01
+#define UART_TX_READY 0x02
 
 // ======= utils ======================================================================================
 
@@ -54,16 +60,6 @@ uint16_t strlen(const char *s)
     for (n = 0; s[n] && n < (uint16_t)-1; n++)
         ;
     return n;
-}
-
-void* memset(void *dst, int c, uint16_t n)
-{
-    char *cdst = (char *)dst;
-    int i;
-    for (i = 0; i < n; i++) {
-        cdst[i] = c;
-    }
-    return dst;
 }
 
 char* strchr(const char* s, char c)
@@ -123,32 +119,32 @@ void* memcpy(void *dst, const void *src, uint16_t n)
 
 static char digits[] = "0123456789ABCDEF";
 
-// static char getc(void)
-// {
-    
-// }
-
-// char* gets(char *buf, int max)
-// {
-//     int i;
-//     char c;
-
-//     for (i = 0; i + 1 < max;) {
-//         c = getc();
-//         if (c < 1)
-//             break;
-//         buf[i++] = c;
-//         if (c == '\n' || c == '\r')
-//             break;
-//     }
-//     buf[i] = '\0';
-//     return buf;
-// }
+static char getc(void)
+{
+    while(!(MMIO8(UART_STAT) & UART_RX_READY)) {/* busy wait */};
+    return MMIO8(UART_RX);
+}
 
 static void putc(char c)
 {
-    while(MMIO8(UART_TX)) {/* busy wait */};
+    while(!(MMIO8(UART_STAT) & UART_TX_READY)) {/* busy wait */};
     MMIO8(UART_TX) = c;
+}
+
+uint16_t gets(char *buf, int max)
+{
+    uint16_t i;
+    char c;
+
+    for (i = 0; i + 1 < max;) {
+        c = getc();
+        putc(c);
+        buf[i++] = c;
+        if (c == '\n' || c == '\r' || c == '\0')
+            break;
+    }
+    buf[i] = '\0';
+    return i;
 }
 
 static void printint(long xx, int base, int sgn)
@@ -276,10 +272,12 @@ void panic(const char *fmt, ...){
 void main(void) {
 
     int x = -42;
+
+    printf("****** 6502 kernel ******\n");
     
     printf("number: %d, hex: 0x%x, unsigned: %u, char: %c, string: \"%s\", pointer: %p %%\n",
                     x,      0xffcb,        0xffff,     'G',    "hello world!",      &x  
     );
-    
+
     while (true) {/* halt */}
 }

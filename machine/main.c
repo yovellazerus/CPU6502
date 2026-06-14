@@ -23,17 +23,22 @@
 
 #define UART_TX      0xfe10
 #define UART_RX      0xfe11
+#define UART_STAT    0xfe12
 
 #define MMU_MAP      0xfe20 // 16 bytes
 
 #define ROM_BASE     0xff00
 #define ROM_SIZE     0x0100
 
+#define UART_RX_READY 0x01
+#define UART_TX_READY 0x02
+
 typedef MCS6502ExecutionContext CPU;
 
 typedef struct {
     uint8_t tx;
     uint8_t rx;
+    uint8_t status;
 } Uart;
 
 enum {
@@ -114,12 +119,15 @@ uint8_t Machin_read(uint16_t addr, void* ctx) {
     if (addr == UART_RX)
     {
         uint8_t c = m->uart->rx;
-        m->uart->rx = 0;
+        m->uart->status &= ~UART_RX_READY;
         return c;
     }
 
     if (addr == UART_TX)
         return m->uart->tx;
+
+    if (addr == UART_STAT)
+        return m->uart->status;
 
     // ---------------- ROM ----------------
     if (addr >= ROM_BASE)
@@ -172,6 +180,7 @@ void Machin_write(uint16_t addr, uint8_t byte, void* ctx) {
     if (addr == UART_TX)
     {
         m->uart->tx = byte;
+        m->uart->status &= ~UART_TX_READY;
         return;
     }
 }
@@ -275,15 +284,19 @@ bool Machin_step(Machin* m){
             return false; // power-off
         }
         
-        if (c != -1)
+        if (c != -1){
             m->uart->rx = (uint8_t)c;
+            m->uart->status |= UART_RX_READY;
+        }
     }
-    
+
     // display
-    if(m->uart->tx != 0){
-        putchar(m->uart->tx);
-        fflush(stdout);
-        m->uart->tx = 0;
+    if (!(m->uart->status & UART_TX_READY))
+    {
+        uint8_t byte = m->uart->tx;
+        if(byte == '\r') byte = '\n';
+        _putch(byte);
+        m->uart->status |= UART_TX_READY;
     }
     
     // disk

@@ -10,7 +10,7 @@ entry:
 
     lda #<msg_banner
     ldx #>msg_banner
-    jsr print
+    jsr puts
 
     lda #1          ; current LBA
     sta scb+2
@@ -24,12 +24,12 @@ entry:
 
     lda #<msg_load_progress
     ldx #>msg_load_progress
-    jsr print
+    jsr puts
 
 load_kernel:
 
     lda #'.'
-    jsr putchar
+    jsr putc
 
     lda #<scb
     ldx #>scb
@@ -59,7 +59,7 @@ load_kernel:
 
     lda #<msg_to_kernel
     ldx #>msg_to_kernel
-    jsr print
+    jsr puts
 
 to_kernel:
     jmp __KERNEL_ENTRY__
@@ -117,59 +117,35 @@ copy_high_page:
     rts
 
 ;;
-;; void putchar(char c)
+;; void putc(char c)
 ;;
-putchar:
-  ldx UART_TX
-  bne putchar
+putc:
+  pha
+@loop:
+  lda UART_STAT
+  and #UART_TX_READY
+  beq @loop
+  pla
   sta UART_TX
   rts
 
 ;;
-;; void print(const char* str)
+;; void puts(const char* str)
 ;;
-print:
+puts:
   sta STR+0
   stx STR+1
   ldy #0
 print_loop:
   lda (STR),y
   beq print_end
-  jsr putchar
+  jsr putc
   iny
   bne print_loop
 print_end:
   rts
-
-;;
-;; void printHex8(unsigned char byte)
-;;
-printHex8:
-    pha             
-    lsr A           
-    lsr A
-    lsr A
-    lsr A
-    jsr printHex4 
-    pla          
-    and #$0F     
-    jsr printHex4 
-    rts
-
-;;
-;; void printHex4(unsigned char nibble)
-;;
-printHex4:
-    tay             
-    lda table_hex, y
-    jsr putchar   
-    rts
-
-table_hex:
-    .byte "0123456789ABCDEF"
-
        
-msg_banner:          .byte "**** boot loader v1.0: ****", $0a, 0
+msg_banner:          .byte "**** boot loader v1.0 ****", $0a, 0
 msg_load_progress:   .byte "loading kernel:", $0a, 0
 msg_to_kernel:       .byte $0a, "done!", $0a, "bootloader: jumping to kernel...", $0a, 0
 

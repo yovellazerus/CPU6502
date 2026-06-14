@@ -4,6 +4,8 @@ NO_DISK   = 0
 CMD_READ  = 1
 STAT_READY = 2
 
+UART_TX_READY = 2
+
 ;; ZP 
 SRC         = $00
 DST         = $02
@@ -27,6 +29,7 @@ DISK_CMD     = $fe01
 DISK_LBA     = $fe02
 UART_TX      = $fe10
 UART_RX      = $fe11
+UART_STAT    = $fe12
 MMU_MAP      = $fe20
 ROM_BASE     = $ff00
 VECTORS      = $fffa

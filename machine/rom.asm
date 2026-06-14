@@ -146,8 +146,12 @@ copy_high_page:
 ;; void putchar(char c)
 ;;
 putchar:
-  ldx UART_TX
-  bne putchar
+  pha
+@loop:
+  lda UART_STAT
+  and #UART_TX_READY
+  beq @loop
+  pla
   sta UART_TX
   rts
 
