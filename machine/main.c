@@ -16,30 +16,6 @@
 
 typedef MCS6502ExecutionContext CPU;
 
-typedef enum {
-    UART_STATUS_RX_READY = 0x01,
-    UART_STATUS_TX_READY = 0x02,
-} Uart_Status;
-
-typedef struct {
-    uint8_t tx;
-    uint8_t rx;
-    uint8_t status;
-} Uart;
-
-typedef enum {
-    DISK_CMD_NONE   = 0,
-    DISK_CMD_READ   = 1,
-    DISK_CMD_WRITE  = 2,
-} Disk_Cmd;
-
-typedef enum {
-    DISK_STATUS_NONE  = 0,
-    DISK_STATUS_BUSY  = 1,
-    DISK_STATUS_READY = 2,
-    DISK_STATUS_ERROR = 3,
-} Disk_Status;
-
 typedef struct {
     FILE* file;
     uint8_t buffer[DISK_SECTOR_SIZE];
@@ -164,20 +140,26 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
         if (byte == DISK_CMD_READ)
         {
             m->disk->status = DISK_STATUS_BUSY;
-            m->disk->delay = DISK_LATENCY; // arbitrary latency
+            m->disk->delay = DISK_LATENCY; 
+        }
+
+        else if (byte == DISK_CMD_WRITE)
+        {
+            m->disk->status = DISK_STATUS_BUSY;
+            m->disk->delay = DISK_LATENCY; 
         }
 
         return;
     }
     
     // ---------------- DISK LBA ----------------
-    if (addr == DISK_LBA)
+    if (addr == DISK_LBA + 0)
     {
         m->disk->lba_low = byte;
         return;
     }
     
-    if (addr == DISK_LBA+1)
+    if (addr == DISK_LBA + 1)
     {
         m->disk->lba_high = byte;
         return;
@@ -317,12 +299,24 @@ bool Machine_step(Machine* m){
             {
                 m->disk->status = DISK_STATUS_ERROR;
             }
-            else
-            {
-                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-
-                m->disk->status = DISK_STATUS_READY;
+            else{
+                if (m->disk->cmd = DISK_CMD_READ)
+                {
+                    fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                    fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+                
+                    m->disk->status = DISK_STATUS_READY;
+                }
+                else if (m->disk->cmd = DISK_CMD_WRITE)
+                {
+                    fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                    fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+                
+                    m->disk->status = DISK_STATUS_READY;
+                }
+                else{
+                    m->disk->status = DISK_STATUS_ERROR;
+                }
             }
         }
     }

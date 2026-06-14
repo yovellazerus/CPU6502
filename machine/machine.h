@@ -33,5 +33,29 @@
 
 #define CPU_PER_STEP        100  // arbitrary value...
 
+typedef enum {
+    UART_STATUS_RX_READY = 0x01,
+    UART_STATUS_TX_READY = 0x02,
+} Uart_Status;
+
+typedef struct {
+    uint8_t tx;
+    uint8_t rx;
+    uint8_t status;
+} Uart;
+
+typedef enum {
+    DISK_CMD_NONE   = 0,
+    DISK_CMD_READ   = 1,
+    DISK_CMD_WRITE  = 2,
+} Disk_Cmd;
+
+typedef enum {
+    DISK_STATUS_NONE  = 0,
+    DISK_STATUS_BUSY  = 1,
+    DISK_STATUS_READY = 2,
+    DISK_STATUS_ERROR = 3,
+} Disk_Status;
+
 
 #endif // MACHINE_H
