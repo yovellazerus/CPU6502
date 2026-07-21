@@ -1,7 +1,7 @@
 
 ;; *****************************************************************************************************
 ;; This is a minimalist 6502 boot-strap and bios ROM
-;; that boots a system from disk and forwards interrupts to kernel handlers, 
+;; that boots a system from disk, 
 ;; using a simple MMIO-based disk interface.
 ;; *****************************************************************************************************
 
@@ -37,58 +37,17 @@ reset:
 bad_disk:
     lda #<msg_no_disk
     ldx #>msg_no_disk
-    jsr print
-    jmp *
+    jmp error
 
 nmi:
-    pha
-    txa
-    pha
-    tya
-    pha
-    tsx
-
-    jmp (NMI_HOOK)
-
-rom_nmi_return:
-
-    sta MMU_MAP+15
-
-    txs
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
+    lda #<msg_nmi
+    ldx #>msg_nmi
+    jmp error
 
 irq:
-    pha
-    txa
-    pha
-    tya
-    pha
-    tsx
-
-    lda $0103, x
-    and #$10
-    bne @irq
-    jmp (BRK_HOOK)
-
-@irq:
-    jmp (IRQ_HOOK)
-
-rom_irq_return:
-
-    sta MMU_MAP+15
-
-    txs
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
+    lda #<msg_irq
+    ldx #>msg_irq
+    jmp error
 
 ;;
 ;; void read_sector(SCB* scb)
@@ -170,6 +129,31 @@ print_loop:
   bne print_loop
 print_end:
   rts
+  
+;;
+;; void error(const char* msg)
+;;
+error:
+    pha
+    txa
+    pha
+    lda #<msg_error
+    ldx #>msg_error
+    jsr print
+    pla
+    tax
+    pla
+    jsr print
+    jmp * ;; halt
+
+msg_error:
+  .byte "ERROR: ", 0
+
+msg_nmi:
+  .byte "NMI", $0a, 0
+
+msg_irq:
+  .byte "IRQ", $0a, 0
 
 msg_banner:
   .byte "ROM:", $0a, 0
@@ -178,7 +162,7 @@ msg_boot:
   .byte "BOOTING...", $0a, 0
 
 msg_no_disk:
-  .byte "ERROR: NO BOOT", $0a, 0
+  .byte "NO BOOT", $0a, 0
 
 boot_scb:
     .word BOOT  ;; buffer

@@ -43,21 +43,26 @@ uint8_t Machine_read(uint16_t addr, void* ctx);
 void    Machine_write(uint16_t addr, uint8_t byte, void* ctx);
 
 Machine* Machine_create(const char* rom_path, const char* disk_path);
-void    Machine_destroy(Machine* m);
-void    Machine_coredump(const Machine* m, const char* path);
-bool    Machine_step(Machine* m);
+void     Machine_destroy(Machine* m);
+void     Machine_coredump(const Machine* m, const char* path);
+bool     Machine_step(Machine* m);
 
 /* ======== main =============================================================*/
 
-int main(void)
+int main(int argc, char** argv)
 {
-    const char* disk_path = "disk.bin";
-    const char* rom_path = "rom.bin";
+    if(argc != 2){
+        fprintf(stderr, COLOR_RED "USAGE: %s <disk.img>.\n" COLOR_RESET, argv[0]);
+        return 1;
+    }
     
-    Machine* m = Machine_create(rom_path, disk_path);
-    if(!m) return 1;
+    Machine* m = Machine_create("machine\\rom.bin", argv[1]);
+    if(!m){
+        fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);
+        return 1;
+    } 
     while(Machine_step(m));
-    Machine_coredump(m, "coredump.bin");
+    Machine_coredump(m, ".\\bin\\coredump.bin");
     Machine_destroy(m);
 
     return 0;
@@ -250,7 +255,7 @@ void Machine_coredump(const Machine* m, const char* path) {
     if (!f) return;
 
     uint8_t mmio[256];
-    memset(mmio, 'd', sizeof(mmio));
+    memset(mmio, 0xff, sizeof(mmio));
     
     fwrite(m->ram, 1, RAM_SIZE, f);
     fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, f);

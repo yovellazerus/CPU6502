@@ -153,7 +153,3 @@ scb:
     .word __KERNEL_LOAD__   ;; buffer
     .word 0                 ;; lba
 
-.segment "HOOK"
-nmi_hook: .res 2
-irq_hook: .res 2
-brk_hook: .res 2

@@ -3,6 +3,4 @@
 *.exe
 *.o
 *.bin
-*.txt
-cc65-2.19
 cc65-snapshot-win64

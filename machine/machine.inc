@@ -28,12 +28,7 @@ BUF         = $08
 
 ;; RAM
 RAM_BASE     = $0000
-
 BOOT         = $f000
-INT_HOOKS    = $f1fa
-NMI_HOOK     = INT_HOOKS+0
-IRQ_HOOK     = INT_HOOKS+2
-BRK_HOOK     = INT_HOOKS+4
 
 ;; MMIO
 DISK_BUF     = $fc00 ;; 512 bytes

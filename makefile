@@ -5,54 +5,54 @@
 CC      = gcc
 CA      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ca65.exe
 LD      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ld65.exe
-CFLAGS  =
-OBJ     = src\main.o src\cpu.o src\instruction.o
-TARGET  = bin\cpu6502.exe
+CL      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\cl65.exe
+CFLAGS  = 
+OBJ     = .\machine\main.o .\machine\MCS6502.o
+TARGET  = .\machine\machine.exe
 
 # Windows cleanup command
 RM      = del /Q /F
 
-.PHONY: all clean
+.PHONY: all clean run
 
 # ====================================================================================
 #  Main build rule
 # ====================================================================================
-all: $(TARGET) input\bios.bin input\disk.bin input\wosmon.bin input\kernel.bin
+all: $(TARGET) .\machine\rom.bin .\kernel\kernel.bin
 
 $(TARGET): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
 	$(RM) $(OBJ) >nul 2>&1
 
-input\bios.bin: input\bios.asm input\bios.cfg
-	$(CA) input\bios.asm -o input\bios.o
-	$(LD) input\bios.o -C input\bios.cfg -o bin\bios.bin
-	$(RM) input\bios.o >nul 2>&1
+.\machine\rom.bin: .\machine\rom.s .\machine\rom.cfg
+	$(CA) .\machine\rom.s -o .\machine\rom.o
+	$(LD) .\machine\rom.o -C .\machine\rom.cfg -o .\machine\rom.bin
+	$(RM) .\machine\rom.o >nul 2>&1
 
-input\disk.bin: input\boot.asm input\root.asm input\hello.asm input\disk.cfg
-	$(CA) input\boot.asm -o input\boot.o
-	$(CA) input\root.asm -o input\root.o
-	$(CA) input\hello.asm -o input\hello.o
-	$(LD) input\boot.o input\root.o input\hello.o -C input\disk.cfg -o bin\disk.bin
-	$(RM) input\boot.o input\root.o input\hello.o >nul 2>&1
+.\kernel\kernel.bin:  .\kernel\crt0.s .\kernel\boot.s .\kernel\main.c .\kernel\io.c .\kernel\string.c
+	$(CL) -t none -C .\kernel\kernel.cfg -o .\kernel\kernel.bin .\kernel\crt0.s .\kernel\boot.s .\kernel\main.c .\kernel\io.c .\kernel\string.c
 
-input\wosmon.bin: input\wosmon.asm input\wosmon.cfg
-	$(CA) input\wosmon.asm -o input\wosmon.o
-	$(LD) input\wosmon.o -C input\wosmon.cfg -o bin\wosmon.bin
-	$(RM) input\wosmon.o >nul 2>&1
-
-input\kernel.bin: input\kernel.asm input\kernel.cfg
-	$(CA) input\kernel.asm -o input\kernel.o
-	$(LD) input\kernel.o -C input\kernel.cfg -o bin\kernel.bin
-	$(RM) input\kernel.o >nul 2>&1
-
-src\%.o: src\%.c
+.\machine\%.o: .\machine\%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# ====================================================================================
+#  Create disk image and run the virtual machine
+# ====================================================================================
+
+run:
+	mingw32-make
+	python.exe .\machine\mkfs.py
+	.\machine\machine.exe .\machine\disk.bin
 
 # ====================================================================================
 #  Cleanup rule
 # ====================================================================================
 clean:
 	-$(RM) $(OBJ) $(TARGET) >nul 2>&1
-	-$(RM) input\*.o >nul 2>&1
-	-$(RM) input\*.bin >nul 2>&1
-	-$(RM) bin\*.bin >nul 2>&1
+	-$(RM) .\machine\*.o >nul 2>&1
+	-$(RM) .\machine\*.bin >nul 2>&1
+	-$(RM) .\kernel\*.o >nul 2>&1
+	-$(RM) .\kernel\*.bin >nul 2>&1
+	-$(RM) .\bin\* >nul 2>&1
+
+	
