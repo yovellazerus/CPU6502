@@ -6,7 +6,14 @@
 #include <stdarg.h>
 
 #include "../machine/machine.h"
-#include "hardware.h"
+
+#define TODO() panic("function \"%s\" is not implemented", __func__)
+
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
+#define MMIO8(register)  *(volatile uint8_t*)(register)
+#define MMIO16(register) *(volatile uint16_t*)(register)
+#define MMIO32(register) *(volatile uint32_t*)(register)
 
 // io.c
 void panic(const char *fmt, ...);

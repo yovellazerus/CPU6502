@@ -131,18 +131,18 @@ static char getc(void)
     return MMIO8(UART_RX);
 }
 
-uint16_t gets(char *buf, int max)
+uint16_t gets(char* buffer, int max)
 {
     uint16_t i;
     char c;
 
     for (i = 0; i + 1 < max;) {
         c = getc();
-        putc(c);
-        buf[i++] = c;
+        putc(c); // TODO: remove echo
+        buffer[i++] = c;
         if (c == '\n' || c == '\r' || c == '\0')
             break;
     }
-    buf[i] = '\0';
+    buffer[i] = '\0';
     return i;
 }
