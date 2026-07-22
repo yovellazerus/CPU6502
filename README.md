@@ -20,12 +20,7 @@ The project aims to faithfully reproduce the behavior of the 6502, including its
 ---
 
 ## 🔧 Build
-Clone and build using `make`:
 
-```bash
-git clone https://github.com/yovellazerus/CPU6502.git
-cd CPU6502
-make run
 
 ## Project Structure:
 .
