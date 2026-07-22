@@ -20,11 +20,11 @@
 
 void main(void) {
 
-    int x = 42;
+    int x = sizeof(Proc);
 
     printf("kernel is booting...\n");
 
-    printf("value: %d, C stack address: %p\n", x, &x);
+    printf("size of Proc struct: %d, C stack address: %p\n", x, &x);
 
-    while(true) {/* halt */}
+    scheduler();
 }

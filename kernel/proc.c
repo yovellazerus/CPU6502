@@ -1,46 +1,45 @@
 
-#include "comman.h" 
+#include "comman.h"
 
-enum Proc_State{
-    PROC_STATE_UNUSED = 0,
-    PROC_STATE_USED,
-    PROC_STATE_READY,
-    PROC_STATE_RUNING,
-    PROC_STATE_WAITING,
-    PROC_STATE_ZOMBIE
-};
+Proc proc_table[MAX_PROC_COUNT];
+Proc* current_proc;      
+uint8_t* MMIO_MMU_PAGE_TABLE;    // Pointer to MMU segment hardware registers
 
-struct Context{
-    uint8_t a;
-    uint8_t x;
-    uint8_t y;
-    uint8_t sp;
-    uint8_t p;
-    uint16_t pc; 
-};
+// Assembly routine that installs the page table, restores context, and executes RTI
+extern void return_from_trap(uint8_t* page_table);
 
-typedef struct Proc {
+// Copy the process's CPU context into the Trap Segment "Life Raft"
+extern void copy_to_life_raft(Context* ctx);
 
-    Context ctx; 
-    uint8_t page_table[16];
-    uint16_t sz;
-     
-    Proc_State state; 
-    uint16_t pid;                   
-    uint8_t  uid;           
-    uint8_t  gid;           
-    uint8_t  ecode;         
-    uint8_t  priority;      
-    uint8_t  ticks;   
+void scheduler(void) {
+    
+    static uint8_t round_robin_index = 0;
+    Proc* p;
 
-    struct Proc* parent;    
-    void* wchan;       
-    bool  killed;      
+    while (1) {
+        
+        asm("cli");
 
-    uint16_t cwd_inode;     
-    uint8_t  fd_table[8];          
+        p = &proc_table[round_robin_index];
+        
+        if (p->state == PROC_STATE_READY) {
+            
+            asm("sei");
+            
+            p->state = PROC_STATE_RUNING;
+            current_proc = p;
+            
+            p->ticks = QUANTUM; 
 
-    // debug 
-    char name[16];
+            copy_to_life_raft(&p->ctx);
 
-} Proc;
+            // no return
+            return_from_trap(p->page_table); 
+        }
+
+        round_robin_index++;
+        if (round_robin_index >= MAX_PROC_COUNT) {
+            round_robin_index = 0;
+        }
+    }
+}

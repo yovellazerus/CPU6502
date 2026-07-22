@@ -62,7 +62,7 @@ int main(int argc, char** argv)
         return 1;
     } 
     while(Machine_step(m));
-    Machine_coredump(m, ".\\bin\\coredump.bin");
+    Machine_coredump(m, ".\\machine\\coredump.bin");
     Machine_destroy(m);
 
     return 0;

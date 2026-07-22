@@ -28,7 +28,7 @@ ROM_CFG  = $(MACH_DIR)/rom.cfg
 ROM_OBJ  = $(MACH_DIR)/rom.o
 ROM_BIN  = $(MACH_DIR)/rom.bin
 
-KERN_SRC = $(KERN_DIR)/crt0.s $(KERN_DIR)/boot.s $(KERN_DIR)/main.c $(KERN_DIR)/io.c $(KERN_DIR)/string.c $(KERN_DIR)/proc.c
+KERN_SRC = $(KERN_DIR)/crt0.s $(KERN_DIR)/boot.s $(KERN_DIR)/trampoline.s $(KERN_DIR)/main.c $(KERN_DIR)/io.c $(KERN_DIR)/string.c $(KERN_DIR)/proc.c
 KERN_CFG = $(KERN_DIR)/kernel.cfg
 KERN_BIN = $(KERN_DIR)/kernel.bin
 
@@ -79,4 +79,3 @@ clean:
 	-$(RM) $(MACH_DIR)\*.bin >nul 2>&1
 	-$(RM) $(KERN_DIR)\*.o >nul 2>&1
 	-$(RM) $(KERN_DIR)\*.bin >nul 2>&1
-	-$(RM) .\bin\* >nul 2>&1
