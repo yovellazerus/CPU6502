@@ -5,21 +5,22 @@
 // memory map
 // ===========================================================================================
 
-#define RAM_BASE     0x0000
-#define RAM_SIZE     0xfc00
+#define RAM_BASE     0x00000000
+#define RAM_SIZE     0x00100000 // 1MB
 
-#define DISK_BUF     0xfc00 // 512 bytes
-#define DISK_STAT    0xfe00
-#define DISK_CMD     0xfe01
-#define DISK_LBA     0xfe02
+#define DISK_BUF     0x0000fc00 // 512 bytes
+#define DISK_STAT    0x0000fe00
+#define DISK_CMD     0x0000fe01
+#define DISK_LBA     0x0000fe02
 
-#define UART_TX      0xfe10
-#define UART_RX      0xfe11
-#define UART_STAT    0xfe12
+#define UART_TX      0x0000fe10
+#define UART_RX      0x0000fe11
+#define UART_STAT    0x0000fe12
 
-#define MMU_MAP      0xfe20 // 16 bytes
+#define MMU_PAGE_TABLE  0x0000fe20 // 16 bytes
+#define MMU_ROM_ENABLE  0x0000fe40
 
-#define ROM_BASE     0xff00
+#define ROM_BASE     0x0000ff00
 #define ROM_SIZE     0x0100
 
 // ===========================================================================================
@@ -38,17 +39,16 @@ typedef enum {
     UART_STATUS_TX_READY = 0x02,
 } Uart_Status;
 
-typedef struct {
-    uint8_t tx;
-    uint8_t rx;
-    uint8_t status;
-} Uart;
-
 typedef enum {
     DISK_CMD_NONE   = 0,
     DISK_CMD_READ   = 1,
     DISK_CMD_WRITE  = 2,
 } Disk_Cmd;
+
+typedef enum {
+    MMU_ROM_ENABLE_FALSE = 0,
+    MMU_ROM_ENABLE_TRUE = 1,
+} MMU_Status;
 
 typedef enum {
     DISK_STATUS_NONE  = 0,

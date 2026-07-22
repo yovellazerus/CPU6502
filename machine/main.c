@@ -17,6 +17,12 @@
 typedef MCS6502ExecutionContext CPU;
 
 typedef struct {
+    uint8_t tx;
+    uint8_t rx;
+    uint8_t status;
+} Uart;
+
+typedef struct {
     FILE* file;
     uint8_t buffer[DISK_SECTOR_SIZE];
     uint8_t cmd;
@@ -25,6 +31,18 @@ typedef struct {
     uint8_t lba_high;
     int delay;   // cycles remaining for operation
 } Disk;
+
+typedef struct {
+    uint8_t page_table[16];
+    uint8_t rom_enable;
+} MMU;
+
+static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
+    uint8_t segment = va >> 12;          
+    uint16_t offset = va & 0x0FFF;       
+    uint8_t frame = mmu->page_table[segment];
+    return (frame << 12) | offset;
+}
 
 /* ======== the Machine itself ===========================================================*/
 
@@ -35,6 +53,7 @@ typedef struct {
     uint8_t* rom;
     Uart* uart;
     Disk* disk;
+    MMU*  mmu;
     // ...
 
 } Machine;
@@ -75,44 +94,56 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
 
-    // ---------------- RAM ----------------
-    if (addr < RAM_SIZE)
-        return m->ram[addr];
+    uint32_t physical_addr = mmu_translate(m->mmu, addr);
+
+    // ---------------- MMU ----------------
+    if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table))
+        return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
+    if (physical_addr == MMU_ROM_ENABLE) return m->mmu->rom_enable;
+
+    // ---------------- ROM ----------------
+    if (physical_addr >= ROM_BASE && physical_addr < ROM_BASE + ROM_SIZE) {
+        if (m->mmu->rom_enable) {
+            return m->rom[physical_addr - ROM_BASE];
+        }
+        // If rom_enable is false, fall through to read the RAM underneath it
+    }
 
     // ---------------- DISK buffer ----------------
-    if (addr >= DISK_BUF && addr < DISK_BUF + sizeof(m->disk->buffer))
-        return m->disk->buffer[addr - DISK_BUF];
+    if (physical_addr >= DISK_BUF && physical_addr < DISK_BUF + sizeof(m->disk->buffer))
+        return m->disk->buffer[physical_addr - DISK_BUF];
 
     // ---------------- DISK registers ----------------
-    if (addr == DISK_CMD)
+    if (physical_addr == DISK_CMD)
         return m->disk->cmd;
 
-    if (addr == DISK_STAT)
+    if (physical_addr == DISK_STAT)
         return m->disk->status;
 
-    if (addr == DISK_LBA + 0)
+    if (physical_addr == DISK_LBA + 0)
         return m->disk->lba_low;
 
-    if (addr == DISK_LBA + 1)
+    if (physical_addr == DISK_LBA + 1)
         return m->disk->lba_high;
 
     // ---------------- UART ----------------
-    if (addr == UART_RX)
+    if (physical_addr == UART_RX)
     {
         uint8_t c = m->uart->rx;
         m->uart->status &= ~UART_STATUS_RX_READY;
         return c;
     }
 
-    if (addr == UART_TX)
+    if (physical_addr == UART_TX)
         return m->uart->tx;
 
-    if (addr == UART_STAT)
+    if (physical_addr == UART_STAT)
         return m->uart->status;
 
-    // ---------------- ROM ----------------
-    if (addr >= ROM_BASE)
-        return m->rom[addr - ROM_BASE];
+    // MUST BE LAST!
+    // ---------------- RAM ----------------
+    if (physical_addr < RAM_SIZE)
+        return m->ram[physical_addr];
 
     // ---------------- unmapped ----------------
     return 0xFF;
@@ -123,22 +154,27 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     if(!ctx) return;
     Machine* m = (Machine*)ctx;
 
-    // ---------------- RAM ----------------
-    if (addr < RAM_SIZE)
-    {
-        m->ram[addr] = byte;
+    uint32_t physical_addr = mmu_translate(m->mmu, addr);
+
+    // ---------------- MMU ----------------
+    if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table)){
+        m->mmu->page_table[physical_addr - MMU_PAGE_TABLE] = byte;
         return;
     }
+    if (physical_addr == MMU_ROM_ENABLE){
+        m->mmu->rom_enable = byte;
+        return;
+    } 
 
     // ---------------- DISK buffer ----------------
-    if (addr >= DISK_BUF && addr < DISK_BUF + sizeof(m->disk->buffer))
+    if (physical_addr >= DISK_BUF && physical_addr < DISK_BUF + sizeof(m->disk->buffer))
     {
-        m->disk->buffer[addr - DISK_BUF] = byte;
+        m->disk->buffer[physical_addr - DISK_BUF] = byte;
         return;
     }
 
     // ---------------- DISK CMD ----------------
-    if (addr == DISK_CMD)
+    if (physical_addr == DISK_CMD)
     {
         m->disk->cmd = byte;
 
@@ -158,23 +194,31 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     }
     
     // ---------------- DISK LBA ----------------
-    if (addr == DISK_LBA + 0)
+    if (physical_addr == DISK_LBA + 0)
     {
         m->disk->lba_low = byte;
         return;
     }
     
-    if (addr == DISK_LBA + 1)
+    if (physical_addr == DISK_LBA + 1)
     {
         m->disk->lba_high = byte;
         return;
     }
 
     // ---------------- UART TX ----------------
-    if (addr == UART_TX)
+    if (physical_addr == UART_TX)
     {
         m->uart->tx = byte;
         m->uart->status &= ~UART_STATUS_TX_READY;
+        return;
+    }
+
+    // MUST BE LAST
+    // ---------------- RAM ----------------
+    if (physical_addr < RAM_SIZE)
+    {
+        m->ram[physical_addr] = byte;
         return;
     }
 }
@@ -191,11 +235,18 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
     m->uart = (Uart*)calloc(1, sizeof(Uart));
     m->disk = (Disk*)calloc(1, sizeof(Disk));
+    m->mmu = (MMU*)calloc(1, sizeof(MMU));
 
-    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu){
+    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->mmu){
         Machine_destroy(m);
         return NULL;
     }
+
+    // MMU
+    for (uint8_t i = 0; i < 16; i++) {
+        m->mmu->page_table[i] = i; 
+    }
+    m->mmu->rom_enable = MMU_ROM_ENABLE_TRUE;
         
     // ROM
     FILE* rom_img = fopen(rom_path, "rb");
@@ -241,6 +292,7 @@ void Machine_destroy(Machine* m) {
     free(m->ram);
     free(m->rom);
     free(m->uart);
+    free(m->mmu);
     if(m->disk->file) fclose(m->disk->file);
     free(m->disk);
     free(m->cpu);
@@ -250,18 +302,9 @@ void Machine_destroy(Machine* m) {
 
 void Machine_coredump(const Machine* m, const char* path) {
     if(!m || !path) return;
-    
     FILE* f = fopen(path, "wb");
     if (!f) return;
-
-    uint8_t mmio[256];
-    memset(mmio, 0xff, sizeof(mmio));
-    
     fwrite(m->ram, 1, RAM_SIZE, f);
-    fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, f);
-    fwrite(mmio, 1, sizeof(mmio), f);
-    fwrite(m->rom, 1, ROM_SIZE, f);
-    
     fclose(f);
 }
 
@@ -277,7 +320,7 @@ bool Machine_step(Machine* m){
         if(c == 0x1B){
             return false; // power-off
         }
-        
+
         if (c != -1){
             m->uart->rx = (uint8_t)c;
             m->uart->status |= UART_STATUS_RX_READY;

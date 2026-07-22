@@ -36,8 +36,8 @@ static void print_ptr(uint16_t ptr){
         putc(digits[ptr >> (sizeof(uint16_t) * 8 - 4)]);
 }
 
-// main printf engine, only %d, %x, %p, %c, %s are in use
-void vprintf(const char *fmt, va_list ap){
+// main printk engine, only %d, %x, %p, %c, %s are in use
+void vprintk(const char *fmt, va_list ap){
     char *s;
     int c0, c1, c2, i, state;
 
@@ -104,19 +104,19 @@ void vprintf(const char *fmt, va_list ap){
     }
 }
 
-void printf(const char *fmt, ...)
+void printk(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    vprintf(fmt, ap);
+    vprintk(fmt, ap);
     va_end(ap);
 }
 
 void panic(const char *fmt, ...){
     va_list ap;
     va_start(ap, fmt);
-    printf("PANIC: ");
-    vprintf(fmt, ap);
+    printk("PANIC: ");
+    vprintk(fmt, ap);
     va_end(ap);
 }
 

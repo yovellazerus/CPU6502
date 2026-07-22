@@ -19,7 +19,7 @@ DISK_STATUS_ERROR = 3
 ;; machine memory map
 ;; ================================================================================================
 
-;; ZP 
+;; ZP (for booting only)
 SRC         = $00
 DST         = $02
 STR         = $04
@@ -38,7 +38,7 @@ DISK_LBA     = $fe02
 UART_TX      = $fe10
 UART_RX      = $fe11
 UART_STAT    = $fe12
-MMU_MAP      = $fe20
+MMU_PAGE_TABLE     = $fe20 ;; 16 bytes
 
 ;; ROM
 ROM_BASE     = $ff00

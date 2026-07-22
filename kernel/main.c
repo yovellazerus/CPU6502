@@ -1,30 +1,46 @@
 
 #include "comman.h"
 
-// static void disk_read_sector(uint8_t* buffer, uint16_t lba){
-//     MMIO16(DISK_LBA) = lba;
-//     MMIO8(DISK_CMD) = DISK_CMD_READ;
-//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
-//     memcpy(buffer, (uint8_t*)DISK_BUF, DISK_SECTOR_SIZE);
-// }
+void hardware_init(void){
 
-// static void disk_write_sector(uint8_t* buffer, uint16_t lba){
-//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
-//     MMIO16(DISK_LBA) = lba;
-//     MMIO8(DISK_CMD) = DISK_CMD_WRITE;
-//     while(!(MMIO8(DISK_STAT) & DISK_STATUS_READY)) {/* busy wait */};
-//     memcpy((uint8_t*)DISK_BUF, buffer , DISK_SECTOR_SIZE);
-// }
+    // mapout the ROM, and install the irq/nmi kernel handlers
+    MMIO8(MMU_ROM_ENABLE) = MMU_ROM_ENABLE_FALSE;
+    MMIO16(0xfffa) = (uint16_t)nmi_handler;
+    MMIO16(0xfffe) = (uint16_t)irq_handler;
 
-// ======= main =====================================================================================
+    // ...
+}
+
+void proc_init(void){
+
+}
+
+void fs_init(void){
+
+}
+    
+void run_init_process(void){
+
+}
+
+void start_timer(void){
+    
+}
 
 void main(void) {
 
-    int x = sizeof(Proc);
+    hardware_init();
 
-    printf("kernel is booting...\n");
+    printk("******* kernel v%d ********\n", 1);
 
-    printf("size of Proc struct: %d, C stack address: %p\n", x, &x);
+    kalloc_init();
+    proc_init();
+    fs_init();
 
+    run_init_process();
+
+    start_timer();
+    asm("cli");
+    // no return
     scheduler();
 }
