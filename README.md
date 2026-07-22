@@ -10,6 +10,8 @@ The project aims to faithfully reproduce the behavior of the 6502, including its
 - Basic UART emulator
 - Block device aka: "disk" emulator
 - Operating system, using the cc65 compiler tool-chain
+- Inspired by the xv6 operating system project by: Copyright (c) 2006-2024 Frans Kaashoek, Robert Morris, Russ Cox,
+                        Massachusetts Institute of Technology
 - ROM chip and its source code
 - Bootloader
 - Kernel source code directory named "kernel" (very early build...) 

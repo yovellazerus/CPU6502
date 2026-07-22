@@ -300,28 +300,22 @@ bool Machine_step(Machine* m){
         {
             uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
 
-            if (lba > DISK_MAX_LBA)
+            if (m->disk->cmd == DISK_CMD_READ)
             {
-                m->disk->status = DISK_STATUS_ERROR;
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
+            }
+            else if (m->disk->cmd == DISK_CMD_WRITE)
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
             }
             else{
-                if (m->disk->cmd = DISK_CMD_READ)
-                {
-                    fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                    fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-                
-                    m->disk->status = DISK_STATUS_READY;
-                }
-                else if (m->disk->cmd = DISK_CMD_WRITE)
-                {
-                    fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                    fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-                
-                    m->disk->status = DISK_STATUS_READY;
-                }
-                else{
-                    m->disk->status = DISK_STATUS_ERROR;
-                }
+                m->disk->status = DISK_STATUS_ERROR;
             }
         }
     }

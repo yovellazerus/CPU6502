@@ -15,6 +15,11 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
+typedef enum Proc_State Proc_State;
+
+typedef struct Proc Proc;
+typedef struct Context Context;
+
 // io.c
 void panic(const char *fmt, ...);
 void printf(const char *fmt, ...);

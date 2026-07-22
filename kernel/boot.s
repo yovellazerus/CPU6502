@@ -4,6 +4,7 @@
 .import __KERNEL_LOAD__
 .import __KERNEL_SIZE__
 .import __KERNEL_ENTRY__
+.import __KERNEL_LBA__
 
 .segment "BOOT"
 entry:
@@ -11,16 +12,6 @@ entry:
     lda #<msg_banner
     ldx #>msg_banner
     jsr print
-
-    lda #1          ; current LBA
-    sta scb+2
-    lda #0
-    sta scb+3
-
-    lda #<__KERNEL_LOAD__
-    sta scb+0
-    lda #>__KERNEL_LOAD__
-    sta scb+1
 
     lda #<msg_load_progress
     ldx #>msg_load_progress
@@ -43,15 +34,8 @@ load_kernel:
 
 :
 
-    ; next destination buffer (+512)
-    clc
-    lda scb+0
-    adc #$00
-    sta scb+0
-
-    lda scb+1
-    adc #$02
-    sta scb+1
+    inc scb+1
+    inc scb+1
 
     lda scb+1
     cmp #>(__KERNEL_LOAD__ + __KERNEL_SIZE__)
@@ -151,5 +135,5 @@ msg_to_kernel:       .byte $0a, "done!", $0a, "bootloader: jumping to kernel..."
 
 scb:
     .word __KERNEL_LOAD__   ;; buffer
-    .word 0                 ;; lba
+    .word __KERNEL_LBA__    ;; lba
 

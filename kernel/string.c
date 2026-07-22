@@ -62,10 +62,10 @@ void* memmove(void *vdst, const void *vsrc, int n)
     return vdst;
 }
 
-int memcmp(const void *s1, const void *s2, uint16_t n)
+int memcmp(const void* s1, const void* s2, uint16_t size)
 {
     const char *p1 = s1, *p2 = s2;
-    while (n-- > 0) {
+    while (size-- > 0) {
         if (*p1 != *p2) {
         return *p1 - *p2;
         }
@@ -75,7 +75,7 @@ int memcmp(const void *s1, const void *s2, uint16_t n)
     return 0;
 }
 
-void* memcpy(void *dst, const void *src, uint16_t n)
+void* memcpy(void* dst, const void* src, uint16_t size)
 {
-    return memmove(dst, src, n);
+    return memmove(dst, src, size);
 }

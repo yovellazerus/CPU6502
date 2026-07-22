@@ -1,58 +1,81 @@
 # ====================================================================================
-#  Makefile for CPU6502 project (Windows 64-bit only)
+#  Makefile for CPU6502 project (Windows 64-bit)
 # ====================================================================================
 
-CC      = gcc
-CA      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ca65.exe
-LD      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\ld65.exe
-CL      = C:\Users\yovel\Desktop\VScode\CPU6502\cc65-snapshot-win64\bin\cl65.exe
-CFLAGS  = 
-OBJ     = .\machine\main.o .\machine\MCS6502.o
-TARGET  = .\machine\machine.exe
+# --- Toolchain Paths ---
+CC       = gcc
+CC65_BIN = C:/Users/yovel/Desktop/VScode/CPU6502/cc65-snapshot-win64/bin
+CA       = $(CC65_BIN)/ca65.exe
+LD       = $(CC65_BIN)/ld65.exe
+CL       = $(CC65_BIN)/cl65.exe
+PYTHON   = python
 
-# Windows cleanup command
-RM      = del /Q /F
+# --- Directories ---
+MACH_DIR = machine
+KERN_DIR = kernel
+
+# --- Flags ---
+# Added basic warnings and optimization for the C compiler
+CFLAGS   = -Wall -Wextra -O2
+
+# --- Files ---
+MACH_SRC = $(MACH_DIR)/main.c $(MACH_DIR)/MCS6502.c
+MACH_OBJ = $(MACH_SRC:.c=.o)
+EMULATOR = $(MACH_DIR)/machine.exe
+
+ROM_SRC  = $(MACH_DIR)/rom.s
+ROM_CFG  = $(MACH_DIR)/rom.cfg
+ROM_OBJ  = $(MACH_DIR)/rom.o
+ROM_BIN  = $(MACH_DIR)/rom.bin
+
+KERN_SRC = $(KERN_DIR)/crt0.s $(KERN_DIR)/boot.s $(KERN_DIR)/main.c $(KERN_DIR)/io.c $(KERN_DIR)/string.c $(KERN_DIR)/proc.c
+KERN_CFG = $(KERN_DIR)/kernel.cfg
+KERN_BIN = $(KERN_DIR)/kernel.bin
+
+DISK_IMG = $(MACH_DIR)/disk.bin
+
+# Windows cleanup command (del requires backslashes)
+RM       = del /Q /F
 
 .PHONY: all clean run
 
 # ====================================================================================
-#  Main build rule
+#  Main build rules
 # ====================================================================================
-all: $(TARGET) .\machine\rom.bin .\kernel\kernel.bin
+all: $(EMULATOR) $(ROM_BIN) $(KERN_BIN) $(DISK_IMG)
 
-$(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ)
-	$(RM) $(OBJ) >nul 2>&1
+# 1. Emulator build
+$(EMULATOR): $(MACH_OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
 
-.\machine\rom.bin: .\machine\rom.s .\machine\rom.cfg
-	$(CA) .\machine\rom.s -o .\machine\rom.o
-	$(LD) .\machine\rom.o -C .\machine\rom.cfg -o .\machine\rom.bin
-	$(RM) .\machine\rom.o >nul 2>&1
-
-.\kernel\kernel.bin:  .\kernel\crt0.s .\kernel\boot.s .\kernel\main.c .\kernel\io.c .\kernel\string.c
-	$(CL) -t none -C .\kernel\kernel.cfg -o .\kernel\kernel.bin .\kernel\crt0.s .\kernel\boot.s .\kernel\main.c .\kernel\io.c .\kernel\string.c
-
-.\machine\%.o: .\machine\%.c
+$(MACH_DIR)/%.o: $(MACH_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# ====================================================================================
-#  Create disk image and run the virtual machine
-# ====================================================================================
+# 2. ROM build
+$(ROM_BIN): $(ROM_SRC) $(ROM_CFG)
+	$(CA) $(ROM_SRC) -o $(ROM_OBJ)
+	$(LD) $(ROM_OBJ) -C $(ROM_CFG) -o $@
 
-run:
-	mingw32-make
-	python.exe .\machine\mkfs.py
-	.\machine\machine.exe .\machine\disk.bin
+# 3. Kernel build
+$(KERN_BIN): $(KERN_SRC) $(KERN_CFG)
+	$(CL) -t none -C $(KERN_CFG) -o $@ $(KERN_SRC)
+
+# 4. Disk Image build
+$(DISK_IMG): $(KERN_BIN) $(MACH_DIR)/mkfs.py
+	$(PYTHON) $(MACH_DIR)/mkfs.py
 
 # ====================================================================================
-#  Cleanup rule
+#  Execution
+# ====================================================================================
+run: all
+	$(EMULATOR) $(DISK_IMG)
+
+# ====================================================================================
+#  Cleanup
 # ====================================================================================
 clean:
-	-$(RM) $(OBJ) $(TARGET) >nul 2>&1
-	-$(RM) .\machine\*.o >nul 2>&1
-	-$(RM) .\machine\*.bin >nul 2>&1
-	-$(RM) .\kernel\*.o >nul 2>&1
-	-$(RM) .\kernel\*.bin >nul 2>&1
-	-$(RM) .\bin\* >nul 2>&1
-
-	
+	-$(RM) $(MACH_DIR)\*.o >nul 2>&1
+	-$(RM) $(MACH_DIR)\*.exe >nul 2>&1
+	-$(RM) $(MACH_DIR)\*.bin >nul 2>&1
+	-$(RM) $(KERN_DIR)\*.o >nul 2>&1
+	-$(RM) $(KERN_DIR)\*.bin >nul 2>&1
