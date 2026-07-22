@@ -79,3 +79,4 @@ clean:
 	-$(RM) $(MACH_DIR)\*.bin >nul 2>&1
 	-$(RM) $(KERN_DIR)\*.o >nul 2>&1
 	-$(RM) $(KERN_DIR)\*.bin >nul 2>&1
+	-$(RM) .\bin\* >nul 2>&1

@@ -25,8 +25,8 @@ typedef struct Proc {
     uint8_t page_table[16];
     uint16_t sz;
      
-    uint16_t pid;           
-    uint8_t  state;         
+    Proc_State state; 
+    uint16_t pid;                   
     uint8_t  uid;           
     uint8_t  gid;           
     uint8_t  ecode;         
