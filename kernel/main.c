@@ -41,6 +41,7 @@ void main(void) {
 
     start_timer();
     asm("cli");
+    
     // no return
     scheduler();
 }

@@ -1,7 +1,7 @@
 
 #include "comman.h"
 
-void syscall_entry(void){
+void kernel_brk(void){
     TODO();
 }
 

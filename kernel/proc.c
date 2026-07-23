@@ -1,14 +1,15 @@
 
 #include "comman.h"
 
-extern uint8_t life_raft[PAGE_TABLE_SIZE];
+extern uint8_t life_raft[];
+extern uint8_t kernel_page_table[];
 
 Proc proc_table[MAX_PROC_COUNT];
 Proc* current_proc;
 
 uint16_t next_pid = 1; // global pid counter
 
-Proc* palloc(void) {
+Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
     uint8_t seg0_frame;
@@ -101,9 +102,11 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
     return 0; // success
 }
 
-// Copy the process's CPU context into the Trap Segment "Life Raft"
-static void copy_to_life_raft(const Context* ctx){
+// Copy the process's CPU context and page table into the Trap Segment "Life Raft"
+static void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table, uint8_t* kernel_page_table){
     memcpy(life_raft, ctx, sizeof(*ctx));
+    memcpy(life_raft + 8, user_page_table, 16);
+    memcpy(life_raft + 8 + 16, kernel_page_table, 16);
 }
 
 void scheduler(void) {
@@ -126,10 +129,10 @@ void scheduler(void) {
             
             p->ticks = QUANTUM; 
 
-            copy_to_life_raft(&p->ctx);
+            copy_to_life_raft(&p->ctx, p->page_table, kernel_page_table);
 
             // no return
-            //return_from_trap(p->page_table); 
+            return_from_trap(); 
         }
 
         round_robin_index++;

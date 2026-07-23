@@ -4,81 +4,131 @@
 .importzp ptr1
 .importzp ptr2
 
-.import _syscall_entry
+.import _kernel_brk
 .import _kernel_irq
 .import _kernel_nmi
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
+USER_RTI       = $0100 ;; close interrupt and resume user code, running in user space to close seg15
 
 .global _irq_handler
 _irq_handler:
-    sta _life_raft + 6
-    sty _life_raft + 5
-    stx _life_raft + 4
+    ;; save user CPU registers to the life raft
+    sta user_context + 6
+    sty user_context + 5
+    stx user_context + 4
     pla
-    sta _life_raft + 3
+    sta user_context + 3
     pla
-    sta _life_raft + 2
+    sta user_context + 2
     pla
-    sta _life_raft + 1
+    sta user_context + 1
     tsx
-    stx _life_raft + 0 
+    stx user_context + 0 
 
-    lda $0103, x
-    and #$10
+    ;; switch the memory map to kernel space, 
+    ;; all of them except for seg15, 
+    ;; because we are currently running code on it
+    ldx #$00          
+@mmu_loop:
+    lda kernel_page_table, x     
+    sta MMU_PAGE_TABLE, x      
+    inx
+    cpx #$0F          ; have we done segments 0 through 14?
+    bne @mmu_loop
+    
+    ;; jmp to C functions in the kernel
+    lda user_context + 1
+    and #%00010000
     beq @irq
-    jmp _syscall_entry ;; brk
+    jmp _kernel_brk ;; note: Y is the syscall number
 @irq:
     jmp _kernel_irq
     
 
 .global _nmi_handler
 _nmi_handler:
-    sta _life_raft + 6
-    sty _life_raft + 5
-    stx _life_raft + 4
+    ;; save user CPU registers to the life raft
+    sta user_context + 6
+    sty user_context + 5
+    stx user_context + 4
     pla
-    sta _life_raft + 3
+    sta user_context + 3
     pla
-    sta _life_raft + 2
+    sta user_context + 2
     pla
-    sta _life_raft + 1
+    sta user_context + 1
     tsx
-    stx _life_raft + 0 
+    stx user_context + 0 
+
+    ;; switch the memory map to kernel space, 
+    ;; all of them except for seg15, 
+    ;; because we are currently running code on it
+    ldx #$00          
+@mmu_loop:
+    lda kernel_page_table, x     
+    sta MMU_PAGE_TABLE, x      
+    inx
+    cpx #$0F          ; have we done segments 0 through 14?
+    bne @mmu_loop
+    
+    ;; jmp to C function in the kernel
     jmp _kernel_nmi
 
-; Assembly routine that installs the page table, restores context, and executes RTI
-; void return_from_trap(uint8_t* page_table);
+; Assembly routine that installs the page table, restores context, install return to user stub
+; void return_from_trap(void);
 .global _return_from_trap
 _return_from_trap:  
-    sta ptr1+0
-    stx ptr1+1
 
-    ldy #$00          
+    ;; restore user memory space form life raft
+    ldx #$00          
 @mmu_loop:
-    lda (ptr1), y     
-    sta MMU_PAGE_TABLE, y      
-    iny
-    cpy #$0F          ; Have we done segments 0 through 14?
+    lda user_page_table, x     
+    sta MMU_PAGE_TABLE, x      
+    inx
+    cpx #$0F          ; Have we done segments 0 through 14?
     bne @mmu_loop
 
-    ldx _life_raft + 0         ; Restore user Stack Pointer
+    ;; restore CPU registers form life raft
+    ldx user_context + 0         ;; Restore user Stack Pointer
     txs               
-    
-    lda _life_raft + 1         ; Push Status Register for RTI
+    lda user_context + 1         ;; Push Status Register for RTI
     pha
-    lda _life_raft + 2         ; Push PC High for RTI
+    lda user_context + 2         ;; Push PC High for RTI
     pha
-    lda _life_raft + 3         ; Push PC Low for RTI
+    lda user_context + 3         ;; Push PC Low for RTI
+    pha
+    ldx user_context + 4         ;; Restore X register
+    ldy user_context + 5         ;; Restore Y register
+    lda user_context + 6         ;; Restore A register last
+    pha                          ;; for use in the user return stub 
+    txa
     pha
 
-    ldx _life_raft + 4         ; Restore X register
-    ldy _life_raft + 5         ; Restore Y register
-    lda _life_raft + 6         ; Restore A register last
+    ;; install in user return stub, and jump to it
+    ldx #$00          
+@stub_loop:
+    lda in_user_return_stub, x     
+    sta USER_RTI, x      
+    inx
+    cpx #(in_user_return_stub_end - in_user_return_stub)         
+    bne @stub_loop
+    jmp USER_RTI     
 
-    sta $F000         ; TODO: not implemented
-    rti               
+in_user_return_stub:
+    lda user_page_table + 15
+    sta MMU_PAGE_TABLE  + 15
+    pla
+    tax
+    pla
+    rti   
+in_user_return_stub_end:   
 
 .global _life_raft
 _life_raft:
-    .res 8
+user_context:
+    .res 8 
+user_page_table:
+    .res 16
+kernel_page_table: 
+    .res 16

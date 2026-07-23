@@ -34,12 +34,12 @@ typedef enum Proc_State{
 } Proc_State;
 
 typedef struct Context {
-    uint8_t a;
-    uint8_t x;
-    uint8_t y;
     uint8_t sp;
     uint8_t p;
     uint16_t pc; 
+    uint8_t x;
+    uint8_t y;
+    uint8_t a;
 } Context;
 
 typedef struct Proc {
@@ -69,7 +69,7 @@ typedef struct Proc {
 } Proc;
 
 // trampoline.s
-extern void return_from_trap(uint8_t* page_table);
+extern void return_from_trap(void);
 extern void irq_handler(void);
 extern void nmi_handler(void);
 
@@ -79,7 +79,7 @@ uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
 // trap.c
-void _syscall_entry(void);
+void _kernel_brk(void);
 void _kernel_irq(void);
 void _kernel_nmi(void);
 
