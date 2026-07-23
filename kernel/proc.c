@@ -1,9 +1,6 @@
 
 #include "comman.h"
 
-extern uint8_t life_raft[];
-extern uint8_t kernel_page_table[];
-
 Proc proc_table[MAX_PROC_COUNT];
 Proc* current_proc;
 
@@ -12,7 +9,6 @@ uint16_t next_pid = 1; // global pid counter
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
-    uint8_t seg0_frame;
 
     for (i = 0; i < PAGE_TABLE_SIZE; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
@@ -45,19 +41,49 @@ Proc* palloc(void){
         p->page_table[i] = FRAME_UNUSED;
     }
 
-    seg0_frame = kalloc();
-    if (seg0_frame == 0) {
-        p->state = PROC_STATE_UNUSED;
-        return 0;
+    return p;
+}
+
+int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
+    uint16_t offset;
+    uint8_t seg;
+    uint8_t physical_frame;
+    uint16_t bytes_in_page;
+    uint16_t chunk;
+    uint8_t* dst_window;
+    uint16_t i;
+    uint8_t* src = (uint8_t*)kernel_src;
+    
+    while (n > 0) {
+        
+        seg = user_dest >> 12;
+        offset = user_dest & 0x0FFF;
+        
+        if (seg >= 15) {
+            return -1; // segfault
+        }
+        
+        physical_frame = page_table[seg];
+        if (physical_frame == 0) {
+            return -1; // segfault
+        }
+        
+        MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
+        
+        bytes_in_page = 4096 - offset;
+        chunk = (n < bytes_in_page) ? n : bytes_in_page;
+
+        dst_window = (uint8_t*)WINDOW1 + offset;
+        
+        for (i = 0; i < chunk; i++) {
+            dst_window[i] = *src++;
+        }
+        
+        n -= chunk;
+        user_dest += chunk;
     }
     
-    p->page_table[0] = seg0_frame;
-
-    // set the proc only frame to all zeros's
-    MMIO8(MMU_PAGE_TABLE + 1) = seg0_frame;
-    memset((void*)WINDOW1, 0, 4096);
-
-    return p;
+    return 0; // success
 }
 
 int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t* page_table){
@@ -103,7 +129,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
 }
 
 // Copy the process's CPU context and page table into the Trap Segment "Life Raft"
-static void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table, uint8_t* kernel_page_table){
+void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table, uint8_t* kernel_page_table){
     memcpy(life_raft, ctx, sizeof(*ctx));
     memcpy(life_raft + 8, user_page_table, 16);
     memcpy(life_raft + 8 + 16, kernel_page_table, 16);

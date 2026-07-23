@@ -1,7 +1,7 @@
 
 .include "../machine/machine.inc"
 
-.import __KERNEL_LOAD__
+.import __KERNEL_START__
 .import __KERNEL_SIZE__
 .import __KERNEL_ENTRY__
 .import __KERNEL_LBA__
@@ -38,7 +38,7 @@ load_kernel:
     inc scb+1
 
     lda scb+1
-    cmp #>(__KERNEL_LOAD__ + __KERNEL_SIZE__)
+    cmp #>(__KERNEL_START__ + __KERNEL_SIZE__)
     bne load_kernel
 
     lda #<msg_to_kernel
@@ -134,6 +134,6 @@ msg_load_progress:   .byte "loading kernel:", $0a, 0
 msg_to_kernel:       .byte $0a, "done!", $0a, "bootloader: jumping to kernel...", $0a, 0
 
 scb:
-    .word __KERNEL_LOAD__   ;; buffer
-    .word __KERNEL_LBA__    ;; lba
+    .word __KERNEL_START__   ;; buffer
+    .word __KERNEL_LBA__     ;; lba
 

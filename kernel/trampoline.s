@@ -18,13 +18,13 @@ _irq_handler:
     sty user_context + 5
     stx user_context + 4
     pla
-    sta user_context + 3
+    sta user_context + 1   ;; P (Status) is always pulled first
     pla
-    sta user_context + 2
+    sta user_context + 2   ;; PCL (PC Low) is pulled second
     pla
-    sta user_context + 1
+    sta user_context + 3   ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0 
+    stx user_context + 0
 
     ;; switch the memory map to kernel space, 
     ;; all of them except for seg15, 
@@ -38,10 +38,10 @@ _irq_handler:
     bne @mmu_loop
     
     ;; jmp to C functions in the kernel
-    lda user_context + 1
-    and #%00010000
+    lda user_context + 1   ;; Load Status (P)
+    and #%00010000         ;; Check the B flag
     beq @irq
-    jmp _kernel_brk ;; note: Y is the syscall number
+    jmp _kernel_brk
 @irq:
     jmp _kernel_irq
     
@@ -53,13 +53,13 @@ _nmi_handler:
     sty user_context + 5
     stx user_context + 4
     pla
-    sta user_context + 3
+    sta user_context + 1   ;; P (Status) is always pulled first
     pla
-    sta user_context + 2
+    sta user_context + 2   ;; PCL (PC Low) is pulled second
     pla
-    sta user_context + 1
+    sta user_context + 3   ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0 
+    stx user_context + 0
 
     ;; switch the memory map to kernel space, 
     ;; all of them except for seg15, 
@@ -90,17 +90,17 @@ _return_from_trap:
     bne @mmu_loop
 
     ;; restore CPU registers form life raft
-    ldx user_context + 0         ;; Restore user Stack Pointer
+    ldx user_context + 0         ;; SP
     txs               
-    lda user_context + 1         ;; Push Status Register for RTI
+    lda user_context + 3         ;; PCH
     pha
-    lda user_context + 2         ;; Push PC High for RTI
+    lda user_context + 2         ;; PCL
     pha
-    lda user_context + 3         ;; Push PC Low for RTI
+    lda user_context + 1         ;; P
     pha
-    ldx user_context + 4         ;; Restore X register
-    ldy user_context + 5         ;; Restore Y register
-    lda user_context + 6         ;; Restore A register last
+    ldx user_context + 4         ;; X
+    ldy user_context + 5         ;; Y
+    lda user_context + 5         ;; Ac
     pha                          ;; for use in the user return stub 
     txa
     pha

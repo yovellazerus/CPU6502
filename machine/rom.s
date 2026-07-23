@@ -153,7 +153,7 @@ msg_nmi:
   .byte "NMI", $0a, 0
 
 msg_irq:
-  .byte "IRQ", $0a, 0
+  .byte "BRK/IRQ", $0a, 0
 
 msg_banner:
   .byte "ROM:", $0a, 0

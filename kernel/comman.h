@@ -7,6 +7,8 @@
 
 #include "../machine/machine.h"
 
+#define NULL ((void*)0)
+
 #define MAX_FILES_PER_PROC 8
 
 #define WINDOW1 0x1000
@@ -68,6 +70,9 @@ typedef struct Proc {
 
 } Proc;
 
+extern uint8_t kernel_page_table[16];
+extern uint8_t life_raft[];
+
 // trampoline.s
 extern void return_from_trap(void);
 extern void irq_handler(void);
@@ -102,7 +107,10 @@ void*   memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
 void scheduler(void);
+void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table, uint8_t* kernel_page_table);
 int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t* page_table);
+int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
+Proc* palloc(void);
 
 #endif // COMMAN_H
 

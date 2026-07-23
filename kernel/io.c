@@ -32,8 +32,9 @@ static void print_ptr(uint16_t ptr){
     int i;
     putc('0');
     putc('x');
-    for (i = 0; i < (sizeof(uint16_t) * 2); i++, ptr <<= 4)
+    for (i = 0; i < (sizeof(uint16_t) * 2); i++, ptr <<= 4){
         putc(digits[ptr >> (sizeof(uint16_t) * 8 - 4)]);
+    }
 }
 
 // main printk engine, only %d, %x, %p, %c, %s are in use

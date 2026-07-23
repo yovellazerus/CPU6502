@@ -28,7 +28,7 @@ BUF         = $08
 
 ;; RAM
 RAM_BASE     = $0000
-BOOT         = $fa00
+BOOT         = $0200
 
 ;; MMIO
 DISK_BUF     = $fc00 ;; 512 bytes
