@@ -54,9 +54,8 @@ Proc proc_table[MAX_PROC_COUNT];
 Proc* init_process;
 Proc* current_process;
 
-static uint16_t next_pid = 1; // global pid counter
-
 static int pid_alloc(void){
+    static uint16_t next_pid = 1;
     int pid = next_pid;
     if(pid == 0) panic("pid_alloc");
     next_pid++;
@@ -71,7 +70,6 @@ void proc_init(void){
     }
     init_process = NULL;
     current_process = NULL;
-    next_pid = 1;
 }
 
 // create a new Proc struct with empty page table, new pid, SP in a READY state 
@@ -99,6 +97,11 @@ Proc* palloc(void){
     }
 
     return p;
+}
+
+uint8_t proc_get_frame(uint8_t segment){
+    if(!current_process || segment >= PAGE_TABLE_SIZE) return FRAME_UNUSED;
+    return current_process->page_table[segment];
 }
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
@@ -187,11 +190,9 @@ void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table){
     memcpy(life_raft + 8, user_page_table, 16);
 }
 
-void sleep(void* channel) {
-    __asm__("sei");
+void sleep(void* channel){
     current_process->channel = channel;
-    current_process->state = PROC_STATE_SLEEPING;
-    scheduler(); 
+    current_process->state = PROC_STATE_SLEEPING; 
 }
 
 void wakeup(void* channel){
@@ -263,7 +264,12 @@ void run_init_process(void){
         0x08,                // php
         0x68,                // pla
         0x8d, 0x03, 0x03,    // sta $0303
-        0x4c, 0x0e, 0x02,    // jmp $020e
+        0xa9, 0x17,          // lda #<msg 
+        0xa2, 0x02,          // ldx #>msg
+        0x00,                // brk
+        0xea,                // nop
+        0x4c, 0x14, 0x02,    // jmp *
+        'H', 'e', 'l', 'l', 'o', '\0'
     };
 
     init_process = palloc();

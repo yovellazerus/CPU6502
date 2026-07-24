@@ -94,6 +94,11 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
 
+    // vector pull
+    if(MCS6502_NMI_LO <= addr){
+        m->mmu->page_table[15] = 15;
+    }
+
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
 
     // ---------------- MMU ----------------

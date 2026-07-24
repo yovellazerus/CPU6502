@@ -48,9 +48,11 @@ void kernel_irq(void);
 void kernel_nmi(void);
 
 // io.c
+void putc(char c);
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
+char getc(void);
 uint16_t gets(char *buf, int max);
 
 // string.c
@@ -67,6 +69,8 @@ void*   memcpy(void *dst, const void *src, uint16_t n);
 typedef enum Proc_State Proc_State;
 typedef struct Context Context;
 typedef struct Proc Proc;
+void sleep(void* channel);
+void wakeup(void* channel);
 void scheduler(void);
 void run_init_process(void);
 void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table);
@@ -74,6 +78,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
 void proc_init(void);
 Proc* palloc(void);
+uint8_t proc_get_frame(uint8_t segment);
 
 #endif // COMMAN_H
 
