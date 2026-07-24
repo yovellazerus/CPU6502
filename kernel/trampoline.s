@@ -9,7 +9,7 @@
 .import _kernel_nmi
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
-USER_RTI       = $0100 ;; close interrupt and resume user code, running in user space to close seg15
+USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code, doing double duty as canary
 
 .global _irq_handler
 _irq_handler:
@@ -31,7 +31,7 @@ _irq_handler:
     ;; because we are currently running code on it
     ldx #$00          
 @mmu_loop:
-    lda kernel_page_table, x     
+    lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
     cpx #$0F          ; have we done segments 0 through 14?
@@ -66,7 +66,7 @@ _nmi_handler:
     ;; because we are currently running code on it
     ldx #$00          
 @mmu_loop:
-    lda kernel_page_table, x     
+    lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
     cpx #$0F          ; have we done segments 0 through 14?
@@ -100,7 +100,7 @@ _return_from_trap:
     pha
     ldx user_context + 4         ;; X
     ldy user_context + 5         ;; Y
-    lda user_context + 5         ;; Ac
+    lda user_context + 6         ;; A
     pha                          ;; for use in the user return stub 
     txa
     pha
@@ -130,5 +130,6 @@ user_context:
     .res 8 
 user_page_table:
     .res 16
-kernel_page_table: 
+.global _kernel_page_table
+_kernel_page_table: 
     .res 16

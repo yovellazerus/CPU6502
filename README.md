@@ -36,13 +36,13 @@ The project aims to faithfully reproduce the behavior of the 6502, including its
 │   ├── main.c
 │   ├── ...
 │   ├── rom.s
-│   ├── mkfs.py
 ├── kernel/
 │   ├── boot.s
 │   ├── crt0.s
 │   ├── main.c
 │   ├── ...
 │   ├── kernel.cfg
+├── mkfs.py
 ├── LICENSE
 ├── Makefile
 └── README.md

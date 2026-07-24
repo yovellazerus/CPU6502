@@ -61,8 +61,8 @@ $(KERN_BIN): $(KERN_SRC) $(KERN_CFG)
 	$(CL) -t none -C $(KERN_CFG) -o $@ $(KERN_SRC)
 
 # 4. Disk Image build
-$(DISK_IMG): $(KERN_BIN) $(MACH_DIR)/mkfs.py
-	$(PYTHON) $(MACH_DIR)/mkfs.py
+$(DISK_IMG): $(KERN_BIN) ./mkfs.py
+	$(PYTHON) ./mkfs.py
 
 # ====================================================================================
 #  Execution

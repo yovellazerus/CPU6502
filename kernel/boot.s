@@ -11,11 +11,11 @@ entry:
 
     lda #<msg_banner
     ldx #>msg_banner
-    jsr print
+    jsr prints
 
     lda #<msg_load_progress
     ldx #>msg_load_progress
-    jsr print
+    jsr prints
 
 load_kernel:
 
@@ -43,7 +43,7 @@ load_kernel:
 
     lda #<msg_to_kernel
     ldx #>msg_to_kernel
-    jsr print
+    jsr prints
 
 to_kernel:
     jmp __KERNEL_ENTRY__
@@ -72,10 +72,10 @@ read_sector:
     lda #DISK_CMD_READ
     sta DISK_CMD
 
-wait:
+@wait:
     lda DISK_STAT
     cmp #DISK_STATUS_READY
-    bne wait
+    bne @wait
 
     lda #<DISK_BUF
     sta SRC+0
@@ -83,21 +83,21 @@ wait:
     sta SRC+1
 
     ldy #0
-copy_low_page:
+@copy_low_page:
     lda (SRC),y
     sta (BUF),y
     iny
-    bne copy_low_page
+    bne @copy_low_page
 
     inc SRC+1
     inc BUF+1
 
     ldy #0
-copy_high_page:
+@copy_high_page:
     lda (SRC),y
     sta (BUF),y
     iny
-    bne copy_high_page
+    bne @copy_high_page
     rts
 
 ;;
@@ -114,19 +114,19 @@ putchar:
   rts
 
 ;;
-;; void print(const char* str)
+;; void prints(const char* str)
 ;;
-print:
+prints:
   sta STR+0
   stx STR+1
   ldy #0
-print_loop:
+@loop:
   lda (STR),y
-  beq print_end
+  beq @end
   jsr putchar
   iny
-  bne print_loop
-print_end:
+  bne @loop
+@end:
   rts
        
 msg_banner:          .byte "**** boot loader v1.0 ****", $0a, 0
@@ -137,3 +137,5 @@ scb:
     .word __KERNEL_START__   ;; buffer
     .word __KERNEL_LBA__     ;; lba
 
+;; must be last
+canary: .byte "CANARY"

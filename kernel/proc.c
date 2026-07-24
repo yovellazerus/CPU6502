@@ -1,10 +1,71 @@
 
 #include "comman.h"
 
+typedef enum Proc_State{
+    PROC_STATE_UNUSED = 0,
+    PROC_STATE_USED,
+    PROC_STATE_READY,
+    PROC_STATE_RUNING,
+    PROC_STATE_SLEEPING,
+    PROC_STATE_ZOMBIE
+} Proc_State;
+
+// order is importent for trampoline!
+typedef struct Context {
+    uint8_t sp;
+    uint8_t p;
+    uint16_t pc; 
+    uint8_t x;
+    uint8_t y;
+    uint8_t a;
+} Context;
+
+typedef struct Proc {
+
+    // CPU and memory context
+    Context ctx; 
+    uint8_t page_table[PAGE_TABLE_SIZE];
+    uint16_t top;
+     
+    // scheduler
+    Proc_State state; 
+    uint16_t pid;                   
+    uint8_t  uid;           
+    uint8_t  gid;           
+    uint8_t  ecode;         
+    uint8_t  priority;      
+    uint8_t  ticks;   
+
+    // IPC
+    struct Proc* parent;    
+    void* wchan;       
+    uint8_t  killed;      
+
+    // file system
+    uint16_t cwd_inode;     
+    uint8_t  fd_table[MAX_FILES_PER_PROC];          
+
+    // debug 
+    char name[16];
+
+} Proc;
+
 Proc proc_table[MAX_PROC_COUNT];
-Proc* current_proc;
+Proc* init_process;
+Proc* current_process;
 
 uint16_t next_pid = 1; // global pid counter
+
+void proc_init(void){
+    uint16_t i;
+    memset(proc_table, 0, sizeof(proc_table));
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        proc_table[i].state = PROC_STATE_UNUSED;
+    }
+    init_process = NULL;
+    current_process = NULL;
+    next_pid = 1;
+}
 
 Proc* palloc(void){
     Proc* p = 0;
@@ -35,7 +96,7 @@ Proc* palloc(void){
     p->parent = 0;
     p->wchan = 0;
     p->killed = 0;
-    p->sz = 0;
+    p->top = 0;
 
     for (i = 0; i < 16; i++) {
         p->page_table[i] = FRAME_UNUSED;
@@ -129,10 +190,9 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
 }
 
 // Copy the process's CPU context and page table into the Trap Segment "Life Raft"
-void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table, uint8_t* kernel_page_table){
+void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table){
     memcpy(life_raft, ctx, sizeof(*ctx));
     memcpy(life_raft + 8, user_page_table, 16);
-    memcpy(life_raft + 8 + 16, kernel_page_table, 16);
 }
 
 void scheduler(void) {
@@ -151,11 +211,11 @@ void scheduler(void) {
             asm("sei");
             
             p->state = PROC_STATE_RUNING;
-            current_proc = p;
+            current_process = p;
             
             p->ticks = QUANTUM; 
 
-            copy_to_life_raft(&p->ctx, p->page_table, kernel_page_table);
+            copy_to_life_raft(&p->ctx, p->page_table);
 
             // no return
             return_from_trap(); 
@@ -166,4 +226,45 @@ void scheduler(void) {
             round_robin_index = 0;
         }
     }
+}
+
+// TODO: nor real implementation, just a test0
+void run_init_process(void){
+
+    Context ctx = {
+       0xff,
+       0x00,
+       0x0200,
+       0x00,
+       0x00,
+       0x00
+    };
+
+    // testing that writing to MMU is not possible from user space
+    uint8_t init_code[] = {
+        0xa9, 0x42,          // lda #$42
+        0x8d, 0x2f, 0xfe,    // sta $SEG15
+        0x4c, 0x05, 0x02,    // jmp $0205
+    };
+
+    int i;
+
+    // user space test
+    init_process = palloc();
+    if(!init_process){
+        panic("palloc");
+    }
+    memcpy(&init_process->ctx, &ctx, sizeof(Context));
+
+    // for this test0
+    for(i = 0; i < PAGE_TABLE_SIZE; i++){
+        init_process->page_table[i] = kalloc();
+        if(init_process->page_table[i] == FRAME_UNUSED){
+            panic("no more frames");
+        }
+    }
+    if(copy_to_user(init_code, 0x0200, sizeof(init_code), init_process->page_table) < 0){
+        panic("copy_to_user");
+    }
+    init_process->state = PROC_STATE_READY;
 }

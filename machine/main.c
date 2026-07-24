@@ -34,7 +34,6 @@ typedef struct {
 
 typedef struct {
     uint8_t page_table[16];
-    uint8_t rom_enable;
 } MMU;
 
 static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
@@ -50,6 +49,7 @@ typedef struct {
       
     CPU* cpu;
     uint8_t* ram;
+    uint8_t  rom_enable;
     uint8_t* rom;
     Uart* uart;
     Disk* disk;
@@ -99,11 +99,11 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     // ---------------- MMU ----------------
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table))
         return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
-    if (physical_addr == MMU_ROM_ENABLE) return m->mmu->rom_enable;
 
     // ---------------- ROM ----------------
+    if (physical_addr == ROM_ENABLE) return m->rom_enable;
     if (physical_addr >= ROM_BASE && physical_addr < ROM_BASE + ROM_SIZE) {
-        if (m->mmu->rom_enable) {
+        if (m->rom_enable) {
             return m->rom[physical_addr - ROM_BASE];
         }
         // If rom_enable is false, fall through to read the RAM underneath it
@@ -161,8 +161,10 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
         m->mmu->page_table[physical_addr - MMU_PAGE_TABLE] = byte;
         return;
     }
-    if (physical_addr == MMU_ROM_ENABLE){
-        m->mmu->rom_enable = byte;
+
+    // ---------------- ROM ENABLE ----------------
+    if (physical_addr == ROM_ENABLE){
+        m->rom_enable = byte;
         return;
     } 
 
@@ -246,7 +248,6 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     for (uint8_t i = 0; i < 16; i++) {
         m->mmu->page_table[i] = i; 
     }
-    m->mmu->rom_enable = MMU_ROM_ENABLE_TRUE;
         
     // ROM
     FILE* rom_img = fopen(rom_path, "rb");
@@ -261,6 +262,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
         return NULL; 
     }
     fclose(rom_img);
+    m->rom_enable = ROM_ENABLE_TRUE;
     
     // disk
     if(disk_path){
