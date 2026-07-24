@@ -38,7 +38,7 @@ struct Proc {
 
     // inter process communication
     struct Proc* parent;    
-    void* wchan;       
+    void* channel;       
     uint8_t  killed;      
 
     // file system
@@ -108,6 +108,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     uint16_t bytes_in_page;
     uint16_t chunk;
     uint8_t* dst_window;
+    uint8_t old_frame;
     uint16_t i;
     uint8_t* src = (uint8_t*)kernel_src;
     
@@ -121,6 +122,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
             return -1; // segfault
         }
         
+        old_frame = MMIO8(MMU_PAGE_TABLE + 1);
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
         bytes_in_page = 4096 - offset;
@@ -135,7 +137,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         n -= chunk;
         user_dest += chunk;
     }
-    
+    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
     return 0; // success
 }
 
@@ -146,6 +148,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
     uint16_t bytes_in_page;
     uint16_t chunk;
     uint8_t* src_window;
+    uint8_t old_frame;
     uint16_t i;
     uint8_t* dst = (uint8_t*)kernel_dest;
     
@@ -159,6 +162,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
             return -1; // segfault
         }
         
+        old_frame = MMIO8(MMU_PAGE_TABLE + 1);
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
         bytes_in_page = 4096 - offset;
@@ -173,7 +177,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
         n -= chunk;
         user_src += chunk;
     }
-    
+    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
     return 0; // success
 }
 
@@ -183,10 +187,34 @@ void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table){
     memcpy(life_raft + 8, user_page_table, 16);
 }
 
+void sleep(void* channel) {
+    __asm__("sei");
+    current_process->channel = channel;
+    current_process->state = PROC_STATE_SLEEPING;
+    scheduler(); 
+}
+
+void wakeup(void* channel){
+    uint8_t i;
+    for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
+        if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
+            proc_table[i].state = PROC_STATE_READY;
+        }
+    }
+}
+
 void scheduler(void) {
     
     static uint8_t round_robin_index = 0;
     Proc* p;
+
+    // destruction of stacks to avoid the "Trail of Breadcrumbs"
+    __asm__("lda #<__STACK_START__");
+    __asm__("sta c_sp+0");
+    __asm__("lda #>__STACK_START__");
+    __asm__("sta c_sp+1");
+    __asm__("ldx #$ff");
+    __asm__("txs");
 
     while (1) {
         
@@ -216,7 +244,6 @@ void scheduler(void) {
     }
 }
 
-// TODO: not real implementation, just a test0
 void run_init_process(void){
 
     Context ctx = {
