@@ -27,9 +27,8 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
-typedef enum Proc_State Proc_State;
-typedef struct Context Context;
-typedef struct Proc Proc;
+// form cc65
+extern void* memset(void *dst, int value, uint16_t size);
 
 // trampoline.s
 extern uint8_t life_raft[];
@@ -44,9 +43,9 @@ uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
 // trap.c
-void _kernel_brk(void);
-void _kernel_irq(void);
-void _kernel_nmi(void);
+void kernel_brk(void);
+void kernel_irq(void);
+void kernel_nmi(void);
 
 // io.c
 void panic(const char *fmt, ...);
@@ -62,10 +61,12 @@ char*   strchr(const char* s, char c);
 int     atoi(const char *s);
 void*   memmove(void *vdst, const void *vsrc, int n);
 int     memcmp(const void *s1, const void *s2, uint16_t n);
-extern void* memset(void *dst, int value, uint16_t size); // form cc65
 void*   memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
+typedef enum Proc_State Proc_State;
+typedef struct Context Context;
+typedef struct Proc Proc;
 void scheduler(void);
 void run_init_process(void);
 void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table);

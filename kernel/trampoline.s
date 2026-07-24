@@ -9,7 +9,7 @@
 .import _kernel_nmi
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
-USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code, doing double duty as canary
+USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
 
 .global _irq_handler
 _irq_handler:

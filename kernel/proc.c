@@ -1,26 +1,26 @@
 
 #include "comman.h"
 
-typedef enum Proc_State{
+enum Proc_State{
     PROC_STATE_UNUSED = 0,
     PROC_STATE_USED,
     PROC_STATE_READY,
     PROC_STATE_RUNING,
     PROC_STATE_SLEEPING,
     PROC_STATE_ZOMBIE
-} Proc_State;
+};
 
 // order is importent for trampoline!
-typedef struct Context {
+struct Context {
     uint8_t sp;
     uint8_t p;
     uint16_t pc; 
     uint8_t x;
     uint8_t y;
     uint8_t a;
-} Context;
+};
 
-typedef struct Proc {
+struct Proc {
 
     // CPU and memory context
     Context ctx; 
@@ -36,7 +36,7 @@ typedef struct Proc {
     uint8_t  priority;      
     uint8_t  ticks;   
 
-    // IPC
+    // inter process communication
     struct Proc* parent;    
     void* wchan;       
     uint8_t  killed;      
@@ -48,13 +48,20 @@ typedef struct Proc {
     // debug 
     char name[16];
 
-} Proc;
+};
 
 Proc proc_table[MAX_PROC_COUNT];
 Proc* init_process;
 Proc* current_process;
 
-uint16_t next_pid = 1; // global pid counter
+static uint16_t next_pid = 1; // global pid counter
+
+static int pid_alloc(void){
+    int pid = next_pid;
+    if(pid == 0) panic("pid_alloc");
+    next_pid++;
+    return pid;
+}
 
 void proc_init(void){
     uint16_t i;
@@ -67,38 +74,27 @@ void proc_init(void){
     next_pid = 1;
 }
 
+// create a new Proc struct with empty page table, new pid, SP in a READY state 
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
 
-    for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+    for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
             p = &proc_table[i];
             break;
         }
     }
-
-    // If no slots are available, return null pointer
-    if (p == 0) {
-        return 0; 
+    // not found
+    if (p == NULL) {
+        return NULL; 
     }
 
+    memset(p, 0, sizeof(*p));
     p->state = PROC_STATE_USED;
-    p->pid = next_pid++; 
-
-    p->ctx.a = 0;
-    p->ctx.x = 0;
-    p->ctx.y = 0;
-    p->ctx.p = 0;
-    p->ctx.sp = 0xFF;
-    p->ctx.pc = 0;
-    
-    p->parent = 0;
-    p->wchan = 0;
-    p->killed = 0;
-    p->top = 0;
-
-    for (i = 0; i < 16; i++) {
+    p->pid = pid_alloc(); 
+    p->ctx.sp = 0xff;
+    for (i = 0; i < PAGE_TABLE_SIZE; i++) {
         p->page_table[i] = FRAME_UNUSED;
     }
 
@@ -119,10 +115,6 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         
         seg = user_dest >> 12;
         offset = user_dest & 0x0FFF;
-        
-        if (seg >= 15) {
-            return -1; // segfault
-        }
         
         physical_frame = page_table[seg];
         if (physical_frame == 0) {
@@ -161,10 +153,6 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
         
         seg = user_src >> 12;
         offset = user_src & 0x0FFF;
-        
-        if (seg >= 15) {
-            return -1; // segfault
-        }
         
         physical_frame = page_table[seg];
         if (physical_frame == 0) {
@@ -228,43 +216,44 @@ void scheduler(void) {
     }
 }
 
-// TODO: nor real implementation, just a test0
+// TODO: not real implementation, just a test0
 void run_init_process(void){
 
     Context ctx = {
-       0xff,
-       0x00,
-       0x0200,
-       0x00,
-       0x00,
-       0x00
+       0xff,   // SP
+       'P',    // P
+       0x0200, // PC
+       'X',    // X
+       'Y',    // Y
+       'A'     // A
     };
 
-    // testing that writing to MMU is not possible from user space
+    // for testing, not the real init code
     uint8_t init_code[] = {
-        0xa9, 0x42,          // lda #$42
-        0x8d, 0x2f, 0xfe,    // sta $SEG15
-        0x4c, 0x05, 0x02,    // jmp $0205
+        0x8d, 0x00, 0x03,    // sta $0300
+        0x8e, 0x01, 0x03,    // stx $0301
+        0x8c, 0x02, 0x03,    // sty $0302
+        0x08,                // php
+        0x68,                // pla
+        0x8d, 0x03, 0x03,    // sta $0303
+        0x4c, 0x0e, 0x02,    // jmp $020e
     };
 
-    int i;
-
-    // user space test
     init_process = palloc();
     if(!init_process){
         panic("palloc");
     }
+
     memcpy(&init_process->ctx, &ctx, sizeof(Context));
 
-    // for this test0
-    for(i = 0; i < PAGE_TABLE_SIZE; i++){
-        init_process->page_table[i] = kalloc();
-        if(init_process->page_table[i] == FRAME_UNUSED){
-            panic("no more frames");
-        }
+    init_process->page_table[0] = kalloc();
+    if(init_process->page_table[0] == FRAME_UNUSED){
+        panic("kalloc");
     }
+
     if(copy_to_user(init_code, 0x0200, sizeof(init_code), init_process->page_table) < 0){
         panic("copy_to_user");
     }
+
     init_process->state = PROC_STATE_READY;
 }
