@@ -94,11 +94,6 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
 
-    // vector pull
-    if(MCS6502_NMI_LO <= addr){
-        m->mmu->page_table[15] = 15;
-    }
-
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
 
     // ---------------- MMU ----------------
@@ -372,6 +367,11 @@ bool Machine_step(Machine* m){
     
     // CPU
     for(int i = 0; i < CPU_PER_STEP; i++){
+
+        // is it going to execute "brk"?
+        if(Machine_read(m->cpu->pc, m) == 0x00){
+            m->mmu->page_table[15] = 15;
+        }
 
         MCS6502ExecResult r = MCS6502ExecNext(m->cpu);
     
