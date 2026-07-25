@@ -24,14 +24,6 @@ The project aims to faithfully reproduce the behavior of the 6502, including its
 
 ## Project Structure:
 .
-├── src/
-│   ├── cpu.c
-│   ├── instruction.c
-│   ├── main.c
-├── include/
-│   ├── ansi_codes.h
-│   ├── cpu.h
-│   ├── instruction.h
 ├── machine/
 │   ├── main.c
 │   ├── ...
