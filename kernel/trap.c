@@ -11,7 +11,7 @@ void kernel_brk(void){
     // appdate the current process Proc struct
     copy_from_life_raft(current_process);
 
-    // get the syscall number and call it
+    // get the syscall and call it
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
     if(!syscall){
@@ -19,7 +19,7 @@ void kernel_brk(void){
         // TODO: terminate process
     }
     else{
-        // NOTE: it is the responsibility of the system call to populate the syscall argument
+        // NOTE: it is the responsibility of the system call to fetch and parse it's arguments
         return_value = syscall();
     }
 

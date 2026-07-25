@@ -256,30 +256,30 @@ void run_init_process(void){
 
     Context ctx = {
        0xff,   // SP
-       'P',    // P
+       0x00,   // P
        0x0200, // PC
-       'X',    // X
-       'Y',    // Y
-       'A'     // A
+       0x00,   // X
+       0x00,   // Y
+       0x00    // A
     };
 
     // for testing, not the real init code
     uint8_t init_code[] = {
-        0x8d, 0x00, 0x03,       // sta $0300
-        0x8e, 0x01, 0x03,       // stx $0301
-        0x8c, 0x02, 0x03,       // sty $0302
-        0x08,                   // php
-        0x68,                   // pla
-        0x8d, 0x03, 0x03,       // sta $0303
 
-        0xa0, 0x42,             // ldy SYS_WRITE(0x42)
-        0xa9, 0x19,             // lda #<arg 
+        0xa0, SYS_WRITE,        // ldy SYS_WRITE
+        0xa9, 0x14,             // lda #<arg 
         0xa2, 0x02,             // ldx #>arg
         0x00,                   // brk
         0xea,                   // nop
-        0x4c, 0x16, 0x02,       // jmp *
-        0x0d, 0x00,             // arg.size   = 0x000d   
-        0x1d, 0x02,             // arg.buffer = 0x021d
+
+        0x8d, 0x00, 0x03,       // sta $0300
+        0x8e, 0x01, 0x03,       // stx $0301
+        0x8c, 0x02, 0x03,       // sty $0302
+
+        0x4c, 0x11, 0x02,       // jmp *
+
+        0x0d, 0x00,             // arg.size
+        0x18, 0x02,             // arg.buffer
         'i', 'n', 'i', 't', ':', ' ', 'h', 'e', 'l', 'l', 'o', '!', '\n', '\0'
     };
 

@@ -48,7 +48,7 @@ typedef int (*Syscall)(void);
 extern Syscall syscalls_table[256];
 void syscall_init(void);
 
-#define SYS_WRITE 0x42
+#define SYS_WRITE 'Y'
 
 int sys_write(void);
 
@@ -58,11 +58,9 @@ void kernel_irq(void);
 void kernel_nmi(void);
 
 // io.c
-void putc(char c);
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
-char getc(void);
 uint16_t gets(char *buf, int max);
 
 // timer.c

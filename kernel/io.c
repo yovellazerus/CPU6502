@@ -3,7 +3,7 @@
 
 static const char digits[] = "0123456789abcdef";
   
-void putc(char c){
+static void putc(char c){
     while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)){/* busy wait */};
     MMIO8(UART_TX) = c;
 }
@@ -121,7 +121,7 @@ void panic(const char *fmt, ...){
     va_end(ap);
 }
 
-char getc(void){
+static char getc(void){
     while(!(MMIO8(UART_STAT) & UART_STATUS_RX_READY)){/* busy wait */};
     return MMIO8(UART_RX);
 }

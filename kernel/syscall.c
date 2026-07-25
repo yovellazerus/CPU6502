@@ -46,7 +46,7 @@ int sys_write(void){
     }
 
     if(syscall_arg.write.size >= sizeof(kernel_buffer)){
-        printk("write syscall is limited to 256 bytes for now...");
+        printk("write syscall is limited to %d bytes for now...", sizeof(kernel_buffer));
         return -1;
     }
 
