@@ -42,8 +42,17 @@ void kalloc_init(void);
 uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
-// trap.c
+// syscall.c
+typedef union Syscall_Arg Syscall_Arg;
+typedef int (*Syscall)(void);
+extern Syscall syscalls_table[256];
 void syscall_init(void);
+
+#define SYS_WRITE 0x42
+
+int sys_write(void);
+
+// trap.c
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
