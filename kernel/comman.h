@@ -55,6 +55,11 @@ void vprintk(const char *fmt, va_list ap);
 char getc(void);
 uint16_t gets(char *buf, int max);
 
+// timer.c
+void timer_init(void);
+void timer_puse(void);
+void timer_resume(void);
+
 // string.c
 char*   strcpy(char *s, const char *t);
 int     strcmp(const char *p, const char *q);
@@ -67,18 +72,31 @@ void*   memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
 typedef enum Proc_State Proc_State;
-typedef struct Context Context;
+// order is importent for trampoline!
+typedef struct Context {
+    uint8_t sp;
+    uint8_t p;
+    uint16_t pc; 
+    uint8_t x;
+    uint8_t y;
+    uint8_t a;
+} Context;
 typedef struct Proc Proc;
+extern Proc* current_process;
+void interrupts_enable(void);
+void interrupts_disable(void);
 void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);
 void run_init_process(void);
-void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table);
-int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t* page_table);
+void copy_to_life_raft(Proc* p);
+void copy_from_life_raft(Proc* p);
+int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
 void proc_init(void);
 Proc* palloc(void);
-uint8_t proc_get_frame(uint8_t segment);
+const Context* proc_get_ctx(const Proc* p);
+const uint8_t* proc_get_page_table(const Proc* p);
 
 #endif // COMMAN_H
 

@@ -10,16 +10,6 @@ enum Proc_State{
     PROC_STATE_ZOMBIE
 };
 
-// order is importent for trampoline!
-struct Context {
-    uint8_t sp;
-    uint8_t p;
-    uint16_t pc; 
-    uint8_t x;
-    uint8_t y;
-    uint8_t a;
-};
-
 struct Proc {
 
     // CPU and memory context
@@ -56,9 +46,12 @@ Proc* current_process;
 
 static int pid_alloc(void){
     static uint16_t next_pid = 1;
-    int pid = next_pid;
+    int pid ;
+    interrupts_disable();
+    pid = next_pid;
     if(pid == 0) panic("pid_alloc");
     next_pid++;
+    interrupts_enable();
     return pid;
 }
 
@@ -72,11 +65,12 @@ void proc_init(void){
     current_process = NULL;
 }
 
-// create a new Proc struct with empty page table, new pid, SP in a READY state 
+// create a new Proc struct with empty page table, new pid and SP in a USED state 
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
 
+    interrupts_disable();
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
             p = &proc_table[i];
@@ -95,13 +89,17 @@ Proc* palloc(void){
     for (i = 0; i < PAGE_TABLE_SIZE; i++) {
         p->page_table[i] = FRAME_UNUSED;
     }
+    interrupts_enable();
 
     return p;
 }
 
-uint8_t proc_get_frame(uint8_t segment){
-    if(!current_process || segment >= PAGE_TABLE_SIZE) return FRAME_UNUSED;
-    return current_process->page_table[segment];
+const Context* proc_get_ctx(const Proc* p){
+    return &p->ctx;
+}
+
+const uint8_t* proc_get_page_table(const Proc* p){
+    return p->page_table;
 }
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
@@ -144,7 +142,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     return 0; // success
 }
 
-int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t* page_table){
+int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table){
     uint16_t offset;
     uint8_t seg;
     uint8_t physical_frame;
@@ -185,23 +183,44 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, uint8_t*
 }
 
 // Copy the process's CPU context and page table into the Trap Segment "Life Raft"
-void copy_to_life_raft(const Context* ctx, uint8_t* user_page_table){
-    memcpy(life_raft, ctx, sizeof(*ctx));
-    memcpy(life_raft + 8, user_page_table, 16);
+void copy_to_life_raft(Proc* p){
+    memcpy(life_raft, &p->ctx,sizeof(Context));
+    memcpy(life_raft + 8, p->page_table, PAGE_TABLE_SIZE);
 }
 
+void copy_from_life_raft(Proc* p){
+    memcpy(&p->ctx, life_raft, sizeof(Context));
+    memcpy(p->page_table, life_raft + 8, PAGE_TABLE_SIZE);
+}
+
+void interrupts_enable(void){
+    timer_resume();
+    asm("cli");
+}
+
+void interrupts_disable(void){
+    timer_puse();
+    asm("sei");
+}
+
+// will yield the cpu
 void sleep(void* channel){
+    interrupts_disable();
     current_process->channel = channel;
-    current_process->state = PROC_STATE_SLEEPING; 
+    current_process->state = PROC_STATE_SLEEPING;
+    interrupts_enable(); 
+    scheduler();
 }
 
 void wakeup(void* channel){
     uint8_t i;
+    interrupts_disable();
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
         }
     }
+    interrupts_enable();
 }
 
 void scheduler(void) {
@@ -209,30 +228,22 @@ void scheduler(void) {
     static uint8_t round_robin_index = 0;
     Proc* p;
 
-    // destruction of stacks to avoid the "Trail of Breadcrumbs"
-    __asm__("lda #<__STACK_START__");
-    __asm__("sta c_sp+0");
-    __asm__("lda #>__STACK_START__");
-    __asm__("sta c_sp+1");
-    __asm__("ldx #$ff");
-    __asm__("txs");
-
     while (1) {
         
-        asm("cli");
+        interrupts_enable(); // to avoid deadlock
 
         p = &proc_table[round_robin_index];
         
         if (p->state == PROC_STATE_READY) {
             
-            asm("sei");
+            interrupts_disable();
             
             p->state = PROC_STATE_RUNING;
             current_process = p;
             
             p->ticks = QUANTUM; 
 
-            copy_to_life_raft(&p->ctx, p->page_table);
+            copy_to_life_raft(current_process);
 
             // no return
             return_from_trap(); 
@@ -258,18 +269,21 @@ void run_init_process(void){
 
     // for testing, not the real init code
     uint8_t init_code[] = {
-        0x8d, 0x00, 0x03,    // sta $0300
-        0x8e, 0x01, 0x03,    // stx $0301
-        0x8c, 0x02, 0x03,    // sty $0302
-        0x08,                // php
-        0x68,                // pla
-        0x8d, 0x03, 0x03,    // sta $0303
-        0xa9, 0x17,          // lda #<msg 
-        0xa2, 0x02,          // ldx #>msg
-        0x00,                // brk
-        0xea,                // nop
-        0x4c, 0x14, 0x02,    // jmp *
-        'H', 'e', 'l', 'l', 'o', '\0'
+        0x8d, 0x00, 0x03,       // sta $0300
+        0x8e, 0x01, 0x03,       // stx $0301
+        0x8c, 0x02, 0x03,       // sty $0302
+        0x08,                   // php
+        0x68,                   // pla
+        0x8d, 0x03, 0x03,       // sta $0303
+
+        0xa9, 0x17,             // lda #<arg 
+        0xa2, 0x02,             // ldx #>arg
+        0x00,                   // brk
+        0xea,                   // nop
+        0x4c, 0x14, 0x02,       // jmp *
+        0x11, 0x00,             // arg.size   = 0x0011   
+        0x1b, 0x02,             // arg.buffer = 0x021b
+        'H', 'e', 'l', 'l', 'o', ' ', 'f', 'r', 'o', 'm', ' ', 'i', 'n', 'i', 't', '!', '\0'
     };
 
     init_process = palloc();

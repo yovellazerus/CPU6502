@@ -1,38 +1,66 @@
 
 #include "comman.h"
 
-// a toy example for a syscall from user space! 
-void kernel_brk(void){
-    uint8_t old_frame;
+typedef union Syscall_Arg{
+    struct {
+        uint16_t size;
+        void* buffer;
+    } write;
+    // ...
+} Syscall_Arg;
+
+uint8_t kernel_buffer[256];
+
+// fetch the raw argument int AX (X is High, A is Low)
+static uint16_t fetch_raw(Proc* p){
     uint8_t a;
     uint8_t x;
-    uint16_t logical_ptr;
-    uint8_t user_seg;
-    uint16_t offset;
-    uint8_t physical_frame;
-    char* str;
+    uint16_t ax;
+    a = (uint8_t)proc_get_ctx(p)->a;
+    x = (uint8_t)proc_get_ctx(p)->x;
+    ax = ((uint16_t)x << 8) | a;
+    return ax;
+}
+
+// a toy example for a syscall from user space! 
+void kernel_brk(void){
+    uint16_t ax;
+    const uint8_t* user_page_table;
+    Syscall_Arg syscall_arg;
+
+    interrupts_disable();
     
-    // X is High, A is Low
-    a = life_raft[6];
-    x = life_raft[4];
-    logical_ptr = ((uint16_t)x << 8) | a;
+    // appdate the current process Proc struc
+    copy_from_life_raft(current_process);
 
-    user_seg = logical_ptr >> 12;
-    offset = logical_ptr & 0x0FFF;
+    ax = fetch_raw(current_process);
 
-    physical_frame = proc_get_frame(user_seg);
+    user_page_table = proc_get_page_table(current_process);
 
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-    MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
-
-    str = (char*)(WINDOW1 + offset);
-
-    while (*str != '\0') {
-        putc(*str);
-        str++;
+    // populate the system call argument
+    if(copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), user_page_table) < 0){
+        printk("syscall_arg pointer out of user space!");
+        goto abort;
     }
 
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+    if(syscall_arg.write.size >= sizeof(kernel_buffer)){
+        printk("write syscall is limited to 256 bytes for now...");
+        goto abort;
+    }
+
+    // take the data from the user pointer to the kernel buffer
+    if(copy_from_user(kernel_buffer, (uint16_t)syscall_arg.write.buffer, syscall_arg.write.size, user_page_table) < 0){
+        printk("user pointer out of user space!");
+        goto abort;
+    }
+
+    // TODO: console write
+    printk("%s", kernel_buffer);
+
+abort:
+    copy_to_life_raft(current_process);
+
+    interrupts_enable();
 
     return_from_trap();
 }

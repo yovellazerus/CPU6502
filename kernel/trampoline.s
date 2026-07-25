@@ -1,6 +1,9 @@
 
 .segment "TRAMPOLINE"
 
+.import __STACK_START__ 
+
+.importzp c_sp
 .importzp ptr1
 .importzp ptr2
 
@@ -79,6 +82,14 @@ _nmi_handler:
 ; void return_from_trap(void);
 .global _return_from_trap
 _return_from_trap:  
+
+    ;; destruction of kernel stacks to avoid the "Trail of Breadcrumbs"
+    lda #<__STACK_START__
+    sta c_sp + 0
+    lda #>__STACK_START__
+    sta c_sp + 1
+    ldx #$ff
+    txs
 
     ;; restore user memory space form life raft
     ldx #$00          

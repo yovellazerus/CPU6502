@@ -8,15 +8,13 @@ void hardware_init(void){
     MMIO16(0xfffa) = (uint16_t)nmi_handler;
     MMIO16(0xfffe) = (uint16_t)irq_handler;
 
+    timer_init();
+
     // ...
 }
 
 void fs_init(void){
 
-}
-
-void start_timer(void){
-    
 }
 
 void main(void) {
@@ -31,8 +29,7 @@ void main(void) {
 
     run_init_process();
 
-    start_timer();
-    asm("cli");
+    interrupts_enable();
 
     // no return
     scheduler();
