@@ -19,6 +19,15 @@
 
 #define MMU_PAGE_TABLE  0x0000fe20 // 16 bytes
 
+#define TIMER_ENABLE        0x0000fe40
+#define TIMER_DISABLE       0x0000fe41            
+#define TIMER_LATCH_LOW     0x0000fe42
+#define TIMER_LATCH_HIGH    0x0000fe43
+#define TIMER_COUNTER_LOW   0x0000fe44
+#define TIMER_COUNTER_HIGH  0x0000fe45
+#define TIMER_CTRL          0x0000fe46
+
+
 #define ROM_ENABLE  0x0000fef0
 #define ROM_BASE     0x0000ff00
 #define ROM_SIZE     0x0100
@@ -49,6 +58,11 @@ typedef enum {
     ROM_ENABLE_FALSE = 0,
     ROM_ENABLE_TRUE = 1,
 } ROM_Status;
+
+typedef enum {
+    TIME_ENABLE_FALSE = 0,
+    TIME_ENABLE_TRUE = 1,
+} Timer_Ctrl;
 
 typedef enum {
     DISK_STATUS_NONE  = 0,

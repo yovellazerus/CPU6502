@@ -30,8 +30,8 @@ void main(void) {
 
     printk("kernel: starting init process...\n");
     run_init_process();
-
-    interrupts_enable();
+    run_extra_process();
+    run_extra_process2();
 
     // no return
     scheduler();

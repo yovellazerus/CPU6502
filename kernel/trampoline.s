@@ -12,10 +12,16 @@
 .import _kernel_nmi
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
+TIMER_DISABLE  = $fe41 ;; 1 byte 
+TIMER_ENABLE   = $fe40 ;; 1 byte
 USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
 
 .global _irq_handler
 _irq_handler:
+
+    ;; pause timer NMI
+    sta TIMER_DISABLE
+
     ;; save user CPU registers to the life raft
     sta user_context + 6
     sty user_context + 5
@@ -51,6 +57,10 @@ _irq_handler:
 
 .global _nmi_handler
 _nmi_handler:
+
+    ;; pause timer NMI
+    sta TIMER_DISABLE
+
     ;; save user CPU registers to the life raft
     sta user_context + 6
     sty user_context + 5
@@ -124,6 +134,10 @@ _return_from_trap:
     inx
     cpx #(in_user_return_stub_end - in_user_return_stub)         
     bne @stub_loop
+
+    ;; resume timer NMI
+    sta TIMER_ENABLE
+
     jmp USER_RTI     
 
 in_user_return_stub:

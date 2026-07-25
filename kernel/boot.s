@@ -134,5 +134,3 @@ scb:
     .word __KERNEL_START__   ;; buffer
     .word __KERNEL_LBA__     ;; lba
 
-;; must be last
-canary: .byte "CANARY"

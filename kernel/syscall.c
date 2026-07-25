@@ -35,13 +35,15 @@ int sys_write(void){
     uint16_t ax;
     const uint8_t* user_page_table;
 
+    memset(kernel_buffer, 0, sizeof(kernel_buffer));
+
     ax = fetch_raw(current_process);
 
     user_page_table = proc_get_page_table(current_process);
 
     // populate the system call argument
     if(copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), user_page_table) < 0){
-        printk("syscall_arg pointer out of user space!");
+        printk("syscall_arg pointer out of user space!\n");
         return -1;
     }
 

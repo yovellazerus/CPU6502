@@ -14,6 +14,7 @@
 
 /* ======== MMIO devices ===========================================================*/
 
+typedef struct Machine Machine;
 typedef MCS6502ExecutionContext CPU;
 
 typedef struct {
@@ -43,9 +44,17 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     return (frame << 12) | offset;
 }
 
-/* ======== the Machine itself ===========================================================*/
-
 typedef struct {
+    uint8_t ctrl;
+    uint8_t latch_low;
+    uint8_t latch_high;
+    uint8_t counter_low;
+    uint8_t counter_high;
+    Machine* m;  // conaction to the machine for triggering NMI  
+} Timer;
+
+// the Machine itself
+struct Machine {
       
     CPU* cpu;
     uint8_t* ram;
@@ -54,9 +63,27 @@ typedef struct {
     Uart* uart;
     Disk* disk;
     MMU*  mmu;
+    Timer* timer;
     // ...
 
-} Machine;
+};
+
+static void Timer_step(Timer* timer){
+    if(!timer || timer->ctrl == TIME_ENABLE_FALSE) return;
+    uint16_t counter = (uint16_t)timer->counter_high << 8;
+    counter |= (uint16_t)timer->counter_low;
+    // the timer has expired
+    if(--counter == 0){
+        timer->counter_high = timer->latch_high;
+        timer->counter_low = timer->latch_low;
+        timer->m->mmu->page_table[15] = 15;
+        MCS6502NMI(timer->m->cpu);
+        return;
+    }
+    // commit to the counter
+    timer->counter_high = (uint8_t)(counter >> 8);
+    timer->counter_low = (uint8_t)(counter >> 0);
+}
 
 uint8_t Machine_read(uint16_t addr, void* ctx);
 void    Machine_write(uint16_t addr, uint8_t byte, void* ctx);
@@ -95,6 +122,14 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     Machine* m = (Machine*)ctx;
 
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
+
+    // ---------------- TIMER ----------------
+    if(physical_addr == TIMER_CTRL) return m->timer->ctrl;
+    if(physical_addr == TIMER_LATCH_HIGH) return m->timer->latch_high;
+    if(physical_addr == TIMER_LATCH_LOW) return m->timer->latch_low;
+    if(physical_addr == TIMER_COUNTER_HIGH) return m->timer->counter_high;
+    if(physical_addr == TIMER_COUNTER_LOW) return m->timer->counter_low;
+
 
     // ---------------- MMU ----------------
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table))
@@ -155,6 +190,32 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     Machine* m = (Machine*)ctx;
 
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
+
+    // ---------------- TIMER ----------------
+    if(physical_addr == TIMER_ENABLE){
+        m->timer->ctrl = TIME_ENABLE_TRUE; // writing to the ctrl register tern ON the timer nmi
+        return;
+    }
+    if(physical_addr == TIMER_DISABLE){
+        m->timer->ctrl = TIME_ENABLE_FALSE; // writing to the ctrl register tern OFF the timer nmi
+        return;
+    }
+    if(physical_addr == TIMER_LATCH_HIGH){
+        m->timer->latch_high = byte;
+        return;
+    }
+    if(physical_addr == TIMER_LATCH_LOW){
+        m->timer->latch_low = byte;
+        return;
+    }
+    if(physical_addr == TIMER_COUNTER_HIGH){
+        m->timer->counter_high = byte;
+        return;
+    }
+    if(physical_addr == TIMER_COUNTER_LOW){
+        m->timer->counter_low = byte;
+        return;
+    }
 
     // ---------------- MMU ----------------
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table)){
@@ -238,11 +299,16 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->uart = (Uart*)calloc(1, sizeof(Uart));
     m->disk = (Disk*)calloc(1, sizeof(Disk));
     m->mmu = (MMU*)calloc(1, sizeof(MMU));
+    m->timer = (Timer*)calloc(1, sizeof(Timer));
 
-    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->mmu){
+    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->timer){
         Machine_destroy(m);
         return NULL;
     }
+
+    // TIMER
+    m->timer->m = m;
+    m->timer->ctrl = TIME_ENABLE_FALSE;
 
     // MMU
     for (uint8_t i = 0; i < 16; i++) {
@@ -295,6 +361,7 @@ void Machine_destroy(Machine* m) {
     free(m->rom);
     free(m->uart);
     free(m->mmu);
+    free(m->timer);
     if(m->disk->file) fclose(m->disk->file);
     free(m->disk);
     free(m->cpu);
@@ -312,7 +379,7 @@ void Machine_coredump(const Machine* m, const char* path) {
 
 bool Machine_step(Machine* m){
     if(!m) return false;
-    
+
     // keyboard
     if (_kbhit())
     {
@@ -370,8 +437,11 @@ bool Machine_step(Machine* m){
 
         // is it going to execute "brk"?
         if(Machine_read(m->cpu->pc, m) == 0x00){
-            m->mmu->page_table[15] = 15;
+            m->mmu->page_table[15] != 15 ? m->mmu->page_table[15] = 15 : false;
+            m->timer->ctrl = TIME_ENABLE_FALSE;
         }
+
+        Timer_step(m->timer);
 
         MCS6502ExecResult r = MCS6502ExecNext(m->cpu);
     

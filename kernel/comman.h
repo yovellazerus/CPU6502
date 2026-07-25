@@ -9,15 +9,20 @@
 
 #define NULL ((void*)0)
 
+#define P_I 0x04
+
 #define MAX_FILES_PER_PROC 8
 
 #define WINDOW1 0x1000
 #define WINDOW2 0x2000
 #define PAGE_TABLE_SIZE 16
-#define FRAME_UNUSED 0
+#define FRAME_UNUSED 0xff
+
+#define CIRCLES 10 // CPU steps per NMI
+
+#define QUANTUM 1  // timer ticks until context switch
 
 #define MAX_PROC_COUNT 64
-#define QUANTUM 10
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
@@ -64,6 +69,7 @@ void vprintk(const char *fmt, va_list ap);
 uint16_t gets(char *buf, int max);
 
 // timer.c
+extern volatile uint32_t systicks;
 void timer_init(void);
 void timer_puse(void);
 void timer_resume(void);
@@ -101,8 +107,8 @@ typedef struct Context {
 typedef struct Proc Proc;
 extern Proc* current_process;
 
-void interrupts_enable(void);
-void interrupts_disable(void);
+void interrupts_on(void);
+void interrupts_off(void);
 void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);
@@ -114,8 +120,15 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 void proc_init(void);
 Proc* palloc(void);
 const Context* proc_get_ctx(const Proc* p);
+uint8_t proc_get_ticks(const Proc* p);
+uint16_t proc_get_pid(const Proc* p);
+uint8_t proc_ticks_dec(Proc* p);
 void proc_set_ax(Proc* p, uint16_t ax);
+void proc_set_state(Proc* p, Proc_State state);
 const uint8_t* proc_get_page_table(const Proc* p);
 
-#endif // COMMAN_H
+// debug
+void run_extra_process(void);
+void run_extra_process2(void);;
 
+#endif // COMMAN_H

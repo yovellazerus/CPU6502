@@ -36,12 +36,9 @@ Proc* current_process;
 
 static int pid_alloc(void){
     static uint16_t next_pid = 1;
-    int pid ;
-    interrupts_disable();
-    pid = next_pid;
+    int pid = next_pid;
     if(pid == 0) panic("pid_alloc");
     next_pid++;
-    interrupts_enable();
     return pid;
 }
 
@@ -60,7 +57,6 @@ Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
 
-    interrupts_disable();
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
             p = &proc_table[i];
@@ -79,7 +75,6 @@ Proc* palloc(void){
     for (i = 0; i < PAGE_TABLE_SIZE; i++) {
         p->page_table[i] = FRAME_UNUSED;
     }
-    interrupts_enable();
 
     return p;
 }
@@ -95,6 +90,24 @@ void proc_set_ax(Proc* p, uint16_t ax){
 
 const uint8_t* proc_get_page_table(const Proc* p){
     return p->page_table;
+}
+
+uint8_t proc_get_ticks(const Proc* p){
+    return p->ticks;
+}
+
+uint16_t proc_get_pid(const Proc* p){
+    return p->pid;
+}
+
+uint8_t proc_ticks_dec(Proc* p){
+    uint8_t ticks = p->ticks;
+    p->ticks--;
+    return ticks;
+}
+
+void proc_set_state(Proc* p, Proc_State state){
+    p->state = state;
 }
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
@@ -133,7 +146,9 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         n -= chunk;
         user_dest += chunk;
     }
+
     MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+
     return 0; // success
 }
 
@@ -173,7 +188,9 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
         n -= chunk;
         user_src += chunk;
     }
+
     MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+
     return 0; // success
 }
 
@@ -188,35 +205,30 @@ void copy_from_life_raft(Proc* p){
     memcpy(p->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
 
-void interrupts_enable(void){
-    timer_resume();
+void interrupts_on(void){
     asm("cli");
 }
 
-void interrupts_disable(void){
-    timer_puse();
+void interrupts_off(void){
     asm("sei");
 }
 
 // will yield the cpu
 void sleep(void* channel){
-    interrupts_disable();
     current_process->channel = channel;
     current_process->state = PROC_STATE_SLEEPING;
-    interrupts_enable(); 
     scheduler();
 }
 
 void wakeup(void* channel){
     uint8_t i;
-    interrupts_disable();
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
             proc_table[i].channel = NULL;
         }
     }
-    interrupts_enable();
+    
 }
 
 void scheduler(void) {
@@ -226,13 +238,11 @@ void scheduler(void) {
 
     while (1) {
         
-        interrupts_enable(); // to avoid deadlock
+        // TODO: to avoid deadlock, need to enable interrupts
 
-        p = &proc_table[round_robin_index];
+        p = &proc_table[round_robin_index++];
         
         if (p->state == PROC_STATE_READY) {
-            
-            interrupts_disable();
             
             p->state = PROC_STATE_RUNING;
             current_process = p;
@@ -241,13 +251,10 @@ void scheduler(void) {
 
             copy_to_life_raft(current_process);
 
-            interrupts_enable();
-
             // no return
             return_from_trap(); 
         }
 
-        round_robin_index++;
         if (round_robin_index >= MAX_PROC_COUNT) {
             round_robin_index = 0;
         }
@@ -255,6 +262,8 @@ void scheduler(void) {
 }
 
 void run_init_process(void){
+
+    const char* name = "init";
 
     Context ctx = {
        0xff,   // SP
@@ -278,7 +287,7 @@ void run_init_process(void){
         0x8e, 0x01, 0x03,       // stx $0301
         0x8c, 0x02, 0x03,       // sty $0302
 
-        0x4c, 0x11, 0x02,       // jmp *
+        0x4c, 0x00, 0x02,       // jmp _start
 
         0x0d, 0x00,             // arg.size
         0x18, 0x02,             // arg.buffer
@@ -301,5 +310,121 @@ void run_init_process(void){
         panic("copy_to_user");
     }
 
+    memcpy(init_process->name, name, strlen(name));
+
     init_process->state = PROC_STATE_READY;
 }
+
+// for debug
+void run_extra_process(void){
+
+    const char name[] = "Second";
+
+    Context ctx = {
+       0xff,   // SP
+       0x00,   // P
+       0x0200, // PC
+       0x00,   // X
+       0x00,   // Y
+       0x00    // A
+    };
+
+    // for testing, not the real init code
+    uint8_t code[] = {
+
+        0xa0, SYS_WRITE,        // ldy SYS_WRITE
+        0xa9, 0x14,             // lda #<arg 
+        0xa2, 0x02,             // ldx #>arg
+        0x00,                   // brk
+        0xea,                   // nop
+
+        0x8d, 0x00, 0x03,       // sta $0300
+        0x8e, 0x01, 0x03,       // stx $0301
+        0x8c, 0x02, 0x03,       // sty $0302
+
+        0x4c, 0x00, 0x02,       // jmp _start
+
+        0x12, 0x00,             // arg.size
+        0x18, 0x02,             // arg.buffer
+        's', 'e', 'c', 'o', 'n', 'd', ' ', 'p', 'r', 'o', 'c', ':', ' ', 'h', 'i', '?', '\n', '\0'
+    };
+
+    Proc* p;
+
+    p = palloc();
+    if(!p){
+        panic("palloc");
+    }
+
+    memcpy(&p->ctx, &ctx, sizeof(Context));
+
+    p->page_table[0] = kalloc();
+    if(p->page_table[0] == FRAME_UNUSED){
+        panic("kalloc");
+    }
+
+    if(copy_to_user(code, 0x0200, sizeof(code), p->page_table) < 0){
+        panic("copy_to_user");
+    }
+
+    memcpy(p->name, name, strlen(name));
+
+    p->state = PROC_STATE_READY;
+}
+
+void run_extra_process2(void){
+
+    const char name[] = "Third";
+
+    Context ctx = {
+       0xff,   // SP
+       0x00,   // P
+       0x0200, // PC
+       0x00,   // X
+       0x00,   // Y
+       0x00    // A
+    };
+
+    // for testing, not the real init code
+    uint8_t code[] = {
+
+        0xa0, SYS_WRITE,        // ldy SYS_WRITE
+        0xa9, 0x14,             // lda #<arg 
+        0xa2, 0x02,             // ldx #>arg
+        0x00,                   // brk
+        0xea,                   // nop
+
+        0x8d, 0x00, 0x03,       // sta $0300
+        0x8e, 0x01, 0x03,       // stx $0301
+        0x8c, 0x02, 0x03,       // sty $0302
+
+        0x4c, 0x00, 0x02,       // jmp _start
+
+        0x0e, 0x00,             // arg.size
+        0x18, 0x02,             // arg.buffer
+        'T', 'h', 'i', 'r', 'd', ' ', 'p', 'r', 'o', 'c','e', 's', 's', '\n', '\0'
+    };
+
+    Proc* p;
+
+    p = palloc();
+    if(!p){
+        panic("palloc");
+    }
+
+    memcpy(&p->ctx, &ctx, sizeof(Context));
+
+    p->page_table[0] = kalloc();
+    if(p->page_table[0] == FRAME_UNUSED){
+        panic("kalloc");
+    }
+
+    if(copy_to_user(code, 0x0200, sizeof(code), p->page_table) < 0){
+        panic("copy_to_user");
+    }
+
+    memcpy(p->name, name, strlen(name));
+
+    p->state = PROC_STATE_READY;
+}
+
