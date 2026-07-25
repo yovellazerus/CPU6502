@@ -28,7 +28,6 @@ struct Proc {
 
     // debug 
     char name[16];
-
 };
 
 Proc proc_table[MAX_PROC_COUNT];
@@ -214,6 +213,7 @@ void wakeup(void* channel){
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
+            proc_table[i].channel = NULL;
         }
     }
     interrupts_enable();
@@ -240,6 +240,8 @@ void scheduler(void) {
             p->ticks = QUANTUM; 
 
             copy_to_life_raft(current_process);
+
+            interrupts_enable();
 
             // no return
             return_from_trap(); 

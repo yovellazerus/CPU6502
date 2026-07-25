@@ -28,7 +28,7 @@ void main(void) {
     syscall_init();
     fs_init();
 
-    printk("kernel: starting \"init\" process...\n");
+    printk("kernel: starting init process...\n");
     run_init_process();
 
     interrupts_enable();

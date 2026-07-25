@@ -19,8 +19,6 @@
 #define MAX_PROC_COUNT 64
 #define QUANTUM 10
 
-#define TODO() panic("function \"%s\" is not implemented", __func__)
-
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #define MMIO8(register)  *(volatile uint8_t*)(register)
@@ -45,8 +43,9 @@ void kfree(uint8_t frame);
 // syscall.c
 typedef union Syscall_Arg Syscall_Arg;
 typedef int (*Syscall)(void);
-extern Syscall syscalls_table[256];
 void syscall_init(void);
+
+extern Syscall syscalls_table[256];
 
 #define SYS_WRITE 'Y'
 
@@ -58,6 +57,7 @@ void kernel_irq(void);
 void kernel_nmi(void);
 
 // io.c
+// TODO: need to be uart.c console.c and printk.c
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
@@ -79,7 +79,6 @@ int     memcmp(const void *s1, const void *s2, uint16_t n);
 void*   memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
-
 typedef enum Proc_State{
     PROC_STATE_UNUSED = 0,
     PROC_STATE_USED,
