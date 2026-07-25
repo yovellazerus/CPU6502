@@ -6,7 +6,7 @@ void hardware_init(void){
     // mapout the ROM, and install the irq/nmi kernel handlers
     MMIO8(ROM_ENABLE) = ROM_ENABLE_FALSE;
     MMIO16(0xfffa) = (uint16_t)nmi_handler;
-    MMIO16(0xfffe) = (uint16_t)irq_handler;
+    MMIO16(0xfffe) = (uint16_t)kernel_vector;
 
     timer_init();
 

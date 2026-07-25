@@ -37,10 +37,6 @@ void kernel_brk(void){
     return_from_trap();
 }
 
-void kernel_irq(void){
-    panic("kernel_irq");
-}
-
 /* 
 the kernel timer interrupt handler, 
 If the process has any quantum remaining, it will return here.
@@ -82,4 +78,18 @@ void kernel_nmi(void){
     copy_to_life_raft(current_process);
     
     return_from_trap();
+}
+
+void kernel_irq(void){
+    panic("kernel_irq");
+}
+
+// can be used for a kernel debugare?
+void kernel_software_interrupt(void){
+    panic("BRK in kernel");
+}
+
+// tray to make this a part of: kernel_irq(), or at list make kernel_irq() call it
+void device_interrupt(void){
+    panic("device_interrupt in kernel");
 }

@@ -39,6 +39,7 @@ extern uint8_t kernel_page_table[PAGE_TABLE_SIZE];
 extern void return_from_trap(void);
 extern void irq_handler(void);
 extern void nmi_handler(void);
+extern void kernel_vector(void);
 
 // kalloc.c
 void kalloc_init(void);
@@ -60,6 +61,8 @@ int sys_write(void);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
+void kernel_software_interrupt(void);
+void device_interrupt(void);
 
 // io.c
 // TODO: need to be uart.c console.c and printk.c

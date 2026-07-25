@@ -119,6 +119,8 @@ void panic(const char *fmt, ...){
     printk("PANIC: ");
     vprintk(fmt, ap);
     va_end(ap);
+    interrupts_off();
+    while (true) { /* halt */ }
 }
 
 static char getc(void){

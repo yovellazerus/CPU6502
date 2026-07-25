@@ -11,10 +11,14 @@
 .import _kernel_irq
 .import _kernel_nmi
 
+.import _kernel_software_interrupt
+.import _device_interrupt
+
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
 TIMER_DISABLE  = $fe41 ;; 1 byte 
 TIMER_ENABLE   = $fe40 ;; 1 byte
 USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
+VECTORS        = $fffa
 
 .global _irq_handler
 _irq_handler:
@@ -45,6 +49,16 @@ _irq_handler:
     inx
     cpx #$0F          ; have we done segments 0 through 14?
     bne @mmu_loop
+
+    ;; install kernel IRQ vector
+    lda #<_kernel_vector
+    sta VECTORS+4
+    lda #>_kernel_vector
+    sta VECTORS+5
+
+    ;; NOTE: for debugging purposes, disable this
+    ;; now can take device interrupts in the kernel
+    cli
     
     ;; jmp to C functions in the kernel
     lda user_context + 1   ;; Load Status (P)
@@ -84,7 +98,15 @@ _nmi_handler:
     inx
     cpx #$0F          ; have we done segments 0 through 14?
     bne @mmu_loop
-    
+
+    ;; install kernel IRQ vector
+    lda #<_kernel_vector
+    sta VECTORS+4
+    lda #>_kernel_vector
+    sta VECTORS+5
+
+    ;; NOTE: not enable IRQ in here! for time-critical timer interrupts
+
     ;; jmp to C function in the kernel
     jmp _kernel_nmi
 
@@ -100,6 +122,12 @@ _return_from_trap:
     sta c_sp + 1
     ldx #$ff
     txs
+
+    ;; restore the user IRQ vector
+    lda #<_irq_handler
+    sta VECTORS+4
+    lda #>_irq_handler
+    sta VECTORS+5
 
     ;; restore user memory space form life raft
     ldx #$00          
@@ -148,6 +176,33 @@ in_user_return_stub:
     pla
     rti   
 in_user_return_stub_end:   
+
+;; IRQ handler for device interrupts and BRK's in the kernel
+.global _kernel_vector
+_kernel_vector:
+    pha
+    txa
+    pha
+    tya
+    pha
+
+    tsx
+    lda $0104, x
+    and #%00010000  ;; Check the B flag
+    beq @irq
+    jsr _kernel_software_interrupt
+    jmp @end
+@irq:
+    jsr _device_interrupt
+
+@end:
+    pla
+    tay
+    pla
+    tax
+    pla
+    rti
+
 
 .global _life_raft
 _life_raft:
