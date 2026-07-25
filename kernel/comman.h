@@ -43,6 +43,7 @@ uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
 // trap.c
+void syscall_init(void);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
@@ -71,7 +72,16 @@ int     memcmp(const void *s1, const void *s2, uint16_t n);
 void*   memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
-typedef enum Proc_State Proc_State;
+
+typedef enum Proc_State{
+    PROC_STATE_UNUSED = 0,
+    PROC_STATE_USED,
+    PROC_STATE_READY,
+    PROC_STATE_RUNING,
+    PROC_STATE_SLEEPING,
+    PROC_STATE_ZOMBIE
+} Proc_State;
+
 // order is importent for trampoline!
 typedef struct Context {
     uint8_t sp;
@@ -81,8 +91,10 @@ typedef struct Context {
     uint8_t y;
     uint8_t a;
 } Context;
+
 typedef struct Proc Proc;
 extern Proc* current_process;
+
 void interrupts_enable(void);
 void interrupts_disable(void);
 void sleep(void* channel);
@@ -96,6 +108,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 void proc_init(void);
 Proc* palloc(void);
 const Context* proc_get_ctx(const Proc* p);
+void proc_set_ax(Proc* p, uint16_t ax);
 const uint8_t* proc_get_page_table(const Proc* p);
 
 #endif // COMMAN_H

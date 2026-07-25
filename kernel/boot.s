@@ -19,9 +19,6 @@ entry:
 
 load_kernel:
 
-    lda #'.'
-    jsr putchar
-
     lda #<scb
     ldx #>scb
     jsr read_sector
@@ -130,8 +127,8 @@ prints:
   rts
        
 msg_banner:          .byte "**** boot loader v1.0 ****", $0a, 0
-msg_load_progress:   .byte "loading kernel:", $0a, 0
-msg_to_kernel:       .byte $0a, "done!", $0a, "bootloader: jumping to kernel...", $0a, 0
+msg_load_progress:   .byte "bootloader: loading kernel...", $0a, 0
+msg_to_kernel:       .byte "bootloader: done!", $0a, "bootloader: jumping to kernel...", $0a, 0
 
 scb:
     .word __KERNEL_START__   ;; buffer

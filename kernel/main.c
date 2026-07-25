@@ -25,8 +25,10 @@ void main(void) {
 
     kalloc_init();
     proc_init();
+    syscall_init();
     fs_init();
 
+    printk("kernel: starting \"init\" process...\n");
     run_init_process();
 
     interrupts_enable();

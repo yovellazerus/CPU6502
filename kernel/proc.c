@@ -1,15 +1,6 @@
 
 #include "comman.h"
 
-enum Proc_State{
-    PROC_STATE_UNUSED = 0,
-    PROC_STATE_USED,
-    PROC_STATE_READY,
-    PROC_STATE_RUNING,
-    PROC_STATE_SLEEPING,
-    PROC_STATE_ZOMBIE
-};
-
 struct Proc {
 
     // CPU and memory context
@@ -96,6 +87,11 @@ Proc* palloc(void){
 
 const Context* proc_get_ctx(const Proc* p){
     return &p->ctx;
+}
+
+void proc_set_ax(Proc* p, uint16_t ax){
+    p->ctx.a = (uint8_t)(ax & 0x00ff);
+    p->ctx.x = (uint8_t)((ax & 0xff00) >> 8);
 }
 
 const uint8_t* proc_get_page_table(const Proc* p){
@@ -276,14 +272,15 @@ void run_init_process(void){
         0x68,                   // pla
         0x8d, 0x03, 0x03,       // sta $0303
 
-        0xa9, 0x17,             // lda #<arg 
+        0xa0, 0x42,             // ldy SYS_WRITE(0x42)
+        0xa9, 0x19,             // lda #<arg 
         0xa2, 0x02,             // ldx #>arg
         0x00,                   // brk
         0xea,                   // nop
-        0x4c, 0x14, 0x02,       // jmp *
-        0x11, 0x00,             // arg.size   = 0x0011   
-        0x1b, 0x02,             // arg.buffer = 0x021b
-        'H', 'e', 'l', 'l', 'o', ' ', 'f', 'r', 'o', 'm', ' ', 'i', 'n', 'i', 't', '!', '\0'
+        0x4c, 0x16, 0x02,       // jmp *
+        0x0d, 0x00,             // arg.size   = 0x000d   
+        0x1d, 0x02,             // arg.buffer = 0x021d
+        'i', 'n', 'i', 't', ':', ' ', 'h', 'e', 'l', 'l', 'o', '!', '\n', '\0'
     };
 
     init_process = palloc();
