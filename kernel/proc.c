@@ -353,48 +353,46 @@ void run_init_process(void){
     /*
     .org $0200
     _start:
-      ldy #70
-      brk
-      nop
-      cmp #0
-      bne perent
-      beq child
+        ldy #70
+        brk
+        nop
+        cmp #0
+        bne perent
+        beq child
     error:
-      jmp *
-    
-    
+        jmp *
+
     child:
-      ldy #87
-      lda #<child_arg
-      ldx #>child_arg
-      brk
-      nop
-      jmp child
-    
-    
+        ldy #87
+        lda #<child_arg
+        ldx #>child_arg
+        brk
+        nop
+        jmp child
+
     perent:
-      ldy #87
-      lda #<perent_arg
-      ldx #>perent_arg
-      brk
-      nop
-      jmp perent
-    
+        ldy #87
+        lda #<perent_arg
+        ldx #>perent_arg
+        brk
+        nop
+        jmp perent
+
     child_arg:
-      .word 7
-      .word child_msg
+        .word 7
+        .word child_msg
     child_msg:
-      .byte "child"
-      .byte $0a
-      .byte 0
-    
+        .byte "child"
+        .byte $0a
+        .byte 0
+
     perent_arg:
-      .word 8
-      .word perent_msg
+        .word 8
+        .word perent_msg
     perent_msg:
-      .byte "perent"
-      .byte $0a
-      .byte 0
+        .byte "perent"
+        .byte $0a
+        .byte 0
     */
     uint8_t init_code[]  = {
         0xA0, 0x46, 0x00, 0xEA, 0xC9, 0x00, 0xD0, 0x10,
@@ -427,117 +425,3 @@ void run_init_process(void){
 
     init_process->state = PROC_STATE_READY;
 }
-
-// for debug
-void run_extra_process(void){
-
-    const char name[] = "Second";
-
-    Context ctx = {
-       0xff,   // SP
-       0x00,   // P
-       0x0200, // PC
-       0x00,   // X
-       0x00,   // Y
-       0x00    // A
-    };
-
-    // for testing, not the real init code
-    uint8_t code[] = {
-
-        0xa0, SYS_WRITE,        // ldy SYS_WRITE
-        0xa9, 0x14,             // lda #<arg 
-        0xa2, 0x02,             // ldx #>arg
-        0x00,                   // brk
-        0xea,                   // nop
-
-        0x8d, 0x00, 0x03,       // sta $0300
-        0x8e, 0x01, 0x03,       // stx $0301
-        0x8c, 0x02, 0x03,       // sty $0302
-
-        0x4c, 0x00, 0x02,       // jmp _start
-
-        0x12, 0x00,             // arg.size
-        0x18, 0x02,             // arg.buffer
-        'S', 'e', 'c', 'o', 'n', 'd', ' ', 'p', 'r', 'o', 'c', ':', ' ', 'h', 'i', '?', '\n', '\0'
-    };
-
-    Proc* p;
-
-    p = palloc();
-    if(!p){
-        panic("palloc");
-    }
-
-    memcpy(&p->ctx, &ctx, sizeof(Context));
-
-    p->page_table[0] = kalloc();
-    if(p->page_table[0] == FRAME_UNUSED){
-        panic("kalloc");
-    }
-
-    if(copy_to_user(code, 0x0200, sizeof(code), p->page_table) < 0){
-        panic("copy_to_user");
-    }
-
-    memcpy(p->name, name, strlen(name));
-
-    p->state = PROC_STATE_READY;
-}
-
-void run_extra_process2(void){
-
-    const char name[] = "Third";
-
-    Context ctx = {
-       0xff,   // SP
-       0x00,   // P
-       0x0200, // PC
-       0x00,   // X
-       0x00,   // Y
-       0x00    // A
-    };
-
-    // for testing, not the real init code
-    uint8_t code[] = {
-
-        0xa0, SYS_WRITE,        // ldy SYS_WRITE
-        0xa9, 0x14,             // lda #<arg 
-        0xa2, 0x02,             // ldx #>arg
-        0x00,                   // brk
-        0xea,                   // nop
-
-        0x8d, 0x00, 0x03,       // sta $0300
-        0x8e, 0x01, 0x03,       // stx $0301
-        0x8c, 0x02, 0x03,       // sty $0302
-
-        0x4c, 0x00, 0x02,       // jmp _start
-
-        0x0e, 0x00,             // arg.size
-        0x18, 0x02,             // arg.buffer
-        'T', 'h', 'i', 'r', 'd', ' ', 'p', 'r', 'o', 'c','e', 's', 's', '\n', '\0'
-    };
-
-    Proc* p;
-
-    p = palloc();
-    if(!p){
-        panic("palloc");
-    }
-
-    memcpy(&p->ctx, &ctx, sizeof(Context));
-
-    p->page_table[0] = kalloc();
-    if(p->page_table[0] == FRAME_UNUSED){
-        panic("kalloc");
-    }
-
-    if(copy_to_user(code, 0x0200, sizeof(code), p->page_table) < 0){
-        panic("copy_to_user");
-    }
-
-    memcpy(p->name, name, strlen(name));
-
-    p->state = PROC_STATE_READY;
-}
-

@@ -133,8 +133,4 @@ void proc_set_ax(Proc* p, uint16_t ax);
 void proc_set_state(Proc* p, Proc_State state);
 const uint8_t* proc_get_page_table(const Proc* p);
 
-// debug
-void run_extra_process(void);
-void run_extra_process2(void);;
-
 #endif // COMMAN_H
