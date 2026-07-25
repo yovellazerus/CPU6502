@@ -27,7 +27,7 @@ struct Proc {
     uint8_t  fd_table[MAX_FILES_PER_PROC];          
 
     // debug 
-    char name[16];
+    char name[MAX_PROC_NAME];
 };
 
 Proc proc_table[MAX_PROC_COUNT];
@@ -261,6 +261,81 @@ void scheduler(void) {
     }
 }
 
+int sys_fork(void){
+    Proc* child;
+    uint8_t segment;
+    uint8_t parent_frame;
+    uint8_t child_frame;
+    uint8_t old_window1;
+    uint8_t old_window2;
+
+    child = palloc();
+    if(!child){
+        printk("palloc\n");
+        return -1;
+    }
+
+    // equal primitives
+    child->channel = current_process->channel;
+    child->gid     = current_process->gid;
+    child->ecode   = current_process->ecode;
+    child->killed  = current_process->killed;
+    child->priority = current_process->priority;
+    child->ticks   = current_process->ticks;
+    child->top     = child->top;
+    child->uid     = current_process->uid;
+    child->ticks   = current_process->ticks;
+    child->state   = current_process->state;
+
+    // for restoration later
+    old_window1 = MMIO8(MMU_PAGE_TABLE + 1);
+    old_window2 = MMIO8(MMU_PAGE_TABLE + 2);
+    // clone the memory space
+    for (segment = 0; segment < PAGE_TABLE_SIZE; segment++) {
+        parent_frame = current_process->page_table[segment];
+        
+        if (parent_frame != FRAME_UNUSED) {
+            
+            child_frame = kalloc();
+            if (child_frame == FRAME_UNUSED) {
+                // TODO: destroy all and retrun -1
+                panic("out of memory in fork"); 
+            }
+            child->page_table[segment] = child_frame;
+
+            // map the parent's and child frame's to the copy window's
+            MMIO8(MMU_PAGE_TABLE + 1) = parent_frame;
+            MMIO8(MMU_PAGE_TABLE + 2) = child_frame;
+
+            // copy the frame
+            memcpy((void*)WINDOW2, (void*)WINDOW1, 4096);
+        }
+    }
+    // restore the kernel's memory space
+    MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
+    MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
+
+    // copy the context
+    memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
+
+    // TODO: this should be deeper... using reference count
+    memcpy(child->fd_table, current_process->fd_table, sizeof(child->fd_table));
+    child->cwd_inode = current_process->cwd_inode;
+
+    // name
+    memcpy(child->name, current_process->name, MAX_PROC_NAME);
+
+    // process tree
+    child->parent  = current_process;
+
+    // wake up the child
+    child->state = PROC_STATE_READY;
+
+    // fork magic, returning 0 for the child and child pid for the perent
+    proc_set_ax(child, 0);
+    return child->pid;
+}
+
 void run_init_process(void){
 
     const char* name = "init";
@@ -275,23 +350,61 @@ void run_init_process(void){
     };
 
     // for testing, not the real init code
-    uint8_t init_code[] = {
-
-        0xa0, SYS_WRITE,        // ldy SYS_WRITE
-        0xa9, 0x14,             // lda #<arg 
-        0xa2, 0x02,             // ldx #>arg
-        0x00,                   // brk
-        0xea,                   // nop
-
-        0x8d, 0x00, 0x03,       // sta $0300
-        0x8e, 0x01, 0x03,       // stx $0301
-        0x8c, 0x02, 0x03,       // sty $0302
-
-        0x4c, 0x00, 0x02,       // jmp _start
-
-        0x0d, 0x00,             // arg.size
-        0x18, 0x02,             // arg.buffer
-        'i', 'n', 'i', 't', ':', ' ', 'h', 'e', 'l', 'l', 'o', '!', '\n', '\0'
+    /*
+    .org $0200
+    _start:
+      ldy #70
+      brk
+      nop
+      cmp #0
+      bne perent
+      beq child
+    error:
+      jmp *
+    
+    
+    child:
+      ldy #87
+      lda #<child_arg
+      ldx #>child_arg
+      brk
+      nop
+      jmp child
+    
+    
+    perent:
+      ldy #87
+      lda #<perent_arg
+      ldx #>perent_arg
+      brk
+      nop
+      jmp perent
+    
+    child_arg:
+      .word 7
+      .word child_msg
+    child_msg:
+      .byte "child"
+      .byte $0a
+      .byte 0
+    
+    perent_arg:
+      .word 8
+      .word perent_msg
+    perent_msg:
+      .byte "perent"
+      .byte $0a
+      .byte 0
+    */
+    uint8_t init_code[]  = {
+        0xA0, 0x46, 0x00, 0xEA, 0xC9, 0x00, 0xD0, 0x10,
+        0xF0, 0x03, 0x4C, 0x0A, 0x02, 0xA0, 0x57, 0xA9,
+        0x23, 0xA2, 0x02, 0x00, 0xEA, 0x4C, 0x0D, 0x02,
+        0xA0, 0x57, 0xA9, 0x2E, 0xA2, 0x02, 0x00, 0xEA,
+        0x4C, 0x18, 0x02, 0x07, 0x00, 0x27, 0x02, 0x63,
+        0x68, 0x69, 0x6C, 0x64, 0x0A, 0x00, 0x08, 0x00,
+        0x32, 0x02, 0x70, 0x65, 0x72, 0x65, 0x6E, 0x74,
+        0x0A, 0x00,
     };
 
     init_process = palloc();
@@ -346,7 +459,7 @@ void run_extra_process(void){
 
         0x12, 0x00,             // arg.size
         0x18, 0x02,             // arg.buffer
-        's', 'e', 'c', 'o', 'n', 'd', ' ', 'p', 'r', 'o', 'c', ':', ' ', 'h', 'i', '?', '\n', '\0'
+        'S', 'e', 'c', 'o', 'n', 'd', ' ', 'p', 'r', 'o', 'c', ':', ' ', 'h', 'i', '?', '\n', '\0'
     };
 
     Proc* p;

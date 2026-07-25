@@ -23,6 +23,7 @@
 #define QUANTUM 1  // timer ticks until context switch
 
 #define MAX_PROC_COUNT 64
+#define MAX_PROC_NAME  16
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
@@ -53,9 +54,11 @@ void syscall_init(void);
 
 extern Syscall syscalls_table[256];
 
-#define SYS_WRITE 'Y'
+#define SYS_WRITE   'W'
+#define SYS_FORK    'F'
 
 int sys_write(void);
+int sys_fork(void);
 
 // trap.c
 void kernel_brk(void);

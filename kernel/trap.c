@@ -80,16 +80,29 @@ void kernel_nmi(void){
     return_from_trap();
 }
 
+/*
+This function handles hardware interrupts from system devices,
+it differs from device_interrupt() in that it is called from user space, 
+whereas device_interrupt() can also be called from an IRQ in kernel space.
+*/
 void kernel_irq(void){
-    panic("kernel_irq");
+
+    // load process ctx from "Life Raft"
+    copy_from_life_raft(current_process);
+
+    device_interrupt();
+
+    copy_to_life_raft(current_process);
+    
+    return_from_trap();
+}
+
+// this is doing the work of a device IRQ
+void device_interrupt(void){
+    panic("device_interrupt");
 }
 
 // can be used for a kernel debugare?
 void kernel_software_interrupt(void){
     panic("BRK in kernel");
-}
-
-// tray to make this a part of: kernel_irq(), or at list make kernel_irq() call it
-void device_interrupt(void){
-    panic("device_interrupt in kernel");
 }

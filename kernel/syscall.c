@@ -14,6 +14,7 @@ Syscall syscalls_table[256];
 void syscall_init(void){
     memset(syscalls_table, 0, sizeof(syscalls_table));
     syscalls_table[SYS_WRITE] = sys_write;
+    syscalls_table[SYS_FORK]  = sys_fork;
     // ...
 }
 
