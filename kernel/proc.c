@@ -69,7 +69,7 @@ Proc* palloc(void){
     }
 
     memset(p, 0, sizeof(*p));
-    p->state = PROC_STATE_USED;
+    p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
     p->ctx.sp = 0xff;
     for (i = 0; i < PAGE_TABLE_SIZE; i++) {
@@ -293,45 +293,43 @@ void scheduler(void) {
 int sys_wait(void){
     uint8_t i;
     uint8_t res;
-    Proc* child = NULL;
-    uint8_t resent = -1;
+    bool has_children = false;
     uint16_t user_exit_code = proc_get_ax(current_process);
 
-    while(true){
-        for(i = resent + 1; i < ARRAY_SIZE(proc_table); i++){
-            child = &proc_table[i];
-            if(child->parent == current_process){
-                break;
-            }
-        }
-        // no children
-        if(child == NULL){
-           return -1;
-        }
-        else if(child->state == PROC_STATE_ZOMBIE){
-            if(user_exit_code != 0){
-                if(copy_to_user(&child->exit_code, user_exit_code, 
-                                sizeof(child->exit_code), 
-                                current_process->page_table) < 0)
-                {
-                    current_process->ctx.a = SEGFAULT;
-                    sys_exit();
-                }
-            }
-            res = child->pid;
-            pfree(child);
-            return res;
-        }
-        // THIS child is not zombie, so the next iteration will start form it
-        else{
-            resent = i;
-        }
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        if(proc_table[i].parent == current_process){
+            has_children = true;
 
-        // this process has no zombie children, so it is going to sleep and yield the CPU
-        if(resent == ARRAY_SIZE(proc_table) - 1){
-            sleep(current_process);
+            if(proc_table[i].state == PROC_STATE_ZOMBIE){
+                if(user_exit_code != 0){
+                    if(copy_to_user(&proc_table[i].exit_code, user_exit_code, 
+                                    sizeof(proc_table[i].exit_code), current_process->page_table) < 0)
+                    {
+                        current_process->ctx.a = SEGFAULT;
+                        sys_exit(); 
+                    }
+                }
+                res = proc_table[i].pid;
+                pfree(&proc_table[i]);
+                return res; 
+            }
         }
     }
+
+    // no children
+    if(!has_children){
+        return -1;
+    }
+
+    // have children, but none are zombie, so we must block
+    // a way to block in this no "Trail of Breadcrumbs" stateless kernel
+    // rewind the PC by 2.
+    current_process->ctx.pc -= 2;
+
+    sleep(current_process);
+
+    // for the compiler...
+    return -1; 
 }
 
 int sys_exit(void){
@@ -346,8 +344,10 @@ int sys_exit(void){
 
     // free process memory frames 
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
-        kfree(current_process->page_table[segment]);
-        current_process->page_table[segment] = FRAME_UNUSED;
+        if(current_process->page_table[segment] != FRAME_UNUSED){
+            kfree(current_process->page_table[segment]);
+            current_process->page_table[segment] = FRAME_UNUSED;
+        }
     }
 
     wakeup(current_process->parent);
@@ -360,7 +360,6 @@ int sys_exit(void){
     for(i = 0; i < ARRAY_SIZE(proc_table); i++){
         if(proc_table[i].parent == current_process){
             proc_table[i].parent = init_process;
-            // is it necessary?
             if(proc_table[i].state == PROC_STATE_ZOMBIE){
                 wakeup(init_process);
             }
@@ -370,8 +369,8 @@ int sys_exit(void){
     // yield the CPU forever...
     scheduler();
 
-    // for compiler...
-    return 0;
+    // for the compiler...
+    return -1;
 }
 
 int sys_fork(void){

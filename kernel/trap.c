@@ -40,7 +40,7 @@ void kernel_brk(void){
 
 /* 
 the kernel timer interrupt handler, 
-If the process has any quantum remaining, it will return here.
+If the process has any quantum remaining, it will return to user space here.
 Otherwise, it will by pass to the scheduler() and yield the CPU.
 In addition, it serves as a "watchdog" for security purposes.
 Only source of NMI in this system is the Timer. 
