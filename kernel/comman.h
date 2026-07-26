@@ -11,8 +11,6 @@
 
 #define P_I 0x04
 
-#define MAX_FILES_PER_PROC 8
-
 #define WINDOW1 0x1000
 #define WINDOW2 0x2000
 #define PAGE_TABLE_SIZE 16
@@ -24,6 +22,9 @@
 
 #define MAX_PROC_COUNT 64
 #define MAX_PROC_NAME  16
+#define MAX_FILES_PER_PROC 8
+
+#define SIG_KILL 9
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
@@ -48,7 +49,7 @@ uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
 // syscall.c
-typedef union Syscall_Arg Syscall_Arg;
+typedef union SyscallArg SyscallArg;
 typedef int (*Syscall)(void);
 void syscall_init(void);
 
@@ -56,9 +57,11 @@ extern Syscall syscalls_table[256];
 
 #define SYS_WRITE   'W'
 #define SYS_FORK    'F'
+#define SYS_EXIT    'X'
 
 int sys_write(void);
 int sys_fork(void);
+int sys_exit(void);
 
 // trap.c
 void kernel_brk(void);
@@ -119,8 +122,8 @@ void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);
 void run_init_process(void);
-void copy_to_life_raft(Proc* p);
-void copy_from_life_raft(Proc* p);
+void kernel_prologue(void);
+void kernel_epilogue(void);
 int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
 void proc_init(void);

@@ -7,6 +7,7 @@ volatile uint32_t systicks = 0;
 void timer_init(void){
     MMIO16(TIMER_LATCH_LOW) = CIRCLES;
     MMIO16(TIMER_COUNTER_LOW) = CIRCLES;
+    MMIO8(TIMER_DISABLE) = TIME_ENABLE_FALSE;
 }
 
 void timer_resume(void){

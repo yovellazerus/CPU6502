@@ -13,7 +13,7 @@ void kernel_brk(void){
     uint16_t return_value = -1;
 
     // appdate the current process Proc struct
-    copy_from_life_raft(current_process);
+    kernel_prologue();
 
     // get the syscall and call it
     sys_number = proc_get_ctx(current_process)->y;
@@ -32,7 +32,7 @@ void kernel_brk(void){
     // fast syscall return back here to resume the process
     proc_set_ax(current_process, return_value);
 
-    copy_to_life_raft(current_process);
+    kernel_epilogue();
     
     return_from_trap();
 }
@@ -54,7 +54,7 @@ void kernel_nmi(void){
     }
 
     // load process ctx from "Life Raft"
-    copy_from_life_raft(current_process);
+    kernel_prologue();
 
     // the "watchdog" trait
     // only check the 'I' flag if the process was actively running in user memory (e.g., $0200 to $efff)
@@ -75,7 +75,7 @@ void kernel_nmi(void){
     }
 
     // process has quantum remaining, so we will return to it
-    copy_to_life_raft(current_process);
+    kernel_epilogue();
     
     return_from_trap();
 }
@@ -88,11 +88,11 @@ whereas device_interrupt() can also be called from an IRQ in kernel space.
 void kernel_irq(void){
 
     // load process ctx from "Life Raft"
-    copy_from_life_raft(current_process);
+    kernel_prologue();
 
     device_interrupt();
 
-    copy_to_life_raft(current_process);
+    kernel_epilogue();
     
     return_from_trap();
 }
@@ -104,5 +104,5 @@ void device_interrupt(void){
 
 // can be used for a kernel debugare?
 void kernel_software_interrupt(void){
-    panic("BRK in kernel");
+    panic("kernel break point");
 }

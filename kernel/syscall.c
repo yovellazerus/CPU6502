@@ -1,7 +1,7 @@
 
 #include "comman.h"
 
-union Syscall_Arg{
+union SyscallArg{
     struct {
         uint16_t size;
         void* buffer;
@@ -15,6 +15,7 @@ void syscall_init(void){
     memset(syscalls_table, 0, sizeof(syscalls_table));
     syscalls_table[SYS_WRITE] = sys_write;
     syscalls_table[SYS_FORK]  = sys_fork;
+    syscalls_table[SYS_EXIT]  = sys_exit;
     // ...
 }
 
@@ -32,7 +33,7 @@ static uint16_t fetch_raw(Proc* p){
 // TODO: sys_* implementation should be in dedicated files
 static uint8_t kernel_buffer[256];
 int sys_write(void){
-    Syscall_Arg syscall_arg;
+    SyscallArg syscall_arg;
     uint16_t ax;
     const uint8_t* user_page_table;
 

@@ -13,7 +13,7 @@ struct Proc {
     uint16_t pid;                   
     uint8_t  uid;           
     uint8_t  gid;           
-    uint8_t  ecode;         
+    uint8_t  exit_code;         
     uint8_t  priority;      
     uint8_t  ticks;   
 
@@ -127,7 +127,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         offset = user_dest & 0x0FFF;
         
         physical_frame = page_table[seg];
-        if (physical_frame == 0) {
+        if (physical_frame == FRAME_UNUSED) {
             return -1; // segfault
         }
         
@@ -169,7 +169,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
         offset = user_src & 0x0FFF;
         
         physical_frame = page_table[seg];
-        if (physical_frame == 0) {
+        if (physical_frame == FRAME_UNUSED) {
             return -1; // segfault
         }
         
@@ -194,15 +194,24 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     return 0; // success
 }
 
-// Copy the process's CPU context and page table into the Trap Segment "Life Raft"
-void copy_to_life_raft(Proc* p){
-    memcpy(life_raft, &p->ctx,sizeof(Context));
-    memcpy(life_raft + 8, p->page_table, PAGE_TABLE_SIZE);
+// Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
+void kernel_epilogue(void){
+    if(current_process->killed != 0 && current_process != init_process){
+        current_process->ctx.a = SIG_KILL;
+        sys_exit();
+    }
+    memcpy(life_raft, &current_process->ctx,sizeof(Context));
+    memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
 }
 
-void copy_from_life_raft(Proc* p){
-    memcpy(&p->ctx, life_raft, sizeof(Context));
-    memcpy(p->page_table, life_raft + 8, PAGE_TABLE_SIZE);
+// Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+void kernel_prologue(void){
+    if(current_process->killed != 0 && current_process != init_process){
+        current_process->ctx.a = SIG_KILL;
+        sys_exit();
+    }
+    memcpy(&current_process->ctx, life_raft, sizeof(Context));
+    memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
 
 void interrupts_on(void){
@@ -249,7 +258,7 @@ void scheduler(void) {
             
             p->ticks = QUANTUM; 
 
-            copy_to_life_raft(current_process);
+            kernel_epilogue();
 
             // no return
             return_from_trap(); 
@@ -259,6 +268,46 @@ void scheduler(void) {
             round_robin_index = 0;
         }
     }
+}
+
+int sys_exit(void){
+    uint8_t segment;
+    uint8_t i;
+
+    if(current_process == init_process){
+        panic("init exited");
+    }
+
+    // TODO: close(decrement reference count of) open files and cwd 
+
+    // free process memory frames 
+    for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
+        kfree(current_process->page_table[segment]);
+        current_process->page_table[segment] = FRAME_UNUSED;
+    }
+
+    wakeup(current_process->parent);
+
+    current_process->exit_code = current_process->ctx.a;
+
+    current_process->state = PROC_STATE_ZOMBIE;
+
+    // re-parent its children
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        if(proc_table[i].parent == current_process){
+            proc_table[i].parent = init_process;
+            // is it necessary?
+            if(proc_table[i].state == PROC_STATE_ZOMBIE){
+                wakeup(init_process);
+            }
+        }
+    }
+
+    // yield the CPU forever...
+    scheduler();
+
+    // for compiler...
+    return 0;
 }
 
 int sys_fork(void){
@@ -278,11 +327,11 @@ int sys_fork(void){
     // equal primitives
     child->channel = current_process->channel;
     child->gid     = current_process->gid;
-    child->ecode   = current_process->ecode;
+    child->exit_code   = current_process->exit_code;
     child->killed  = current_process->killed;
     child->priority = current_process->priority;
     child->ticks   = current_process->ticks;
-    child->top     = child->top;
+    child->top     = current_process->top;
     child->uid     = current_process->uid;
     child->ticks   = current_process->ticks;
     child->state   = current_process->state;
@@ -331,7 +380,7 @@ int sys_fork(void){
     // wake up the child
     child->state = PROC_STATE_READY;
 
-    // fork magic, returning 0 for the child and child pid for the perent
+    // fork magic, returning 0 for the child and child pid for the parent
     proc_set_ax(child, 0);
     return child->pid;
 }
@@ -357,7 +406,7 @@ void run_init_process(void){
         brk
         nop
         cmp #0
-        bne perent
+        bne parent
         beq child
     error:
         jmp *
@@ -370,13 +419,13 @@ void run_init_process(void){
         nop
         jmp child
 
-    perent:
+    parent:
         ldy #87
         lda #<perent_arg
         ldx #>perent_arg
         brk
         nop
-        jmp perent
+        jmp parent
 
     child_arg:
         .word 7
@@ -390,7 +439,7 @@ void run_init_process(void){
         .word 8
         .word perent_msg
     perent_msg:
-        .byte "perent"
+        .byte "parent"
         .byte $0a
         .byte 0
     */
@@ -401,7 +450,7 @@ void run_init_process(void){
         0xA0, 0x57, 0xA9, 0x2E, 0xA2, 0x02, 0x00, 0xEA,
         0x4C, 0x18, 0x02, 0x07, 0x00, 0x27, 0x02, 0x63,
         0x68, 0x69, 0x6C, 0x64, 0x0A, 0x00, 0x08, 0x00,
-        0x32, 0x02, 0x70, 0x65, 0x72, 0x65, 0x6E, 0x74,
+        0x32, 0x02, 0x70, 0x61, 0x72, 0x65, 0x6E, 0x74,
         0x0A, 0x00,
     };
 
