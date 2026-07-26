@@ -18,14 +18,31 @@
 typedef struct Machine Machine;
 typedef MCS6502ExecutionContext CPU;
 
-typedef struct Uart {
+typedef struct ROM
+{
+    uint8_t  rom_enable;
+    uint8_t* data;
+
+} ROM;
+
+typedef struct RAM
+{
+    uint8_t* data;
+
+} RAM;
+
+
+typedef struct Uart 
+{
     Machine* m;
     uint8_t tx;
     uint8_t rx;
     uint8_t status;
+
 } Uart;
 
-typedef struct Disk {
+typedef struct Disk 
+{
     Machine* m;
     FILE* file;
     uint8_t buffer[DISK_SECTOR_SIZE];
@@ -34,47 +51,38 @@ typedef struct Disk {
     uint8_t lba_low;
     uint8_t lba_high;
     int delay;   // cycles remaining for operation
+
 } Disk;
 
-typedef struct MMU {
+typedef struct MMU 
+{
     Machine* m;
     uint8_t page_table[MMU_PAGE_TABLE_SIZE];
+
 } MMU;
 
-static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
-    uint8_t segment = va >> 12;          
-    uint16_t offset = va & 0x0FFF;       
-    uint8_t frame = mmu->page_table[segment];
-
-    // not working...
-    // if(frame == MMU_FRAME_INVALID){
-    //     MCS6502IRQ(mmu->m->cpu);
-    //     return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
-    // }
-
-    return (frame << 12) | offset;
-}
-
-typedef struct Timer {
+typedef struct Timer 
+{
     Machine* m;
     uint8_t ctrl;
     uint8_t latch_low;
     uint8_t latch_high;
     uint8_t counter_low;
     uint8_t counter_high;  
+
 } Timer;
 
 // the Machine itself
-struct Machine {
+struct Machine 
+{
 
     // bus
     MCS6502DataReadByteFunction  read;
     MCS6502DataWriteByteFunction write;
       
     CPU* cpu;
-    uint8_t* ram;
-    uint8_t  rom_enable;
-    uint8_t* rom;
+    RAM* ram;
+    ROM*  rom;
     Uart* uart;
     Disk* disk;
     MMU*  mmu;
@@ -84,7 +92,24 @@ struct Machine {
 
 };
 
-/* ============================================ read/write functions ======================================================*/
+/* ================================================= helpers functions ======================================================*/
+
+static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
+    uint8_t segment = va >> 12;          
+    uint16_t offset = va & 0x0FFF;       
+    uint8_t frame = mmu->page_table[segment];
+
+    // not working...
+    // if(frame == MMU_FRAME_INVALID){
+    //     // MCS6502IRQ(mmu->m->cpu);
+    //     //return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
+    //     printf("va = %.4x\n", va);
+    // }
+
+    return (frame << 12) | offset;
+}
+
+/* ============================================== read/write functions ======================================================*/
 
 // TODO: MMU...
 uint8_t Machine_read(uint16_t addr, void* ctx) {
@@ -106,10 +131,10 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
         return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
 
     // ---------------- ROM ----------------
-    if (physical_addr == ROM_ENABLE) return m->rom_enable;
+    if (physical_addr == ROM_ENABLE) return m->rom->rom_enable;
     if (physical_addr >= ROM_BASE && physical_addr < ROM_BASE + ROM_SIZE) {
-        if (m->rom_enable) {
-            return m->rom[physical_addr - ROM_BASE];
+        if (m->rom->rom_enable) {
+            return m->rom->data[physical_addr - ROM_BASE];
         }
         // If rom_enable is false, fall through to read the RAM underneath it
     }
@@ -148,7 +173,7 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     // MUST BE LAST!
     // ---------------- RAM ----------------
     if (physical_addr < RAM_SIZE)
-        return m->ram[physical_addr];
+        return m->ram->data[physical_addr];
 
     // ---------------- unmapped ----------------
     return 0xFF;
@@ -195,7 +220,7 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
 
     // ---------------- ROM ENABLE ----------------
     if (physical_addr == ROM_ENABLE){
-        m->rom_enable = byte;
+        m->rom->rom_enable = byte;
         return;
     } 
 
@@ -251,7 +276,7 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     // ---------------- RAM ----------------
     if (physical_addr < RAM_SIZE)
     {
-        m->ram[physical_addr] = byte;
+        m->ram->data[physical_addr] = byte;
         return;
     }
 }
@@ -262,11 +287,13 @@ void CPU_destroy(CPU* cpu){
     free(cpu);
 }
 
-void ROM_destroy(uint8_t* rom){
+void ROM_destroy(ROM* rom){
+    free(rom->data);
     free(rom);
 }
 
-void RAM_destroy(uint8_t* ram){
+void RAM_destroy(RAM* ram){
+    free(ram->data);
     free(ram);
 }
 
@@ -316,28 +343,46 @@ CPU* CPU_create(Machine* m){
     return cpu;
 }
 
-uint8_t* RAM_create(void){
-    uint8_t* ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
-    if(!ram) return NULL;
+RAM* RAM_create(void){
+    RAM* ram = (RAM*)calloc(1, sizeof(RAM));
+    if(!ram){
+        return NULL;
+    }
+    uint8_t* data = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
+    if(!data){
+        free(ram);
+        return NULL;
+    }
+    ram->data = data;
     return ram;
 }
 
-uint8_t* ROM_create(const char* path){
-    uint8_t* rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
+ROM* ROM_create(const char* path){
+    ROM* rom = (ROM*)calloc(1, sizeof(ROM));
     if(!rom) return NULL;
+
+    uint8_t* data = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
+    if(!data){
+        free(rom);
+        return NULL;
+    } 
 
     FILE* rom_img = fopen(path, "rb");
     if(!rom_img){
         free(rom);
+        free(data);
         return NULL;
     }
-    ssize_t rom_size = fread(rom, 1, ROM_SIZE, rom_img);
+    ssize_t rom_size = fread(data, 1, ROM_SIZE, rom_img);
     if(rom_size > ROM_SIZE){
         fclose(rom_img);
         free(rom);
+        free(data);
         return NULL;
     }
     fclose(rom_img);
+    rom->data = data;
+    rom->rom_enable = ROM_ENABLE_TRUE;
     return rom;
 }
 
@@ -390,9 +435,6 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
     m->read = Machine_read;
     m->write = Machine_write;
-
-    // TODO: move this to a ROM struct
-    m->rom_enable = ROM_ENABLE_TRUE;
 
     m->ram = RAM_create();
     m->rom = ROM_create(rom_path);
@@ -540,7 +582,7 @@ void Machine_coredump(const Machine* m, const char* path) {
     if(!m || !path) return;
     FILE* f = fopen(path, "wb");
     if (!f) return;
-    fwrite(m->ram, 1, RAM_SIZE, f);
+    fwrite(m->ram->data, 1, RAM_SIZE, f);
     fclose(f);
 }
 
