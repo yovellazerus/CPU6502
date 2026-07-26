@@ -44,6 +44,7 @@
 #define CPU_PER_STEP        100  // arbitrary value...
 
 #define MMU_PAGE_TABLE_SIZE 16
+#define MMU_LAST_SEGMENT    (MMU_PAGE_TABLE_SIZE - 1)
 #define MMU_FRAME_UNUSED    0x00
 
 typedef enum {
