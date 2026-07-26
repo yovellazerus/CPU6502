@@ -43,6 +43,8 @@
 
 #define CPU_PER_STEP        100  // arbitrary value...
 
+#define MMU_FRAME_UNUSED    0x00
+
 typedef enum {
     UART_STATUS_RX_READY = 0x01,
     UART_STATUS_TX_READY = 0x02,

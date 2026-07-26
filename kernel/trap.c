@@ -5,7 +5,7 @@
 the kernel syscall entry, 
 fast call return here (then return to user space), 
 and sleeping syscalls will yield the CPU by doing:
-    sleep() -> scheduler() -> (different process) -> return to user space
+    sleep() -> scheduler() -> (different process)
 */
 void kernel_brk(void){
     uint8_t sys_number;

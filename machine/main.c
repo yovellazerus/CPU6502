@@ -6,6 +6,7 @@
 #include <string.h>
 #include <ctype.h>
 
+// windows only
 #include <conio.h>
 
 #include "MCS6502.h"
@@ -16,14 +17,20 @@
 
 typedef struct Machine Machine;
 typedef MCS6502ExecutionContext CPU;
+typedef struct Uart Uart;
+typedef struct Disk Disk;
+typedef struct MMU MMU;
+typedef struct Timer Timer;
 
-typedef struct {
+struct Uart {
+    Machine* m;
     uint8_t tx;
     uint8_t rx;
     uint8_t status;
-} Uart;
+};
 
-typedef struct {
+struct Disk {
+    Machine* m;
     FILE* file;
     uint8_t buffer[DISK_SECTOR_SIZE];
     uint8_t cmd;
@@ -31,11 +38,11 @@ typedef struct {
     uint8_t lba_low;
     uint8_t lba_high;
     int delay;   // cycles remaining for operation
-} Disk;
+};
 
-typedef struct {
+struct MMU {
     uint8_t page_table[16];
-} MMU;
+};
 
 static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     uint8_t segment = va >> 12;          
@@ -44,14 +51,14 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     return (frame << 12) | offset;
 }
 
-typedef struct {
+struct Timer {
     uint8_t ctrl;
     uint8_t latch_low;
     uint8_t latch_high;
     uint8_t counter_low;
     uint8_t counter_high;
     Machine* m;  // conaction to the machine for triggering NMI  
-} Timer;
+};
 
 // the Machine itself
 struct Machine {
@@ -68,8 +75,93 @@ struct Machine {
 
 };
 
-static void Timer_step(Timer* timer){
-    if(!timer || timer->ctrl == TIME_ENABLE_FALSE) return;
+/* ========================================= constructors ==================================================================*/
+
+CPU*     CPU_create(Machine* m);
+uint8_t* RAM_create(Machine* m);
+uint8_t* ROM_create(Machine* m, const char* path);
+Uart*    Uart_create(Machine* m);
+Disk*    Disk_create(Machine* m, const char* path);
+MMU*     MMU_create(Machine* m);
+Timer*   Timer_create(Machine* m);
+
+/* =========================================== destructors ==================================================================*/
+
+void CPU_destroy(CPU* cpu);
+void ROM_destroy(uint8_t* rom);
+void RAM_destroy(uint8_t* ram);
+void Uart_destroy(Uart* uart);
+void Disk_destroy(Disk* disk);
+void MMU_destroy(MMU* mmu);
+void Timer_destroy(Timer* timer);
+
+/* =========================================== step functions ===============================================================*/
+
+bool Disk_step(Disk* disk){
+    if(!disk) return false;
+    Machine* m = disk->m;
+    if (m->disk->status == DISK_STATUS_BUSY)
+    {
+        if (--m->disk->delay == 0)
+        {
+            uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
+
+            if (m->disk->cmd == DISK_CMD_READ)
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
+            }
+            else if (m->disk->cmd == DISK_CMD_WRITE)
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
+            }
+            else{
+                m->disk->status = DISK_STATUS_ERROR;
+            }
+        }
+    }
+    return true;
+}
+
+bool Uart_step(Uart* uart){
+    if(!uart) return false;
+
+    // keyboard
+    if (_kbhit())
+    {
+        int c = _getch();
+        
+        // ESC 
+        if(c == 0x1B){
+            return false; // power-off
+        }
+
+        if (c != -1){
+            uart->m->uart->rx = (uint8_t)c;
+            uart->m->uart->status |= UART_STATUS_RX_READY;
+        }
+    }
+
+    // display
+    if (!(uart->m->uart->status & UART_STATUS_TX_READY))
+    {
+        uint8_t byte = uart->m->uart->tx;
+        if(byte == '\r') byte = '\n';
+        _putch(byte);
+        uart->m->uart->status |= UART_STATUS_TX_READY;
+    }
+
+    return true;
+}
+
+bool Timer_step(Timer* timer){
+    if(!timer) return false; 
+    if(timer->ctrl == TIME_ENABLE_FALSE) return true;
     uint16_t counter = (uint16_t)timer->counter_high << 8;
     counter |= (uint16_t)timer->counter_low;
     // the timer has expired
@@ -78,11 +170,12 @@ static void Timer_step(Timer* timer){
         timer->counter_low = timer->latch_low;
         timer->m->mmu->page_table[15] = 15;
         MCS6502NMI(timer->m->cpu);
-        return;
+        return true;
     }
     // commit to the counter
     timer->counter_high = (uint8_t)(counter >> 8);
     timer->counter_low = (uint8_t)(counter >> 0);
+    return true;
 }
 
 uint8_t Machine_read(uint16_t addr, void* ctx);
@@ -92,29 +185,6 @@ Machine* Machine_create(const char* rom_path, const char* disk_path);
 void     Machine_destroy(Machine* m);
 void     Machine_coredump(const Machine* m, const char* path);
 bool     Machine_step(Machine* m);
-
-/* ======== main =============================================================*/
-
-int main(int argc, char** argv)
-{
-    if(argc != 2){
-        fprintf(stderr, COLOR_RED "USAGE: %s <disk.img>.\n" COLOR_RESET, argv[0]);
-        return 1;
-    }
-    
-    Machine* m = Machine_create("machine\\rom.bin", argv[1]);
-    if(!m){
-        fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);
-        return 1;
-    } 
-    while(Machine_step(m));
-    Machine_coredump(m, ".\\machine\\coredump.bin");
-    Machine_destroy(m);
-
-    return 0;
-}
-
-/* ======== read/write =======================================================*/
 
 // TODO: MMU...
 uint8_t Machine_read(uint16_t addr, void* ctx) {
@@ -286,7 +356,7 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     }
 }
 
-/* ======== functions ========================================================*/
+/* ===================================================== functions ========================================================*/
 
 Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
@@ -331,6 +401,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->rom_enable = ROM_ENABLE_TRUE;
     
     // disk
+    m->disk->m = m;
     if(disk_path){
        m->disk->file = fopen(disk_path, "rb+");
        if(!m->disk->file){
@@ -350,6 +421,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     MCS6502Reset(m->cpu);
     
     // uart
+    m->uart->m = m;
     printf(COLOR_GREEN);
 
     return m;
@@ -380,78 +452,30 @@ void Machine_coredump(const Machine* m, const char* path) {
 bool Machine_step(Machine* m){
     if(!m) return false;
 
-    // keyboard
-    if (_kbhit())
-    {
-        int c = _getch();
-        
-        // ESC 
-        if(c == 0x1B){
-            return false; // power-off
-        }
-
-        if (c != -1){
-            m->uart->rx = (uint8_t)c;
-            m->uart->status |= UART_STATUS_RX_READY;
-        }
-    }
-
-    // display
-    if (!(m->uart->status & UART_STATUS_TX_READY))
-    {
-        uint8_t byte = m->uart->tx;
-        if(byte == '\r') byte = '\n';
-        _putch(byte);
-        m->uart->status |= UART_STATUS_TX_READY;
-    }
+    if(!Uart_step(m->uart)) return false;
     
-    // disk
-    if (m->disk->status == DISK_STATUS_BUSY)
-    {
-        if (--m->disk->delay == 0)
-        {
-            uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
-
-            if (m->disk->cmd == DISK_CMD_READ)
-            {
-                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
-                m->disk->status = DISK_STATUS_READY;
-            }
-            else if (m->disk->cmd == DISK_CMD_WRITE)
-            {
-                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
-                m->disk->status = DISK_STATUS_READY;
-            }
-            else{
-                m->disk->status = DISK_STATUS_ERROR;
-            }
-        }
-    }
+    (void)Disk_step(m->disk);
     
     // CPU
     for(int i = 0; i < CPU_PER_STEP; i++){
 
-        // is it going to execute "brk"?
+        // is it going to execute "brk"? simulating VPB pin
         if(Machine_read(m->cpu->pc, m) == 0x00){
             m->mmu->page_table[15] != 15 ? m->mmu->page_table[15] = 15 : false;
             m->timer->ctrl = TIME_ENABLE_FALSE;
         }
 
-        Timer_step(m->timer);
+        (void)Timer_step(m->timer);
 
-        MCS6502ExecResult r = MCS6502ExecNext(m->cpu);
+        MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
     
         // debug
-        if (r == MCS6502ExecResultInvalidOperation)
+        if (result == MCS6502ExecResultInvalidOperation)
         {
             fprintf(stderr, COLOR_RED "\nDEBUG: invalid opcode\n" COLOR_GREEN);
             return false;
         }
-        else if (r == MCS6502ExecResultHalting)
+        else if (result == MCS6502ExecResultHalting)
         {
             // ...
         }
@@ -459,3 +483,26 @@ bool Machine_step(Machine* m){
     
     return true;
 }
+
+/* =============================================== main =====================================================================*/
+
+int main(int argc, char** argv)
+{
+    if(argc != 2){
+        fprintf(stderr, COLOR_RED "USAGE: %s <disk.img>.\n" COLOR_RESET, argv[0]);
+        return 1;
+    }
+    
+    Machine* m = Machine_create("machine\\rom.bin", argv[1]);
+    if(!m){
+        fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);
+        return 1;
+    } 
+    while(Machine_step(m));
+    Machine_coredump(m, ".\\machine\\coredump.bin");
+    Machine_destroy(m);
+
+    return 0;
+}
+
+/* ========================================= read/write functions ===========================================================*/

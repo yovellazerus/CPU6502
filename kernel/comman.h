@@ -14,11 +14,11 @@
 #define WINDOW1 0x1000
 #define WINDOW2 0x2000
 #define PAGE_TABLE_SIZE 16
-#define FRAME_UNUSED 0xff
+#define FRAME_UNUSED MMU_FRAME_UNUSED
 
-#define CIRCLES 10 // CPU steps per NMI
+#define CIRCLES 100 // CPU steps per NMI
 
-#define QUANTUM 1  // timer ticks until context switch
+#define QUANTUM 10 // timer ticks until context switch
 
 #define MAX_PROC_COUNT 64
 #define MAX_PROC_NAME  16
