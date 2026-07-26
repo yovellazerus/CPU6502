@@ -45,7 +45,7 @@
 
 #define MMU_PAGE_TABLE_SIZE 16
 #define MMU_LAST_SEGMENT    (MMU_PAGE_TABLE_SIZE - 1)
-#define MMU_FRAME_UNUSED    0x00
+#define MMU_FRAME_INVALID   0xff
 
 typedef enum {
     UART_STATUS_RX_READY = 0x01,

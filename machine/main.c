@@ -13,23 +13,19 @@
 #include "ansi_codes.h"
 #include "machine.h"
 
-/* ======== MMIO devices ===========================================================*/
+/* ========================================================== MMIO devices =========================================*/
 
 typedef struct Machine Machine;
 typedef MCS6502ExecutionContext CPU;
-typedef struct Uart Uart;
-typedef struct Disk Disk;
-typedef struct MMU MMU;
-typedef struct Timer Timer;
 
-struct Uart {
+typedef struct Uart {
     Machine* m;
     uint8_t tx;
     uint8_t rx;
     uint8_t status;
-};
+} Uart;
 
-struct Disk {
+typedef struct Disk {
     Machine* m;
     FILE* file;
     uint8_t buffer[DISK_SECTOR_SIZE];
@@ -38,27 +34,35 @@ struct Disk {
     uint8_t lba_low;
     uint8_t lba_high;
     int delay;   // cycles remaining for operation
-};
+} Disk;
 
-struct MMU {
-    uint8_t page_table[16];
-};
+typedef struct MMU {
+    Machine* m;
+    uint8_t page_table[MMU_PAGE_TABLE_SIZE];
+} MMU;
 
 static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     uint8_t segment = va >> 12;          
     uint16_t offset = va & 0x0FFF;       
     uint8_t frame = mmu->page_table[segment];
+
+    // not working...
+    // if(frame == MMU_FRAME_INVALID){
+    //     MCS6502IRQ(mmu->m->cpu);
+    //     return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
+    // }
+
     return (frame << 12) | offset;
 }
 
-struct Timer {
+typedef struct Timer {
     Machine* m;
     uint8_t ctrl;
     uint8_t latch_low;
     uint8_t latch_high;
     uint8_t counter_low;
     uint8_t counter_high;  
-};
+} Timer;
 
 // the Machine itself
 struct Machine {
@@ -79,211 +83,6 @@ struct Machine {
     // ...
 
 };
-
-/* ========================================= constructors ==================================================================*/
-
-CPU* CPU_create(Machine* m){
-    if(!m) return NULL;
-    CPU* cpu = (CPU*)calloc(1, sizeof(CPU));
-    if(!cpu) return NULL;
-    MCS6502Init(
-        cpu,
-        m->read,
-        m->write,
-        m
-    );
-    MCS6502Reset(cpu);
-    return cpu;
-}
-
-uint8_t* RAM_create(void){
-    uint8_t* ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
-    if(!ram) return NULL;
-    return ram;
-}
-
-uint8_t* ROM_create(const char* path){
-    uint8_t* rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
-    if(!rom) return NULL;
-
-    FILE* rom_img = fopen(path, "rb");
-    if(!rom_img){
-        free(rom);
-        return NULL;
-    }
-    ssize_t rom_size = fread(rom, 1, ROM_SIZE, rom_img);
-    if(rom_size > ROM_SIZE){
-        fclose(rom_img);
-        free(rom);
-        return NULL;
-    }
-    fclose(rom_img);
-    return rom;
-}
-
-Uart* Uart_create(void){
-    Uart* uart = (Uart*)calloc(1, sizeof(Uart));
-    if(!uart) return NULL;
-    uart->m = NULL;
-    printf(COLOR_GREEN);
-    return uart;
-}
-
-Disk* Disk_create(const char* path){
-    Disk* disk = (Disk*)calloc(1, sizeof(Disk));
-    if(!disk) return NULL;
-
-    disk->m = NULL;
-    if(path){
-       disk->file = fopen(path, "rb+");
-       if(!disk->file){
-           free(disk);
-           return NULL;
-       }
-       disk->status = ~DISK_STATUS_NONE; 
-    }
-    return disk;
-}
-
-MMU* MMU_create(void){
-    MMU* mmu = (MMU*)calloc(1, sizeof(MMU));
-    if(!mmu) return NULL;
-    for (uint8_t i = 0; i < MMU_PAGE_TABLE_SIZE; i++) {
-        mmu->page_table[i] = i; 
-    }
-    return mmu;
-}
-
-Timer* Timer_create(void){
-    Timer* timer = (Timer*)calloc(1, sizeof(Timer));
-    if(!timer) return NULL;
-    timer->m = NULL;
-    timer->ctrl = TIME_ENABLE_FALSE;
-    return timer;
-}
-
-/* =========================================== destructors ==================================================================*/
-
-void CPU_destroy(CPU* cpu){
-    free(cpu);
-}
-
-void ROM_destroy(uint8_t* rom){
-    free(rom);
-}
-
-void RAM_destroy(uint8_t* ram){
-    free(ram);
-}
-
-void Uart_destroy(Uart* uart){
-    free(uart);
-    printf(COLOR_RESET);
-}
-
-void Disk_destroy(Disk* disk){
-    if(disk->file) fclose(disk->file);
-    free(disk);
-}
-
-void MMU_destroy(MMU* mmu){
-    free(mmu);
-}
-
-void Timer_destroy(Timer* timer){
-    free(timer);
-}
-
-/* =========================================== step functions ===============================================================*/
-
-bool Disk_step(Disk* disk){
-    if(!disk) return false;
-    Machine* m = disk->m;
-    if (m->disk->status == DISK_STATUS_BUSY)
-    {
-        if (--m->disk->delay == 0)
-        {
-            uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
-
-            if (m->disk->cmd == DISK_CMD_READ)
-            {
-                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
-                m->disk->status = DISK_STATUS_READY;
-            }
-            else if (m->disk->cmd == DISK_CMD_WRITE)
-            {
-                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
-                m->disk->status = DISK_STATUS_READY;
-            }
-            else{
-                m->disk->status = DISK_STATUS_ERROR;
-            }
-        }
-    }
-    return true;
-}
-
-bool Uart_step(Uart* uart){
-    if(!uart) return false;
-
-    // keyboard
-    if (_kbhit())
-    {
-        int c = _getch();
-        
-        // ESC 
-        if(c == 0x1B){
-            return false; // power-off
-        }
-
-        if (c != -1){
-            uart->m->uart->rx = (uint8_t)c;
-            uart->m->uart->status |= UART_STATUS_RX_READY;
-        }
-    }
-
-    // display
-    if (!(uart->m->uart->status & UART_STATUS_TX_READY))
-    {
-        uint8_t byte = uart->m->uart->tx;
-        if(byte == '\r') byte = '\n';
-        _putch(byte);
-        uart->m->uart->status |= UART_STATUS_TX_READY;
-    }
-
-    return true;
-}
-
-bool Timer_step(Timer* timer){
-    if(!timer) return false; 
-    if(timer->ctrl == TIME_ENABLE_FALSE) return true;
-    uint16_t counter = (uint16_t)timer->counter_high << 8;
-    counter |= (uint16_t)timer->counter_low;
-    // the timer has expired
-    if(--counter == 0){
-        timer->counter_high = timer->latch_high;
-        timer->counter_low = timer->latch_low;
-        timer->m->mmu->page_table[15] = 15;
-        MCS6502NMI(timer->m->cpu);
-        return true;
-    }
-    // commit to the counter
-    timer->counter_high = (uint8_t)(counter >> 8);
-    timer->counter_low = (uint8_t)(counter >> 0);
-    return true;
-}
-
-uint8_t Machine_read(uint16_t addr, void* ctx);
-void    Machine_write(uint16_t addr, uint8_t byte, void* ctx);
-
-Machine* Machine_create(const char* rom_path, const char* disk_path);
-void     Machine_destroy(Machine* m);
-void     Machine_coredump(const Machine* m, const char* path);
-bool     Machine_step(Machine* m);
 
 /* ============================================ read/write functions ======================================================*/
 
@@ -457,7 +256,132 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     }
 }
 
-/* ===================================================== functions ========================================================*/
+/* =========================================== destructors ==================================================================*/
+
+void CPU_destroy(CPU* cpu){
+    free(cpu);
+}
+
+void ROM_destroy(uint8_t* rom){
+    free(rom);
+}
+
+void RAM_destroy(uint8_t* ram){
+    free(ram);
+}
+
+void Uart_destroy(Uart* uart){
+    free(uart);
+    printf(COLOR_RESET);
+}
+
+void Disk_destroy(Disk* disk){
+    if(disk->file) fclose(disk->file);
+    free(disk);
+}
+
+void MMU_destroy(MMU* mmu){
+    free(mmu);
+}
+
+void Timer_destroy(Timer* timer){
+    free(timer);
+}
+
+void Machine_destroy(Machine* m) {
+    if (!m) return;
+    CPU_destroy(m->cpu);
+    ROM_destroy(m->rom);
+    RAM_destroy(m->ram);
+    Uart_destroy(m->uart);
+    Disk_destroy(m->disk);
+    MMU_destroy(m->mmu);
+    Timer_destroy(m->timer);
+    free(m);
+}
+
+/* ========================================= constructors ==================================================================*/
+
+CPU* CPU_create(Machine* m){
+    if(!m) return NULL;
+    CPU* cpu = (CPU*)calloc(1, sizeof(CPU));
+    if(!cpu) return NULL;
+    MCS6502Init(
+        cpu,
+        m->read,
+        m->write,
+        m
+    );
+    MCS6502Reset(cpu);
+    return cpu;
+}
+
+uint8_t* RAM_create(void){
+    uint8_t* ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
+    if(!ram) return NULL;
+    return ram;
+}
+
+uint8_t* ROM_create(const char* path){
+    uint8_t* rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
+    if(!rom) return NULL;
+
+    FILE* rom_img = fopen(path, "rb");
+    if(!rom_img){
+        free(rom);
+        return NULL;
+    }
+    ssize_t rom_size = fread(rom, 1, ROM_SIZE, rom_img);
+    if(rom_size > ROM_SIZE){
+        fclose(rom_img);
+        free(rom);
+        return NULL;
+    }
+    fclose(rom_img);
+    return rom;
+}
+
+Uart* Uart_create(void){
+    Uart* uart = (Uart*)calloc(1, sizeof(Uart));
+    if(!uart) return NULL;
+    uart->m = NULL;
+    printf(COLOR_GREEN);
+    return uart;
+}
+
+Disk* Disk_create(const char* path){
+    Disk* disk = (Disk*)calloc(1, sizeof(Disk));
+    if(!disk) return NULL;
+
+    disk->m = NULL;
+    if(path){
+       disk->file = fopen(path, "rb+");
+       if(!disk->file){
+           free(disk);
+           return NULL;
+       }
+       disk->status = ~DISK_STATUS_NONE; 
+    }
+    return disk;
+}
+
+MMU* MMU_create(void){
+    MMU* mmu = (MMU*)calloc(1, sizeof(MMU));
+    if(!mmu) return NULL;
+    mmu->m = NULL;
+    for (uint8_t i = 0; i < MMU_PAGE_TABLE_SIZE; i++) {
+        mmu->page_table[i] = i; 
+    }
+    return mmu;
+}
+
+Timer* Timer_create(void){
+    Timer* timer = (Timer*)calloc(1, sizeof(Timer));
+    if(!timer) return NULL;
+    timer->m = NULL;
+    timer->ctrl = TIME_ENABLE_FALSE;
+    return timer;
+}
 
 Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
@@ -487,34 +411,98 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->uart->m = m;
     m->disk->m = m;
     m->timer->m = m;
+    m->mmu->m = m;
 
     return m;
 }
 
-void Machine_destroy(Machine* m) {
-    if (!m) return;
-    CPU_destroy(m->cpu);
-    ROM_destroy(m->rom);
-    RAM_destroy(m->ram);
-    Uart_destroy(m->uart);
-    Disk_destroy(m->disk);
-    MMU_destroy(m->mmu);
-    Timer_destroy(m->timer);
-    free(m);
+/* =========================================== step functions ===============================================================*/
+
+bool Disk_step(Disk* disk){
+    if(!disk) return false;
+    Machine* m = disk->m;
+    if (m->disk->status == DISK_STATUS_BUSY)
+    {
+        if (--m->disk->delay == 0)
+        {
+            uint16_t lba = (m->disk->lba_high << 8) | m->disk->lba_low;
+
+            if (m->disk->cmd == DISK_CMD_READ)
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
+            }
+            else if (m->disk->cmd == DISK_CMD_WRITE)
+            {
+                fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
+                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+            
+                m->disk->status = DISK_STATUS_READY;
+            }
+            else{
+                m->disk->status = DISK_STATUS_ERROR;
+            }
+        }
+    }
+    return true;
 }
 
-void Machine_coredump(const Machine* m, const char* path) {
-    if(!m || !path) return;
-    FILE* f = fopen(path, "wb");
-    if (!f) return;
-    fwrite(m->ram, 1, RAM_SIZE, f);
-    fclose(f);
+bool Uart_step(Uart* uart){
+    if(!uart) return false;
+
+    // keyboard
+    if (_kbhit())
+    {
+        int c = _getch();
+        
+        // ESC 
+        if(c == 0x1B){
+            return false; // power-off
+        }
+
+        if (c != -1){
+            uart->m->uart->rx = (uint8_t)c;
+            uart->m->uart->status |= UART_STATUS_RX_READY;
+        }
+    }
+
+    // display
+    if (!(uart->m->uart->status & UART_STATUS_TX_READY))
+    {
+        uint8_t byte = uart->m->uart->tx;
+        if(byte == '\r') byte = '\n';
+        _putch(byte);
+        uart->m->uart->status |= UART_STATUS_TX_READY;
+    }
+
+    return true;
+}
+
+bool Timer_step(Timer* timer){
+    if(!timer) return false; 
+    if(timer->ctrl == TIME_ENABLE_FALSE) return true;
+    uint16_t counter = (uint16_t)timer->counter_high << 8;
+    counter |= (uint16_t)timer->counter_low;
+    // the timer has expired
+    if(--counter == 0){
+        timer->counter_high = timer->latch_high;
+        timer->counter_low = timer->latch_low;
+        timer->m->mmu->page_table[15] = 15;
+        MCS6502NMI(timer->m->cpu);
+        return true;
+    }
+    // commit to the counter
+    timer->counter_high = (uint8_t)(counter >> 8);
+    timer->counter_low = (uint8_t)(counter >> 0);
+    return true;
 }
 
 bool Machine_step(Machine* m){
     if(!m) return false;
 
-    if(!Uart_step(m->uart)) return false;
+    if(!Uart_step(m->uart)) return false; // power off
     
     (void)Disk_step(m->disk);
     
@@ -544,6 +532,16 @@ bool Machine_step(Machine* m){
     }
     
     return true;
+}
+
+/* ============================================== debug =====================================================================*/
+
+void Machine_coredump(const Machine* m, const char* path) {
+    if(!m || !path) return;
+    FILE* f = fopen(path, "wb");
+    if (!f) return;
+    fwrite(m->ram, 1, RAM_SIZE, f);
+    fclose(f);
 }
 
 /* =============================================== main =====================================================================*/
