@@ -52,16 +52,20 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
 }
 
 struct Timer {
+    Machine* m;
     uint8_t ctrl;
     uint8_t latch_low;
     uint8_t latch_high;
     uint8_t counter_low;
-    uint8_t counter_high;
-    Machine* m;  // conaction to the machine for triggering NMI  
+    uint8_t counter_high;  
 };
 
 // the Machine itself
 struct Machine {
+
+    // bus
+    MCS6502DataReadByteFunction  read;
+    MCS6502DataWriteByteFunction write;
       
     CPU* cpu;
     uint8_t* ram;
@@ -77,23 +81,128 @@ struct Machine {
 
 /* ========================================= constructors ==================================================================*/
 
-CPU*     CPU_create(Machine* m);
-uint8_t* RAM_create(Machine* m);
-uint8_t* ROM_create(Machine* m, const char* path);
-Uart*    Uart_create(Machine* m);
-Disk*    Disk_create(Machine* m, const char* path);
-MMU*     MMU_create(Machine* m);
-Timer*   Timer_create(Machine* m);
+bool CPU_create(Machine* m){
+    if(!m) return false;
+    m->cpu = (CPU*)calloc(1, sizeof(CPU));
+    if(!m->cpu) return false;
+    MCS6502Init(
+        m->cpu,
+        m->read,
+        m->write,
+        m
+    );
+    MCS6502Reset(m->cpu);
+    return true;
+}
+
+bool RAM_create(Machine* m){
+    if(!m) return false;
+    m->ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
+    if(!m->ram) return false;
+    return true;
+}
+
+bool ROM_create(Machine* m, const char* path){
+    if(!m) return false;
+    m->rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
+    if(!m->rom) return false;
+
+    FILE* rom_img = fopen(path, "rb");
+    if(!rom_img){
+        free(m->rom);
+        return false;
+    }
+    ssize_t rom_size = fread(m->rom, 1, ROM_SIZE, rom_img);
+    if(rom_size > ROM_SIZE){
+        fclose(rom_img);
+        free(m->rom);
+        return false;
+    }
+    fclose(rom_img);
+    m->rom_enable = ROM_ENABLE_TRUE;
+
+    return true;
+}
+
+bool Uart_create(Machine* m){
+    if(!m) return false;
+    m->uart = (Uart*)calloc(1, sizeof(Uart));
+    if(!m->uart) return false;
+    m->uart->m = m;
+    printf(COLOR_GREEN);
+    return true;
+}
+
+bool Disk_create(Machine* m, const char* path){
+    if(!m) return false;
+    m->uart = (Uart*)calloc(1, sizeof(Uart));
+    if(!m->uart) return false;
+
+    m->disk->m = m;
+    if(path){
+       m->disk->file = fopen(path, "rb+");
+       if(!m->disk->file){
+           free(m->disk);
+           return false;
+       }
+       m->disk->status = ~DISK_STATUS_NONE; 
+    }
+
+    return true;
+}
+
+bool MMU_create(Machine* m){
+    if(!m) return false;
+    m->mmu = (MMU*)calloc(1, sizeof(MMU));
+    if(!m->mmu) return false;
+    for (uint8_t i = 0; i < MMU_PAGE_TABLE_SIZE; i++) {
+        m->mmu->page_table[i] = i; 
+    }
+    return true;
+}
+
+bool Timer_create(Machine* m){
+    if(!m) return false;
+    m->timer = (Timer*)calloc(1, sizeof(Timer));
+    if(!m->timer) return false;
+    m->timer->m = m;
+    m->timer->ctrl = TIME_ENABLE_FALSE;
+    return true;
+}
+
 
 /* =========================================== destructors ==================================================================*/
 
-void CPU_destroy(CPU* cpu);
-void ROM_destroy(uint8_t* rom);
-void RAM_destroy(uint8_t* ram);
-void Uart_destroy(Uart* uart);
-void Disk_destroy(Disk* disk);
-void MMU_destroy(MMU* mmu);
-void Timer_destroy(Timer* timer);
+void CPU_destroy(CPU* cpu){
+    free(cpu);
+}
+
+void ROM_destroy(uint8_t* rom){
+    free(rom);
+}
+
+void RAM_destroy(uint8_t* ram){
+    free(ram);
+}
+
+void Uart_destroy(Uart* uart){
+    free(uart);
+    printf(COLOR_RESET);
+}
+
+void Disk_destroy(Disk* disk){
+    if(disk->file) fclose(disk->file);
+    free(disk);
+}
+
+void MMU_destroy(MMU* mmu){
+    free(mmu);
+}
+
+void Timer_destroy(Timer* timer){
+    free(timer);
+}
+
 
 /* =========================================== step functions ===============================================================*/
 
@@ -185,6 +294,8 @@ Machine* Machine_create(const char* rom_path, const char* disk_path);
 void     Machine_destroy(Machine* m);
 void     Machine_coredump(const Machine* m, const char* path);
 bool     Machine_step(Machine* m);
+
+/* ============================================ read/write functions ======================================================*/
 
 // TODO: MMU...
 uint8_t Machine_read(uint16_t addr, void* ctx) {
@@ -429,16 +540,14 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
 void Machine_destroy(Machine* m) {
     if (!m) return;
-    free(m->ram);
-    free(m->rom);
-    free(m->uart);
-    free(m->mmu);
-    free(m->timer);
-    if(m->disk->file) fclose(m->disk->file);
-    free(m->disk);
-    free(m->cpu);
+    CPU_destroy(m->cpu);
+    ROM_destroy(m->rom);
+    RAM_destroy(m->ram);
+    Uart_destroy(m->uart);
+    Disk_destroy(m->disk);
+    MMU_destroy(m->mmu);
+    Timer_destroy(m->timer);
     free(m);
-    printf(COLOR_RESET);
 }
 
 void Machine_coredump(const Machine* m, const char* path) {
@@ -505,4 +614,3 @@ int main(int argc, char** argv)
     return 0;
 }
 
-/* ========================================= read/write functions ===========================================================*/
