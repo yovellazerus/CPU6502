@@ -135,8 +135,8 @@ bool Uart_create(Machine* m){
 
 bool Disk_create(Machine* m, const char* path){
     if(!m) return false;
-    m->uart = (Uart*)calloc(1, sizeof(Uart));
-    if(!m->uart) return false;
+    m->disk = (Disk*)calloc(1, sizeof(Disk));
+    if(!m->disk) return false;
 
     m->disk->m = m;
     if(path){
@@ -147,7 +147,6 @@ bool Disk_create(Machine* m, const char* path){
        }
        m->disk->status = ~DISK_STATUS_NONE; 
     }
-
     return true;
 }
 
@@ -169,7 +168,6 @@ bool Timer_create(Machine* m){
     m->timer->ctrl = TIME_ENABLE_FALSE;
     return true;
 }
-
 
 /* =========================================== destructors ==================================================================*/
 
@@ -202,7 +200,6 @@ void MMU_destroy(MMU* mmu){
 void Timer_destroy(Timer* timer){
     free(timer);
 }
-
 
 /* =========================================== step functions ===============================================================*/
 
@@ -474,69 +471,93 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     Machine* m = (Machine*)calloc(1, sizeof(Machine));
     if (!m) return NULL;
 
-    m->cpu = (CPU*)calloc(1, sizeof(CPU));
-    m->ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
-    m->rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
-    m->uart = (Uart*)calloc(1, sizeof(Uart));
-    m->disk = (Disk*)calloc(1, sizeof(Disk));
-    m->mmu = (MMU*)calloc(1, sizeof(MMU));
-    m->timer = (Timer*)calloc(1, sizeof(Timer));
+    // connecting the bus
+    m->read = Machine_read;
+    m->write = Machine_write;
 
-    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->timer){
+    if( !RAM_create(m) || 
+        !ROM_create(m, rom_path) ||
+        !Uart_create(m) || 
+        !Disk_create(m, disk_path) ||
+        !Timer_create(m) ||
+        !MMU_create(m) || 
+        !CPU_create(m) )
+    {
         Machine_destroy(m);
         return NULL;
     }
-
-    // TIMER
-    m->timer->m = m;
-    m->timer->ctrl = TIME_ENABLE_FALSE;
-
-    // MMU
-    for (uint8_t i = 0; i < 16; i++) {
-        m->mmu->page_table[i] = i; 
-    }
-        
-    // ROM
-    FILE* rom_img = fopen(rom_path, "rb");
-    if(!rom_img){
-        Machine_destroy(m);
-        return NULL;
-    }
-    ssize_t rom_size = fread(m->rom, 1, ROM_SIZE, rom_img);
-    if(rom_size > ROM_SIZE){
-        fclose(rom_img);
-        Machine_destroy(m);
-        return NULL; 
-    }
-    fclose(rom_img);
-    m->rom_enable = ROM_ENABLE_TRUE;
     
-    // disk
-    m->disk->m = m;
-    if(disk_path){
-       m->disk->file = fopen(disk_path, "rb+");
-       if(!m->disk->file){
-           Machine_destroy(m);
-           return NULL;
-       }
-       m->disk->status = ~DISK_STATUS_NONE; 
-    }
-    
-    // CPU
-    MCS6502Init(
-        m->cpu,
-        Machine_read,
-        Machine_write,
-        m
-    );
-    MCS6502Reset(m->cpu);
-    
-    // uart
-    m->uart->m = m;
-    printf(COLOR_GREEN);
-
     return m;
 }
+
+// Machine* Machine_create(const char* rom_path, const char* disk_path) {
+
+//     Machine* m = (Machine*)calloc(1, sizeof(Machine));
+//     if (!m) return NULL;
+
+//     m->cpu = (CPU*)calloc(1, sizeof(CPU));
+//     m->ram = (uint8_t*)calloc(RAM_SIZE, sizeof(uint8_t));
+//     m->rom = (uint8_t*)calloc(ROM_SIZE, sizeof(uint8_t));
+//     m->uart = (Uart*)calloc(1, sizeof(Uart));
+//     m->disk = (Disk*)calloc(1, sizeof(Disk));
+//     m->mmu = (MMU*)calloc(1, sizeof(MMU));
+//     m->timer = (Timer*)calloc(1, sizeof(Timer));
+
+//     if (!m->ram || !m->rom || !m->uart || !m->disk || !m->cpu || !m->timer){
+//         Machine_destroy(m);
+//         return NULL;
+//     }
+
+//     // TIMER
+//     m->timer->m = m;
+//     m->timer->ctrl = TIME_ENABLE_FALSE;
+
+//     // MMU
+//     for (uint8_t i = 0; i < MMU_PAGE_TABLE_SIZE; i++) {
+//         m->mmu->page_table[i] = i; 
+//     }
+        
+//     // ROM
+//     FILE* rom_img = fopen(rom_path, "rb");
+//     if(!rom_img){
+//         Machine_destroy(m);
+//         return NULL;
+//     }
+//     ssize_t rom_size = fread(m->rom, 1, ROM_SIZE, rom_img);
+//     if(rom_size > ROM_SIZE){
+//         fclose(rom_img);
+//         Machine_destroy(m);
+//         return NULL; 
+//     }
+//     fclose(rom_img);
+//     m->rom_enable = ROM_ENABLE_TRUE;
+    
+//     // disk
+//     m->disk->m = m;
+//     if(disk_path){
+//        m->disk->file = fopen(disk_path, "rb+");
+//        if(!m->disk->file){
+//            Machine_destroy(m);
+//            return NULL;
+//        }
+//        m->disk->status = ~DISK_STATUS_NONE; 
+//     }
+    
+//     // CPU
+//     MCS6502Init(
+//         m->cpu,
+//         Machine_read,
+//         Machine_write,
+//         m
+//     );
+//     MCS6502Reset(m->cpu);
+    
+//     // uart
+//     m->uart->m = m;
+//     printf(COLOR_GREEN);
+
+//     return m;
+// }
 
 void Machine_destroy(Machine* m) {
     if (!m) return;
