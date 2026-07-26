@@ -20,7 +20,8 @@ void kernel_brk(void){
     syscall = syscalls_table[sys_number];
     if(!syscall){
         printk("bad syscall number: 0x%x\n", sys_number);
-        // TODO: terminate process
+        proc_set_ax(current_process, BADSYSCALL);
+        sys_exit();
     }
     else{
         // NOTE: it is the responsibility of the system call to fetch and parse it's arguments
@@ -64,7 +65,8 @@ void kernel_nmi(void){
         proc_get_ctx(current_process)->pc < 0xF000) {
         
         printk("user process cant have 'I' flage on\n");
-        // TODO: kill process
+        proc_set_ax(current_process, IFLAGEON);
+        sys_exit();
     }
 
     if(proc_ticks_dec(current_process) == 0){

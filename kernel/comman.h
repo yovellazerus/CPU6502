@@ -24,7 +24,10 @@
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
 
-#define SIG_KILL 9
+#define SIGKILL      9
+#define SEGFAULT     1
+#define BADSYSCALL   2
+#define IFLAGEON     3
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
@@ -58,10 +61,12 @@ extern Syscall syscalls_table[256];
 #define SYS_WRITE   'W'
 #define SYS_FORK    'F'
 #define SYS_EXIT    'X'
+#define SYS_WAIT    'w'
 
 int sys_write(void);
 int sys_fork(void);
 int sys_exit(void);
+int sys_wait(void);
 
 // trap.c
 void kernel_brk(void);
@@ -128,10 +133,12 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
 void proc_init(void);
 Proc* palloc(void);
+void pfree(Proc* p);
 const Context* proc_get_ctx(const Proc* p);
 uint8_t proc_get_ticks(const Proc* p);
 uint16_t proc_get_pid(const Proc* p);
 uint8_t proc_ticks_dec(Proc* p);
+uint16_t proc_get_ax(const Proc* p);
 void proc_set_ax(Proc* p, uint16_t ax);
 void proc_set_state(Proc* p, Proc_State state);
 const uint8_t* proc_get_page_table(const Proc* p);

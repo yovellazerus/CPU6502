@@ -16,18 +16,8 @@ void syscall_init(void){
     syscalls_table[SYS_WRITE] = sys_write;
     syscalls_table[SYS_FORK]  = sys_fork;
     syscalls_table[SYS_EXIT]  = sys_exit;
+    syscalls_table[SYS_WAIT]  = sys_wait;
     // ...
-}
-
-// fetch the raw argument int AX (X is High, A is Low)
-static uint16_t fetch_raw(Proc* p){
-    uint8_t a;
-    uint8_t x;
-    uint16_t ax;
-    a = (uint8_t)proc_get_ctx(p)->a;
-    x = (uint8_t)proc_get_ctx(p)->x;
-    ax = ((uint16_t)x << 8) | a;
-    return ax;
 }
 
 // TODO: sys_* implementation should be in dedicated files
@@ -39,7 +29,7 @@ int sys_write(void){
 
     memset(kernel_buffer, 0, sizeof(kernel_buffer));
 
-    ax = fetch_raw(current_process);
+    ax = proc_get_ax(current_process);
 
     user_page_table = proc_get_page_table(current_process);
 

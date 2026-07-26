@@ -79,8 +79,29 @@ Proc* palloc(void){
     return p;
 }
 
+void pfree(Proc* p){
+    uint8_t i;
+    if(!p) panic("pfree");
+    memset(p, 0, sizeof(*p));
+    for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+        p->page_table[i] = FRAME_UNUSED;
+    }
+    p->state = PROC_STATE_UNUSED;
+}
+
 const Context* proc_get_ctx(const Proc* p){
     return &p->ctx;
+}
+
+// X is High, A is Low
+uint16_t proc_get_ax(const Proc* p){
+    uint8_t a;
+    uint8_t x;
+    uint16_t ax;
+    a = (uint8_t)proc_get_ctx(p)->a;
+    x = (uint8_t)proc_get_ctx(p)->x;
+    ax = ((uint16_t)x << 8) | a;
+    return ax;
 }
 
 void proc_set_ax(Proc* p, uint16_t ax){
@@ -197,7 +218,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 // Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
 void kernel_epilogue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        current_process->ctx.a = SIG_KILL;
+        current_process->ctx.a = SIGKILL;
         sys_exit();
     }
     memcpy(life_raft, &current_process->ctx,sizeof(Context));
@@ -207,7 +228,7 @@ void kernel_epilogue(void){
 // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        current_process->ctx.a = SIG_KILL;
+        current_process->ctx.a = SIGKILL;
         sys_exit();
     }
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
@@ -237,7 +258,6 @@ void wakeup(void* channel){
             proc_table[i].channel = NULL;
         }
     }
-    
 }
 
 void scheduler(void) {
@@ -266,6 +286,50 @@ void scheduler(void) {
 
         if (round_robin_index >= MAX_PROC_COUNT) {
             round_robin_index = 0;
+        }
+    }
+}
+
+int sys_wait(void){
+    uint8_t i;
+    uint8_t res;
+    Proc* child = NULL;
+    uint8_t resent = -1;
+    uint16_t user_exit_code = proc_get_ax(current_process);
+
+    while(true){
+        for(i = resent + 1; i < ARRAY_SIZE(proc_table); i++){
+            child = &proc_table[i];
+            if(child->parent == current_process){
+                break;
+            }
+        }
+        // no children
+        if(child == NULL){
+           return -1;
+        }
+        else if(child->state == PROC_STATE_ZOMBIE){
+            if(user_exit_code != 0){
+                if(copy_to_user(&child->exit_code, user_exit_code, 
+                                sizeof(child->exit_code), 
+                                current_process->page_table) < 0)
+                {
+                    current_process->ctx.a = SEGFAULT;
+                    sys_exit();
+                }
+            }
+            res = child->pid;
+            pfree(child);
+            return res;
+        }
+        // THIS child is not zombie, so the next iteration will start form it
+        else{
+            resent = i;
+        }
+
+        // this process has no zombie children, so it is going to sleep and yield the CPU
+        if(resent == ARRAY_SIZE(proc_table) - 1){
+            sleep(current_process);
         }
     }
 }
