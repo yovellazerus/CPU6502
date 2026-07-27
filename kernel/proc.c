@@ -80,12 +80,8 @@ Proc* palloc(void){
 }
 
 void pfree(Proc* p){
-    uint8_t i;
     if(!p) panic("pfree");
     memset(p, 0, sizeof(*p));
-    for (i = 0; i < PAGE_TABLE_SIZE; i++) {
-        p->page_table[i] = FRAME_UNUSED;
-    }
     p->state = PROC_STATE_UNUSED;
 }
 
@@ -235,12 +231,32 @@ void kernel_prologue(void){
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
 
-void interrupts_on(void){
-    asm("cli");
+// global counter to track how deep we are in nested critical sections
+static uint8_t interrupt_depth = 0;
+
+// always disable hardware IRQ's
+void interrupts_push(void) {
+
+    asm("sei");
+    
+    interrupt_depth++;
+    
+    if (interrupt_depth == 0) {
+        panic("interrupts_push");
+    }
 }
 
-void interrupts_off(void){
-    asm("sei");
+// only re-enable hardware interrupts if we have fully exited all nested critical sections
+void interrupts_pop(void) {
+    if (interrupt_depth == 0) {
+        panic("interrupts_pop");
+    }
+
+    interrupt_depth--;
+    
+    if (interrupt_depth == 0) {
+        asm("cli");
+    }
 }
 
 // will yield the cpu
@@ -473,7 +489,7 @@ void run_init_process(void){
         panic("kalloc");
     }
 
-    if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, _INITCODE_SIZE__, init_process->page_table) < 0){
+    if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
         panic("copy_to_user");
     }
 

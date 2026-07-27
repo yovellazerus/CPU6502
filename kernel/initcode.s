@@ -32,7 +32,7 @@ child:
     beq grandson
 
 grandson:
-    ldy #'D'
+    ldy #'P'
     lda #<grandson_arg
     ldx #>grandson_arg
     brk
@@ -40,7 +40,7 @@ grandson:
     jmp grandson
 
 second:
-    ldy #'D'
+    ldy #'P'
     lda #<second_arg
     ldx #>second_arg
     brk
@@ -48,7 +48,7 @@ second:
     jmp second
 
 child_loop:
-    ldy #'D'
+    ldy #'P'
     lda #<child_arg
     ldx #>child_arg
     brk
@@ -56,7 +56,7 @@ child_loop:
     jmp child_loop
 
 init:
-    ldy #'D'
+    ldy #'P'
     lda #<init_arg
     ldx #>init_arg
     brk

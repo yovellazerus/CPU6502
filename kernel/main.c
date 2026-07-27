@@ -23,7 +23,7 @@ void main(void) {
 
     printk("******* kernel v%d ********\n", 1);
 
-    kalloc_init();
+    memory_init();
     proc_init();
     syscall_init();
     fs_init();

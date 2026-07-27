@@ -53,7 +53,7 @@ extern uint8_t _INITCODE_RUN__[];
 extern uint8_t _INITCODE_SIZE__[];
 
 // kalloc.c
-void kalloc_init(void);
+void memory_init(void);
 uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
@@ -64,7 +64,7 @@ void syscall_init(void);
 
 extern Syscall syscalls_table[256];
 
-#define SYS_DUMP    'D'
+#define SYS_PRINT   'P'
 #define SYS_FORK    'F'
 #define SYS_EXIT    'E'
 #define SYS_WAIT    'W'
@@ -72,7 +72,7 @@ extern Syscall syscalls_table[256];
 int sys_fork(void);
 int sys_exit(void);
 int sys_wait(void);
-int sys_dump(void);
+int sys_print(void);
 
 // trap.c
 void kernel_brk(void);
@@ -127,8 +127,8 @@ typedef struct Context {
 typedef struct Proc Proc;
 extern Proc* current_process;
 
-void interrupts_on(void);
-void interrupts_off(void);
+void interrupts_push(void);
+void interrupts_pop(void);
 void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);

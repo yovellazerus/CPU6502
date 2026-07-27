@@ -58,7 +58,7 @@ _irq_handler:
 
     ;; NOTE: for debugging purposes, disable this
     ;; now can take device interrupts in the kernel
-    cli
+    ; cli
     
     ;; jmp to C functions in the kernel
     lda user_context + 1   ;; Load Status (P)

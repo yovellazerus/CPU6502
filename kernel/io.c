@@ -119,7 +119,7 @@ void panic(const char *fmt, ...){
     printk("PANIC: ");
     vprintk(fmt, ap);
     va_end(ap);
-    interrupts_off();
+    interrupts_push();
     timer_puse(); // just in case...
     while (true) { /* halt */ }
 }
