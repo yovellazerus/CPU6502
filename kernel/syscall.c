@@ -13,16 +13,16 @@ Syscall syscalls_table[256];
 
 void syscall_init(void){
     memset(syscalls_table, 0, sizeof(syscalls_table));
-    syscalls_table[SYS_WRITE] = sys_write;
+    syscalls_table[SYS_DUMP]  = sys_dump;
     syscalls_table[SYS_FORK]  = sys_fork;
     syscalls_table[SYS_EXIT]  = sys_exit;
     syscalls_table[SYS_WAIT]  = sys_wait;
     // ...
 }
 
-// TODO: sys_* implementation should be in dedicated files
+// console syscall demo for debug
 static uint8_t kernel_buffer[256];
-int sys_write(void){
+int sys_dump(void){
     SyscallArg syscall_arg;
     uint16_t ax;
     const uint8_t* user_page_table;
@@ -39,8 +39,10 @@ int sys_write(void){
         return -1;
     }
 
+    // printk("%d\n", syscall_arg.write.size);
+
     if(syscall_arg.write.size >= sizeof(kernel_buffer)){
-        printk("write syscall is limited to %d bytes for now...", sizeof(kernel_buffer));
+        printk("dump syscall is limited to %d bytes for now...", sizeof(kernel_buffer));
         return -1;
     }
 
@@ -50,9 +52,7 @@ int sys_write(void){
         return -1;
     }
 
-    // TODO: console write
     printk("%s", kernel_buffer);
 
-    // TODO: real "write" return value
     return ('X' << 8) | 'A'; 
 }

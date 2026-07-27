@@ -16,7 +16,7 @@
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
 #define FRAME_UNUSED MMU_FRAME_INVALID
 
-#define CIRCLES 100 // CPU steps per NMI
+#define CIRCLES 1 // CPU steps per NMI
 
 #define QUANTUM 10 // timer ticks until context switch
 
@@ -64,15 +64,15 @@ void syscall_init(void);
 
 extern Syscall syscalls_table[256];
 
-#define SYS_WRITE   'W'
+#define SYS_DUMP    'D'
 #define SYS_FORK    'F'
-#define SYS_EXIT    'X'
-#define SYS_WAIT    'w'
+#define SYS_EXIT    'E'
+#define SYS_WAIT    'W'
 
-int sys_write(void);
 int sys_fork(void);
 int sys_exit(void);
 int sys_wait(void);
+int sys_dump(void);
 
 // trap.c
 void kernel_brk(void);

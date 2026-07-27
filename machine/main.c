@@ -100,11 +100,17 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     uint8_t frame = mmu->page_table[segment];
 
     // not working...
-    // if(frame == MMU_FRAME_INVALID){
-    //     // MCS6502IRQ(mmu->m->cpu);
-    //     //return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
-    //     printf("va = %.4x\n", va);
-    // }
+    if(frame == MMU_FRAME_INVALID){
+        // MCS6502IRQ(mmu->m->cpu);
+        //return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
+
+        // debug
+        printf("\nPC = 0x%.4x\n", mmu->m->cpu->pc);
+        printf("unmap virtual address: 0x%.4x\n", va);
+        for(int i = 0; i < 16;i++) printf("0x%.2x  ", mmu->page_table[i]);
+        printf("\n\n");
+
+    }
 
     return (frame << 12) | offset;
 }
@@ -541,23 +547,18 @@ bool Timer_step(Timer* timer){
     return true;
 }
 
-bool Machine_step(Machine* m){
-    if(!m) return false;
+// runing multiple cpu feach, decode, execute steps
+bool CPU_step(CPU* cpu){
+    if(!cpu) return false;
+    Machine* m = (Machine*)cpu->readWriteContext;
 
-    if(!Uart_step(m->uart)) return false; // power off
-    
-    (void)Disk_step(m->disk);
-    
-    // CPU
     for(int i = 0; i < CPU_PER_STEP; i++){
 
         // is it going to execute "brk"? simulating VPB pin
-        if(Machine_read(m->cpu->pc, m) == 0x00){
+        if(m->read(m->cpu->pc, m) == 0x00){
             m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT ? m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT : false;
             m->timer->ctrl = TIME_ENABLE_FALSE;
         }
-
-        (void)Timer_step(m->timer);
 
         MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
     
@@ -572,6 +573,16 @@ bool Machine_step(Machine* m){
             // ...
         }
     }
+    return true;
+}
+
+bool Machine_step(Machine* m){
+    if(!m) return false;
+
+    if(!Uart_step(m->uart)) return false; // power off
+    (void)Disk_step(m->disk);
+    (void)Timer_step(m->timer);
+    (void)CPU_step(m->cpu);
     
     return true;
 }
