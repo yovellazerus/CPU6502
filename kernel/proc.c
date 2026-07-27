@@ -453,68 +453,12 @@ void run_init_process(void){
     const char* name = "init";
 
     Context ctx = {
-       0xff,   // SP
-       0x00,   // P
-       0x0200, // PC
-       0x00,   // X
-       0x00,   // Y
-       0x00    // A
-    };
-
-    // for testing, not the real init code
-    /*
-    .org $0200
-    _start:
-        ldy #70
-        brk
-        nop
-        cmp #0
-        bne parent
-        beq child
-    error:
-        jmp *
-
-    child:
-        ldy #87
-        lda #<child_arg
-        ldx #>child_arg
-        brk
-        nop
-        jmp child
-
-    parent:
-        ldy #87
-        lda #<perent_arg
-        ldx #>perent_arg
-        brk
-        nop
-        jmp parent
-
-    child_arg:
-        .word 7
-        .word child_msg
-    child_msg:
-        .byte "child"
-        .byte $0a
-        .byte 0
-
-    perent_arg:
-        .word 8
-        .word perent_msg
-    perent_msg:
-        .byte "parent"
-        .byte $0a
-        .byte 0
-    */
-    uint8_t init_code[]  = {
-        0xA0, 0x46, 0x00, 0xEA, 0xC9, 0x00, 0xD0, 0x10,
-        0xF0, 0x03, 0x4C, 0x0A, 0x02, 0xA0, 0x57, 0xA9,
-        0x23, 0xA2, 0x02, 0x00, 0xEA, 0x4C, 0x0D, 0x02,
-        0xA0, 0x57, 0xA9, 0x2E, 0xA2, 0x02, 0x00, 0xEA,
-        0x4C, 0x18, 0x02, 0x07, 0x00, 0x27, 0x02, 0x63,
-        0x68, 0x69, 0x6C, 0x64, 0x0A, 0x00, 0x08, 0x00,
-        0x32, 0x02, 0x70, 0x61, 0x72, 0x65, 0x6E, 0x74,
-        0x0A, 0x00,
+       0xff,                // SP
+       0x00,                // P
+       (uint16_t)init_code, // PC
+       0x00,                // X
+       0x00,                // Y
+       0x00                 // A
     };
 
     init_process = palloc();
@@ -529,7 +473,7 @@ void run_init_process(void){
         panic("kalloc");
     }
 
-    if(copy_to_user(init_code, 0x0200, sizeof(init_code), init_process->page_table) < 0){
+    if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, _INITCODE_SIZE__, init_process->page_table) < 0){
         panic("copy_to_user");
     }
 

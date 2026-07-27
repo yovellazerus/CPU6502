@@ -46,6 +46,12 @@ extern void irq_handler(void);
 extern void nmi_handler(void);
 extern void kernel_vector(void);
 
+// initcode.s
+extern uint8_t init_code[];
+extern uint8_t _INITCODE_LOAD__[];
+extern uint8_t _INITCODE_RUN__[];
+extern uint8_t _INITCODE_SIZE__[];
+
 // kalloc.c
 void kalloc_init(void);
 uint8_t kalloc(void);
