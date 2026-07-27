@@ -101,14 +101,16 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
 
     // not working...
     if(frame == MMU_FRAME_INVALID){
+        
         // MCS6502IRQ(mmu->m->cpu);
-        //return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
+        return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
         // debug
-        printf("\nPC = 0x%.4x\n", mmu->m->cpu->pc);
+        printf(COLOR_RED "\nMMU:\n");
+        printf("PC = 0x%.4x\n", mmu->m->cpu->pc);
         printf("unmap virtual address: 0x%.4x\n", va);
         for(int i = 0; i < 16;i++) printf("0x%.2x  ", mmu->page_table[i]);
-        printf("\n\n");
+        printf("\n\n" COLOR_GREEN);
 
     }
 

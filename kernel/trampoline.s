@@ -165,7 +165,8 @@ _return_from_trap:
 
     ;; resume timer NMI
     sta TIMER_ENABLE
-
+    nop 
+    
     jmp USER_RTI     
 
 in_user_return_stub:

@@ -14,9 +14,14 @@ _init_code:
     brk
     nop
     cmp #0
-    bne parent
     beq child
-    jmp *  ;; error
+
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    bne init
+    beq second
 
 child:
     ldy #'F'
@@ -25,7 +30,6 @@ child:
     cmp #0
     bne child_loop
     beq grandson
-    jmp *
 
 grandson:
     ldy #'D'
@@ -35,6 +39,14 @@ grandson:
     nop
     jmp grandson
 
+second:
+    ldy #'D'
+    lda #<second_arg
+    ldx #>second_arg
+    brk
+    nop
+    jmp second
+
 child_loop:
     ldy #'D'
     lda #<child_arg
@@ -43,13 +55,13 @@ child_loop:
     nop
     jmp child_loop
 
-parent:
+init:
     ldy #'D'
-    lda #<parent_arg
-    ldx #>parent_arg
+    lda #<init_arg
+    ldx #>init_arg
     brk
     nop
-    jmp parent
+    jmp init
 
 grandson_arg:
     .word (grandson_msg_end - grandson_msg)
@@ -65,9 +77,16 @@ child_msg:
     .byte "child", $0a, 0
 child_msg_end:
     
-parent_arg:
-    .word (parent_msg_end - parent_msg)
-    .word parent_msg
-parent_msg:
-    .byte "parent", $0a, 0
-parent_msg_end:
+init_arg:
+    .word (init_msg_end - init_msg)
+    .word init_msg
+init_msg:
+    .byte "init", $0a, 0
+init_msg_end:
+
+second_arg:
+    .word (second_msg_end - second_msg)
+    .word second_msg
+second_msg:
+    .byte "second", $0a, 0
+second_msg_end:
