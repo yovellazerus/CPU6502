@@ -240,7 +240,7 @@ void interrupts_push(void) {
     asm("sei");
     
     interrupt_depth++;
-    
+
     if (interrupt_depth == 0) {
         panic("interrupts_push");
     }
@@ -277,32 +277,43 @@ void wakeup(void* channel){
 }
 
 void scheduler(void) {
-    
     static uint8_t round_robin_index = 0;
     Proc* p;
-
+    uint8_t i;
+    
     while (1) {
-        
-        // TODO: to avoid deadlock, need to enable interrupts
-
-        p = &proc_table[round_robin_index++];
-        
-        if (p->state == PROC_STATE_READY) {
+        // scan the entire process table exactly once
+        for (i = 0; i < MAX_PROC_COUNT; i++) {
             
-            p->state = PROC_STATE_RUNING;
-            current_process = p;
+            p = &proc_table[round_robin_index++];
+            if (round_robin_index >= MAX_PROC_COUNT) {
+                round_robin_index = 0;
+            }
             
-            p->ticks = QUANTUM; 
+            if (p->state == PROC_STATE_READY) {
 
-            kernel_epilogue();
+                p->state = PROC_STATE_RUNING;
 
-            // no return
-            return_from_trap(); 
+                current_process = p;
+                
+                p->ticks = QUANTUM; 
+
+                kernel_epilogue();
+
+                // no return
+                return_from_trap(); 
+            }
         }
 
-        if (round_robin_index >= MAX_PROC_COUNT) {
-            round_robin_index = 0;
-        }
+        // idle state, no processes are ready, open interrupt window so hardware can wake them up
+
+        asm("cli"); // open the window
+
+        // a "WAI" could have been nice here...
+        asm("nop"); 
+        asm("nop");
+
+        asm("sei"); // close the window before we scan the table again
     }
 }
 
