@@ -32,12 +32,23 @@ child:
     beq grandson
 
 grandson:
+
+    ;; watchdog test
+    ; sei
+    ; nop
+
+    ;; segfault test 
+    lda $fe20
+    sta $0300
+    sta $1000
+
+grandson_loop:
     ldy #'P'
     lda #<grandson_arg
     ldx #>grandson_arg
     brk
     nop
-    jmp grandson
+    jmp grandson_loop
 
 second:
     ldy #'P'

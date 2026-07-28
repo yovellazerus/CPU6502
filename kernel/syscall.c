@@ -21,13 +21,13 @@ void syscall_init(void){
 }
 
 // console syscall demo for debug
-static uint8_t kernel_buffer[256];
+static uint8_t print_buffer[256];
 int sys_print(void){
     SyscallArg syscall_arg;
     uint16_t ax;
     const uint8_t* user_page_table;
 
-    memset(kernel_buffer, 0, sizeof(kernel_buffer));
+    memset(print_buffer, 0, sizeof(print_buffer));
 
     ax = proc_get_ax(current_process);
 
@@ -35,22 +35,22 @@ int sys_print(void){
 
     // populate the system call argument
     if(copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), user_page_table) < 0){
-        printk("syscall_arg pointer out of user space!\n");
+        printk("kernel: syscall argument pointer out of user space!\n");
         return -1;
     }
 
-    if(syscall_arg.print.size >= sizeof(kernel_buffer)){
-        printk("print syscall is limited to %d bytes for now...", sizeof(kernel_buffer));
+    if(syscall_arg.print.size >= sizeof(print_buffer)){
+        printk("kernel: print syscall is limited to %d bytes for now...", sizeof(print_buffer));
         return -1;
     }
 
     // take the data from the user pointer to the kernel buffer
-    if(copy_from_user(kernel_buffer, (uint16_t)syscall_arg.print.buffer, syscall_arg.print.size, user_page_table) < 0){
-        printk("user pointer out of user space!");
+    if(copy_from_user(print_buffer, (uint16_t)syscall_arg.print.buffer, syscall_arg.print.size, user_page_table) < 0){
+        printk("kernel: user pointer out of user space!");
         return -1;
     }
 
-    printk("%s", kernel_buffer);
+    printk("%s", print_buffer);
 
     return ('X' << 8) | 'A'; 
 }

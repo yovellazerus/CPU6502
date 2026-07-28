@@ -142,6 +142,7 @@ Proc* palloc(void);
 void pfree(Proc* p);
 const Context* proc_get_ctx(const Proc* p);
 uint8_t proc_get_ticks(const Proc* p);
+const char* proc_get_name(const Proc* p);
 uint16_t proc_get_pid(const Proc* p);
 uint8_t proc_ticks_dec(Proc* p);
 uint16_t proc_get_ax(const Proc* p);

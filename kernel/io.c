@@ -136,7 +136,7 @@ uint16_t gets(char* buffer, int max)
 
     for (i = 0; i + 1 < max;){
         c = getc();
-        putc(c); // TODO: remove echo
+        putc(c);
         buffer[i++] = c;
         if(c == '\n' || c == '\r' || c == '\0') break;
     }

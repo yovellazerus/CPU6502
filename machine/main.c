@@ -99,18 +99,19 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
     uint16_t offset = va & 0x0FFF;       
     uint8_t frame = mmu->page_table[segment];
 
-    // not working...
     if(frame == MMU_FRAME_INVALID){
         
-        // MCS6502IRQ(mmu->m->cpu);
-        return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
-
         // debug
-        printf(COLOR_RED "\nMMU:\n");
-        printf("PC = 0x%.4x\n", mmu->m->cpu->pc);
-        printf("unmap virtual address: 0x%.4x\n", va);
-        for(int i = 0; i < 16;i++) printf("0x%.2x  ", mmu->page_table[i]);
-        printf("\n\n" COLOR_GREEN);
+        fprintf(stderr, COLOR_RED "\nMMU:\n");
+        fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
+        fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
+        for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
+        fprintf(stderr, "\n\n" COLOR_GREEN);
+
+        // TODO: trigger an IRQ on memory access violation
+        // MCS6502IRQ(mmu->m->cpu);
+        
+        return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
     }
 
@@ -119,7 +120,6 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
 
 /* ============================================== read/write functions ======================================================*/
 
-// TODO: MMU...
 uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
@@ -187,7 +187,6 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     return 0xFF;
 }
 
-// TODO: MMU...
 void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     if(!ctx) return;
     Machine* m = (Machine*)ctx;
@@ -441,6 +440,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     Machine* m = (Machine*)calloc(1, sizeof(Machine));
     if (!m) return NULL;
 
+    // connecting the bus
     m->read = Machine_read;
     m->write = Machine_write;
 
@@ -457,7 +457,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
         return NULL;
     }
 
-    // connecting the bus
+    // connecting the devices that can generate interrupts
     m->uart->m = m;
     m->disk->m = m;
     m->timer->m = m;

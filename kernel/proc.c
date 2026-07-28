@@ -113,6 +113,10 @@ uint8_t proc_get_ticks(const Proc* p){
     return p->ticks;
 }
 
+const char* proc_get_name(const Proc* p){
+    return p->name;
+}
+
 uint16_t proc_get_pid(const Proc* p){
     return p->pid;
 }
@@ -138,6 +142,8 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     uint16_t i;
     uint8_t* src = (uint8_t*)kernel_src;
     
+    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
+
     while (n > 0) {
         
         seg = user_dest >> 12;
@@ -148,7 +154,6 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
             return -1; // segfault
         }
         
-        old_frame = MMIO8(MMU_PAGE_TABLE + 1);
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
         bytes_in_page = 4096 - offset;
@@ -180,6 +185,8 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     uint16_t i;
     uint8_t* dst = (uint8_t*)kernel_dest;
     
+    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
+
     while (n > 0) {
         
         seg = user_src >> 12;
@@ -190,7 +197,6 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
             return -1; // segfault
         }
         
-        old_frame = MMIO8(MMU_PAGE_TABLE + 1);
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
         bytes_in_page = 4096 - offset;
@@ -211,24 +217,39 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     return 0; // success
 }
 
-// Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
 void kernel_epilogue(void){
     if(current_process->killed != 0 && current_process != init_process){
+        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
+    // Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
     memcpy(life_raft, &current_process->ctx,sizeof(Context));
     memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
 }
 
-// Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
+        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
+
+    // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
+
+    // the "watchdog" trait, check for "I" flag bing on for a user process
+    // TODO: only check the 'I' flag if the process was actively running $0200 to $efff, try to remove it...
+    if((proc_get_ctx(current_process)->p & P_I) && 
+        proc_get_ctx(current_process)->pc >= 0x0200 && 
+        proc_get_ctx(current_process)->pc < 0xF000) {
+        
+        printk("kernel: \"%s\" [%d] terminated do to 'I' flage bing on\n", proc_get_name(current_process), proc_get_pid(current_process));
+        proc_set_ax(current_process, IFLAGEON);
+        sys_exit();
+    }
 }
 
 // global counter to track how deep we are in nested critical sections
@@ -410,7 +431,7 @@ int sys_fork(void){
 
     child = palloc();
     if(!child){
-        printk("palloc\n");
+        printk("kernel: process pool exhausted\n");
         return -1;
     }
 
@@ -436,10 +457,22 @@ int sys_fork(void){
         if (parent_frame != FRAME_UNUSED) {
             
             child_frame = kalloc();
+
+            // no more memory frames, clean the new process page table, free the new Proc struct and return error code -1
             if (child_frame == FRAME_UNUSED) {
-                // TODO: destroy all and retrun -1
-                panic("out of memory in fork"); 
+                do{
+                    if(child->page_table[segment] != FRAME_UNUSED){
+                        kfree(child->page_table[segment]);
+                        child->page_table[segment] = FRAME_UNUSED;
+                    }
+                    segment--;
+                }
+                while(segment > 0);
+                pfree(child);
+                printk("kernel: frame pool exhausted in fork()"); 
+                return -1;
             }
+
             child->page_table[segment] = child_frame;
 
             // map the parent's and child frame's to the copy window's

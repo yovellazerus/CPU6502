@@ -19,7 +19,7 @@ void kernel_brk(void){
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
     if(!syscall){
-        printk("bad syscall number: 0x%x\n", sys_number);
+        printk("kernel: \"%s\" [%d] terminated do to invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
         proc_set_ax(current_process, BADSYSCALL);
         sys_exit();
     }
@@ -58,13 +58,12 @@ void kernel_nmi(void){
     kernel_prologue();
 
     // the "watchdog" trait
-    // only check the 'I' flag if the process was actively running in user memory (e.g., $0200 to $efff)
-    // TODO: try to remove it...
+    // TODO: only check the 'I' flag if the process was actively running $0200 to $efff, try to remove it...
     if((proc_get_ctx(current_process)->p & P_I) && 
         proc_get_ctx(current_process)->pc >= 0x0200 && 
         proc_get_ctx(current_process)->pc < 0xF000) {
         
-        printk("user process cant have 'I' flage on\n");
+        printk("kernel: \"%s\" [%d] terminated do to 'I' flage bing on\n", proc_get_name(current_process), proc_get_pid(current_process));
         proc_set_ax(current_process, IFLAGEON);
         sys_exit();
     }
