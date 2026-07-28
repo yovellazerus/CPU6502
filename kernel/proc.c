@@ -150,6 +150,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         
         physical_frame = page_table[seg];
         if (physical_frame == FRAME_UNUSED) {
+            MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
             return -1; // segfault
         }
         
@@ -193,6 +194,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
         
         physical_frame = page_table[seg];
         if (physical_frame == FRAME_UNUSED) {
+            MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
             return -1; // segfault
         }
         
@@ -468,6 +470,9 @@ int sys_fork(void){
                     segment--;
                 }
                 while(segment > 0);
+                // restore the kernel's memory space
+                MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
+                MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
                 printk("kernel: frame pool exhausted in fork()"); 
                 return -1;
