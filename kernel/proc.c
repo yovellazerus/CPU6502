@@ -242,11 +242,7 @@ void kernel_prologue(void){
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 
     // the "watchdog" trait, check for "I" flag bing on for a user process
-    // TODO: only check the 'I' flag if the process was actively running $0200 to $efff, try to remove it...
-    if((proc_get_ctx(current_process)->p & P_I) && 
-        proc_get_ctx(current_process)->pc >= 0x0200 && 
-        proc_get_ctx(current_process)->pc < 0xF000) {
-        
+    if((proc_get_ctx(current_process)->p & P_I)) {
         printk("kernel: \"%s\" [%d] terminated do to 'I' flage bing on\n", proc_get_name(current_process), proc_get_pid(current_process));
         proc_set_ax(current_process, IFLAGEON);
         sys_exit();

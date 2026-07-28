@@ -35,6 +35,10 @@ grandson:
 
     ;; watchdog test
     sei
+    ; nop
+    ; nop
+    ; nop
+    ; nop
     
     ;; segfault test 
     lda $fe20
