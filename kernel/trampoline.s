@@ -138,6 +138,15 @@ _return_from_trap:
     cpx #$0F          ; Have we done segments 0 through 14?
     bne @mmu_loop
 
+    ;; install in user return stub, and jump to it
+    ldx #$00          
+@stub_loop:
+    lda in_user_return_stub, x     
+    sta USER_RTI, x      
+    inx
+    cpx #(in_user_return_stub_end - in_user_return_stub)         
+    bne @stub_loop
+
     ;; restore CPU registers form life raft
     ldx user_context + 0         ;; SP
     txs               
@@ -151,29 +160,17 @@ _return_from_trap:
     ldy user_context + 5         ;; Y
     lda user_context + 6         ;; A
     pha                          ;; for use in the user return stub 
-    txa
-    pha
-
-    ;; install in user return stub, and jump to it
-    ldx #$00          
-@stub_loop:
-    lda in_user_return_stub, x     
-    sta USER_RTI, x      
-    inx
-    cpx #(in_user_return_stub_end - in_user_return_stub)         
-    bne @stub_loop
 
     ;; resume timer NMI
     sta TIMER_ENABLE
-    nop 
     
     jmp USER_RTI     
 
 in_user_return_stub:
     lda user_page_table + 15
     sta MMU_PAGE_TABLE  + 15
-    pla
-    tax
+    nop
+    nop
     pla
     rti   
 in_user_return_stub_end:   

@@ -12,7 +12,7 @@ void kernel_brk(void){
     Syscall syscall;
     uint16_t return_value = -1;
 
-    // appdate the current process Proc struct
+    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
     kernel_prologue();
 
     // get the syscall and call it
@@ -54,19 +54,8 @@ void kernel_nmi(void){
         panic("is this possible?");
     }
 
-    // load process ctx from "Life Raft"
+    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
     kernel_prologue();
-
-    // the "watchdog" trait
-    // TODO: only check the 'I' flag if the process was actively running $0200 to $efff, try to remove it...
-    if((proc_get_ctx(current_process)->p & P_I) && 
-        proc_get_ctx(current_process)->pc >= 0x0200 && 
-        proc_get_ctx(current_process)->pc < 0xF000) {
-        
-        printk("kernel: \"%s\" [%d] terminated do to 'I' flage bing on\n", proc_get_name(current_process), proc_get_pid(current_process));
-        proc_set_ax(current_process, IFLAGEON);
-        sys_exit();
-    }
 
     if(proc_ticks_dec(current_process) == 0){
 
@@ -88,7 +77,7 @@ whereas device_interrupt() can also be called from an IRQ in kernel space.
 */
 void kernel_irq(void){
 
-    // load process ctx from "Life Raft"
+    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
     kernel_prologue();
 
     device_interrupt();

@@ -34,9 +34,8 @@ child:
 grandson:
 
     ;; watchdog test
-    ; sei
-    ; nop
-
+    sei
+    
     ;; segfault test 
     lda $fe20
     sta $0300

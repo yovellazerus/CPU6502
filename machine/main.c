@@ -195,11 +195,11 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
 
     // ---------------- TIMER ----------------
     if(physical_addr == TIMER_ENABLE){
-        m->timer->ctrl = TIME_ENABLE_TRUE; // writing to the ctrl register tern ON the timer nmi
+        m->timer->ctrl = TIME_ENABLE_TRUE; // writing to the TIMER_ENABLE register tern ON the timer nmi
         return;
     }
     if(physical_addr == TIMER_DISABLE){
-        m->timer->ctrl = TIME_ENABLE_FALSE; // writing to the ctrl register tern OFF the timer nmi
+        m->timer->ctrl = TIME_ENABLE_FALSE; // writing to the TIMER_DISABLE register tern OFF the timer nmi
         return;
     }
     if(physical_addr == TIMER_LATCH_HIGH){
@@ -539,7 +539,7 @@ bool Timer_step(Timer* timer){
     if(--counter == 0){
         timer->counter_high = timer->latch_high;
         timer->counter_low = timer->latch_low;
-        timer->m->mmu->page_table[15] = 15;
+        timer->m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
         MCS6502NMI(timer->m->cpu);
         return true;
     }
