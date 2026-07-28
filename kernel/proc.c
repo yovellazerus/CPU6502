@@ -52,7 +52,7 @@ void proc_init(void){
     current_process = NULL;
 }
 
-// create a new Proc struct with empty page table, new pid and SP in a USED state 
+// create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
@@ -68,7 +68,6 @@ Proc* palloc(void){
         return NULL; 
     }
 
-    memset(p, 0, sizeof(*p));
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
     p->ctx.sp = 0xff;
@@ -450,6 +449,7 @@ int sys_fork(void){
     // for restoration later
     old_window1 = MMIO8(MMU_PAGE_TABLE + 1);
     old_window2 = MMIO8(MMU_PAGE_TABLE + 2);
+
     // clone the memory space
     for (segment = 0; segment < PAGE_TABLE_SIZE; segment++) {
         parent_frame = current_process->page_table[segment];
@@ -523,18 +523,18 @@ void run_init_process(void){
 
     init_process = palloc();
     if(!init_process){
-        panic("palloc");
+        panic("palloc in run_init_process");
     }
 
     memcpy(&init_process->ctx, &ctx, sizeof(Context));
 
     init_process->page_table[0] = kalloc();
     if(init_process->page_table[0] == FRAME_UNUSED){
-        panic("kalloc");
+        panic("kalloc in run_init_process");
     }
 
     if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
-        panic("copy_to_user");
+        panic("copy_to_user in run_init_process");
     }
 
     memcpy(init_process->name, name, strlen(name));

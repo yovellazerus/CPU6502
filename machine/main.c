@@ -557,7 +557,7 @@ bool CPU_step(CPU* cpu){
     for(int i = 0; i < CPU_PER_STEP; i++){
 
         // is it going to execute "brk"? simulating VPB pin
-        if(m->read(m->cpu->pc, m) == 0x00){
+        if(m->read(cpu->pc, m) == 0x00){
             m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT ? m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT : false;
             m->timer->ctrl = TIME_ENABLE_FALSE;
         }
@@ -567,7 +567,7 @@ bool CPU_step(CPU* cpu){
         // debug
         if (result == MCS6502ExecResultInvalidOperation)
         {
-            fprintf(stderr, COLOR_RED "\nDEBUG: invalid opcode\n" COLOR_GREEN);
+            fprintf(stderr, COLOR_RED "\nCPU: \ninvalid opcode: 0x%.2x\nPC = 0x%.4x\n" COLOR_GREEN, m->read(cpu->pc, m), cpu->pc);
             return false;
         }
         else if (result == MCS6502ExecResultHalting)
@@ -584,7 +584,7 @@ bool Machine_step(Machine* m){
     if(!Uart_step(m->uart)) return false; // power off
     (void)Disk_step(m->disk);
     (void)Timer_step(m->timer);
-    (void)CPU_step(m->cpu);
+    if(!CPU_step(m->cpu)) return false; // invalid opcode
     
     return true;
 }
