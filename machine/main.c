@@ -111,7 +111,7 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
         fprintf(stderr, "\n\n" COLOR_GREEN);
 
         // TODO: trigger an IRQ on memory access violation
-        // MCS6502IRQ(mmu->m->cpu);
+        // m->pending_irq = true
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
@@ -125,7 +125,6 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
 uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
-
 
     // It is essential for interrupts to feach the vector from the trap frame
     if (addr >= 0xfffa && m->pending_irq) {

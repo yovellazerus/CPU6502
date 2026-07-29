@@ -64,19 +64,21 @@ void kernel_irq(void){
     // load process ctx from "Life Raft"
     kernel_prologue();
 
-    device_interrupt();
+    // if true it is the timer
+    if(device_interrupt()){
+        /* 
+        the kernel timer interrupt handler, 
+        If the process has any quantum remaining, it will return to user space here.
+        Otherwise, it will by pass to the scheduler() and yield the CPU.
+        */
+        if(proc_ticks_dec(current_process) == 0){
 
-    /* 
-    the kernel timer interrupt handler, 
-    If the process has any quantum remaining, it will return to user space here.
-    Otherwise, it will by pass to the scheduler() and yield the CPU.
-    */
-    if(proc_ticks_dec(current_process) == 0){
+            proc_set_state(current_process, PROC_STATE_READY);
 
-        proc_set_state(current_process, PROC_STATE_READY);
-
-        scheduler();
+            scheduler();
+        }
     }
+    // else, not the timer
 
     // process has quantum remaining, so we will return to it
     kernel_epilogue();
@@ -86,10 +88,12 @@ void kernel_irq(void){
 
 // this is doing the work of a device IRQ
 // TODO: only Timer IRQ's for now
-void device_interrupt(void){
+bool device_interrupt(void){
 
     // increment global system timer
     if(++systicks == 0) panic("systicks");
+
+    return true; // for timer interrupt
 
 }
 

@@ -16,7 +16,7 @@
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
 #define FRAME_UNUSED MMU_FRAME_INVALID
 
-#define CIRCLES 100 // CPU steps per NMI
+#define CIRCLES 100 // CPU steps per Timer tick
 
 #define QUANTUM 10 // timer ticks until context switch
 
@@ -79,7 +79,7 @@ void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
 void kernel_software_interrupt(void);
-void device_interrupt(void);
+bool device_interrupt(void);
 
 // io.c
 // TODO: need to be uart.c console.c and printk.c
