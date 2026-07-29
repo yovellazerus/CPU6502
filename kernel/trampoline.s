@@ -190,7 +190,7 @@ _kernel_vector:
 
     tsx
     lda $0104, x
-    and #%00010000  ;; Check the B flag
+    and #%00010000  ;; check the B flag
     beq @irq
     jsr _kernel_software_interrupt
     jmp @end
@@ -205,6 +205,7 @@ _kernel_vector:
     pla
     rti
 
+;; Initializes the kernel stack pointer in the allocated frame in A
 ;;
 ;; void make_stack(uint8_t frame);
 ;;
@@ -238,70 +239,77 @@ _make_stack:
 
 old_frame:  .res 1
 
+;; preformed the context switch form process "old" kernel stack to process "new" kernel stack 
+;; 
 ;;
 ;; void context_switch(Proc* old, Proc* new);
 ;;
 .global _context_switch
 _context_switch:
-    ; cc65 passes the right argument 'new' in A and X
+    ;; "new" in AX
     sta tmp_new+0
     stx tmp_new+1
     
-    ; The left argument 'old' is on the C param stack. Pop it.
+    ;; "old" on software stack
     jsr popax
     sta tmp_old+0
     stx tmp_old+1
     
-    ; 1. Save current hardware stack pointer to old->ksp (Offset 7 in Proc)
+    ;; save current hardware stack pointer to old->ksp (Offset 7 in Proc)
     ldy #7
     tsx
     txa
     sta (tmp_old), y
     
-    ; 2. Read new->ksp (Offset 7) and new->kernel_stack_frame (Offset 24 in Proc)
+    ;; read the new process kernel hardware stack form new->ksp (Offset 7) to A and move it to the CPU's SP
     lda (tmp_new), y
-    tax              ; X = new process hardware stack pointer
+    tax              
+    txs
+
+    ;; load the new process kernel stack frame  from new->kernel_stack_frame (Offset 24 in Proc) 
+    ;; and install it in to the MMU (segment 0)
     ldy #24
-    lda (tmp_new), y ; A = new process Segment 0 physical frame
-    
-    ; 3. THE BRAIN TRANSPLANT: Swap Segment 0 memory instantly!
+    lda (tmp_new), y
     sta MMU_PAGE_TABLE + 0        
     
-    ; 4. Restore the new process's hardware stack pointer
-    txs
-    
-    ; 5. Return (This pulls the return address from the NEW process's stack!)
+    ; return to the NEW process stack! essentially, this is the context switch
     rts
 
+;; preformed the context switch form process "old" kernel stack to process "new" kernel stack
+;; when "new" is a new process just created bye sys_fork() and it is it's first quantum to run
 ;;
 ;; void first_context_switch(Proc* old, Proc* new);
 ;;
 .global _first_context_switch
 _first_context_switch:
-    sta tmp_new
+
+    ;; "new" in AX
+    sta tmp_new+0
     stx tmp_new+1
+
+    ;; "old" on software stack
     jsr popax
-    sta tmp_old
+    sta tmp_old+0
     stx tmp_old+1
     
-    ; Save old->ksp
+    ; save old->ksp (offset 7 in Proc)
     ldy #7
     tsx
     txa
     sta (tmp_old), y
     
-    ; Read new frame (Offset 24), ignore ksp since it is empty
+    ; read new frame (offset 24 in Proc), ignore ksp since it is empty
     ldy #24
     lda (tmp_new), y
     
-    ; Swap memory
+    ; swap memory
     sta MMU_PAGE_TABLE + 0
     
-    ; Set a fresh hardware stack for the new kernel thread
+    ; set a fresh hardware stack pointer for the new process
     ldx #$ff
     txs
     
-    ; Jump directly to user space
+    ; jump directly to user space, because there is nowhere for it to return to in the kernel (no function called it) 
     jsr _kernel_epilogue
     jmp _return_from_trap
 
