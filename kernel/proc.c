@@ -53,6 +53,8 @@ void proc_init(void){
     current_process = NULL;
 }
 
+static uint16_t inital_csp = 0x1000;
+
 // create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW ad a kernel stack
 Proc* palloc(void){
     Proc* p = 0;
@@ -60,7 +62,6 @@ Proc* palloc(void){
     uint8_t stack_frame;
     uint8_t old_frame;
     // for now hard coded...
-    uint16_t new_csp = 0x1000;
 
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
@@ -80,10 +81,11 @@ Proc* palloc(void){
     }
 
     // Initialize the software kernel stack by writing to it's c_sp zero page register
+    // TODO: c_sp is currently hard code, both the offset and the inital value  
     old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-    // c_sp offset is asum to be 0...
-    memcpy((void*)(WINDOW1 + 0), &new_csp, sizeof(new_csp));
-    MMIO8(MMU_PAGE_TABLE + 1) = stack_frame;
+    MMIO8(MMU_PAGE_TABLE + 1) = stack_frame;                       
+    memcpy((void*)(WINDOW1 + C_SP_OFFSET), &inital_csp, sizeof(inital_csp));
+    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;                      
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
@@ -261,7 +263,7 @@ void kernel_prologue(void){
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
-    
+
     // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);

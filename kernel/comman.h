@@ -38,6 +38,7 @@
 // form cc65
 // extern uint16_t c_sp; 
 // extern void __STACK_START__;
+#define C_SP_OFFSET 0x0000
 extern void* memset(void *dst, int value, uint16_t size);
 
 // trampoline.s

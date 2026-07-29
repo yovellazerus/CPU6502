@@ -236,7 +236,8 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
 
     // ---------------- ROM ENABLE ----------------
     if (physical_addr == ROM_ENABLE){
-        m->rom->rom_enable = byte;
+        // TODO: for debug, cant reenable the ROM
+        if(m->rom->rom_enable == ROM_ENABLE_TRUE) m->rom->rom_enable = byte;
         return;
     } 
 

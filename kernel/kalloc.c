@@ -29,7 +29,12 @@ uint8_t kalloc(void) {
 
 void kfree(uint8_t frame) {
     uint8_t old_frame;
-    if(frame == FRAME_UNUSED) return;
+    
+    // Guard: Do not free empty slots, AND do not free static kernel frames!
+    if(frame == FRAME_UNUSED || frame < PAGE_TABLE_SIZE) {
+        return;
+    }
+
     free_frames[free_top] = frame;
     free_top++;
 
