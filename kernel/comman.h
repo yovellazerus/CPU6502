@@ -36,6 +36,8 @@
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
 // form cc65
+// extern uint16_t c_sp; 
+// extern void __STACK_START__;
 extern void* memset(void *dst, int value, uint16_t size);
 
 // trampoline.s
@@ -91,7 +93,7 @@ uint16_t gets(char *buf, int max);
 // timer.c
 extern volatile uint32_t systicks;
 void timer_init(void);
-void timer_puse(void);
+void timer_pause(void);
 void timer_resume(void);
 
 // string.c
@@ -122,6 +124,7 @@ typedef struct Context {
     uint8_t x;
     uint8_t y;
     uint8_t a;
+    uint8_t ksp;
 } Context;
 
 typedef struct Proc Proc;

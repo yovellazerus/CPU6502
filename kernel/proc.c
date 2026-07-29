@@ -7,6 +7,7 @@ struct Proc {
     Context ctx; 
     uint8_t page_table[PAGE_TABLE_SIZE];
     uint16_t top;
+    uint8_t kernel_stack_frame;
      
     // scheduler
     Proc_State state; 
@@ -52,10 +53,14 @@ void proc_init(void){
     current_process = NULL;
 }
 
-// create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW
+// create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW ad a kernel stack
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
+    uint8_t stack_frame;
+    uint8_t old_frame;
+    // for now hard coded...
+    uint16_t new_csp = 0x1000;
 
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
@@ -67,6 +72,18 @@ Proc* palloc(void){
     if (p == NULL) {
         return NULL; 
     }
+
+    // give the process a fresh empty kernel stack
+    stack_frame = p->kernel_stack_frame = kalloc();
+    if(p->kernel_stack_frame == FRAME_UNUSED){
+        return NULL;
+    }
+
+    // Initialize the software kernel stack by writing to it's c_sp zero page register
+    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
+    // c_sp offset is asum to be 0...
+    memcpy((void*)(WINDOW1 + 0), &new_csp, sizeof(new_csp));
+    MMIO8(MMU_PAGE_TABLE + 1) = stack_frame;
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
@@ -80,6 +97,7 @@ Proc* palloc(void){
 
 void pfree(Proc* p){
     if(!p) panic("pfree");
+    kfree(p->kernel_stack_frame);
     memset(p, 0, sizeof(*p));
     p->state = PROC_STATE_UNUSED;
 }
@@ -223,8 +241,17 @@ void kernel_epilogue(void){
         sys_exit();
     }
     // Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
-    memcpy(life_raft, &current_process->ctx,sizeof(Context));
+    // NOTE: not install the kernel stack, it is saving it!
+    // so it can be loaded to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
+
+    // 1. Copies all 8 bytes (0-7), WHICH INCLUDES ksp at byte 7!
+    memcpy(life_raft, &current_process->ctx, sizeof(Context));
+    
+    // 2. Safely copies the page table starting at byte 8. Zero collisions.
     memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
+    
+    // 3. Setup the kernel segment 0 swap
+    kernel_page_table[0] = current_process->kernel_stack_frame;
 }
 
 
@@ -234,7 +261,7 @@ void kernel_prologue(void){
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
-
+    
     // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
@@ -478,6 +505,12 @@ int sys_fork(void){
             memcpy((void*)WINDOW2, (void*)WINDOW1, 4096);
         }
     }
+
+    // copy the kernel stack
+    MMIO8(MMU_PAGE_TABLE + 1) = current_process->kernel_stack_frame;
+    MMIO8(MMU_PAGE_TABLE + 2) = child->kernel_stack_frame;
+    memcpy((void*)WINDOW2, (void*)WINDOW1, 4096);
+
     // restore the kernel's memory space
     MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
     MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
@@ -513,7 +546,8 @@ void run_init_process(void){
        (uint16_t)init_code, // PC
        0x00,                // X
        0x00,                // Y
-       0x00                 // A
+       0x00,                // A
+       0xff                 // KSP
     };
 
     init_process = palloc();

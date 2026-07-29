@@ -8,6 +8,7 @@ void memory_init(void){
     uint16_t i;
     free_top = 0;
     // construct the kernel global page table
+    // with seg0 is frame 0 aka stack0 to be used before the first process was created
     for(i = 0; i < PAGE_TABLE_SIZE; i++){
         kernel_page_table[i] = MMIO8(MMU_PAGE_TABLE + i);
     }

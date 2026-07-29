@@ -32,7 +32,11 @@ _irq_handler:
     pla
     sta user_context + 3   ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0
+    stx user_context + 0   ;; SP
+
+    ;; switch to the user kernel hardware stack
+    ldx user_context + 7
+    txs
 
     ;; switch the memory map to kernel space, 
     ;; all of them except for seg15, 
@@ -78,7 +82,11 @@ _nmi_handler:
     pla
     sta user_context + 3   ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0
+    stx user_context + 0   ;; SP
+
+    ;; switch to the user kernel hardware stack
+    ldx user_context + 7
+    txs
 
     ;; switch the memory map to kernel space, 
     ;; all of them except for seg15, 
@@ -106,14 +114,6 @@ _nmi_handler:
 ; void return_from_trap(void);
 .global _return_from_trap
 _return_from_trap:  
-
-    ;; destruction of kernel stacks to avoid the "Trail of Breadcrumbs"
-    lda #<__STACK_START__
-    sta c_sp + 0
-    lda #>__STACK_START__
-    sta c_sp + 1
-    ldx #$ff
-    txs
 
     ;; restore the user IRQ vector
     lda #<_irq_handler
