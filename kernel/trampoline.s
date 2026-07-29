@@ -13,6 +13,9 @@ tmp_new: .res 2
 
 .import popax
 
+;; form linker
+.import __STACK_START__
+
 .import _kernel_brk
 .import _kernel_irq
 .import _kernel_nmi
@@ -29,25 +32,23 @@ VECTORS        = $fffa
 _irq_handler:
 
     ;; save user CPU registers to the life raft
-    sta user_context + 6
-    sty user_context + 5
-    stx user_context + 4
+    sta user_context + 6    ;; A
+    sty user_context + 5    ;; Y
+    stx user_context + 4    ;; X
     pla
-    sta user_context + 1   ;; P (Status) is always pulled first
+    sta user_context + 1    ;; P (Status) is always pulled first
     pla
-    sta user_context + 2   ;; PCL (PC Low) is pulled second
+    sta user_context + 2    ;; PCL (PC Low) is pulled second
     pla
-    sta user_context + 3   ;; PCH (PC High) is pulled last
+    sta user_context + 3    ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0   ;; SP
+    stx user_context + 0    ;; SP
 
     ;; switch to the user kernel hardware stack
     ldx user_context + 7
     txs
 
-    ;; switch the memory map to kernel space, 
-    ;; all of them except for seg15, 
-    ;; because we are currently running code on it
+    ;; switch the memory map to kernel space
     ldx #$00          
 @mmu_loop:
     lda _kernel_page_table, x     
@@ -67,8 +68,8 @@ _irq_handler:
     ; cli
     
     ;; jmp to C functions in the kernel
-    lda user_context + 1   ;; Load Status (P)
-    and #%00010000         ;; Check the B flag
+    lda user_context + 1   ;; load Status (P)
+    and #%00010000         ;; check the B flag
     beq @irq
     jsr _kernel_brk
     jmp _return_from_trap
@@ -81,25 +82,23 @@ _irq_handler:
 _nmi_handler:
 
     ;; save user CPU registers to the life raft
-    sta user_context + 6
-    sty user_context + 5
-    stx user_context + 4
+    sta user_context + 6    ;; A   
+    sty user_context + 5    ;; Y
+    stx user_context + 4    ;; X
     pla
-    sta user_context + 1   ;; P (Status) is always pulled first
+    sta user_context + 1    ;; P (Status) is always pulled first
     pla
-    sta user_context + 2   ;; PCL (PC Low) is pulled second
+    sta user_context + 2    ;; PCL (PC Low) is pulled second
     pla
-    sta user_context + 3   ;; PCH (PC High) is pulled last
+    sta user_context + 3    ;; PCH (PC High) is pulled last
     tsx
-    stx user_context + 0   ;; SP
+    stx user_context + 0    ;; SP
 
     ;; switch to the user kernel hardware stack
     ldx user_context + 7
     txs
 
-    ;; switch the memory map to kernel space, 
-    ;; all of them except for seg15, 
-    ;; because we are currently running code on it
+    ;; switch the memory map to kernel space
     ldx #$00          
 @mmu_loop:
     lda _kernel_page_table, x     
@@ -120,10 +119,16 @@ _nmi_handler:
     jsr _kernel_nmi
     jmp _return_from_trap
 
-; Assembly routine that installs the page table, restores context, install return to user stub
-;
-; void return_from_trap(void);
-;
+;; *********************************    Core system assembly routine    ********************************************
+;; 1) install the user _irq_handler to the IRQ vector.
+;; 2) load the user page table to the MMU. 
+;; 3) injecting the in_user_return_stub to the process hardware stack (to close the last segment safely).
+;; 4) restore user context from "life raft".
+;; 5) jump to in_user_return_stub that close the trap frame (the last segment) and preform the "RTI" to resume usr process. 
+
+;;
+;; void return_from_trap(void);
+;;
 .global _return_from_trap
 _return_from_trap:  
 
@@ -139,10 +144,10 @@ _return_from_trap:
     lda user_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ; Have we done segments 0 through 14?
+    cpx #$0F          ; have we done segments 0 through 14?
     bne @mmu_loop
 
-    ;; install in user return stub, and jump to it
+    ;; inject in user return stub
     ldx #$00          
 @stub_loop:
     lda in_user_return_stub, x     
@@ -201,10 +206,43 @@ _kernel_vector:
     rti
 
 ;;
-;; void switch_threads(Proc* old, Proc* new);
+;; void make_stack(uint8_t frame);
 ;;
-.global _switch_threads
-_switch_threads:
+.global _make_stack
+_make_stack:
+    ;; save old_frame and map WINDOW1 to frame in A
+    ldx MMU_PAGE_TABLE + 1  
+    stx old_frame
+    sta MMU_PAGE_TABLE + 1  
+
+    ;; ptr1 set to the base of WINDOW1
+    lda #$00
+    sta ptr1+0
+    lda #$10
+    sta ptr1+1
+
+    ;; use of the zp address of c_sp as the Y index 
+    ldy #<c_sp 
+
+    ;; store the value of __STACK_START__ to the offset of c_sp in the new stack frame
+    lda #<__STACK_START__
+    sta (ptr1), y          
+    iny
+    lda #>__STACK_START__
+    sta (ptr1), y           
+
+    ;; restore the old_frame of WINDOW1
+    ldx old_frame
+    stx MMU_PAGE_TABLE + 1  
+    rts
+
+old_frame:  .res 1
+
+;;
+;; void context_switch(Proc* old, Proc* new);
+;;
+.global _context_switch
+_context_switch:
     ; cc65 passes the right argument 'new' in A and X
     sta tmp_new+0
     stx tmp_new+1
@@ -236,10 +274,10 @@ _switch_threads:
     rts
 
 ;;
-;; void switch_to_new_thread(Proc* old, Proc* new);
+;; void first_context_switch(Proc* old, Proc* new);
 ;;
-.global _switch_to_new_thread
-_switch_to_new_thread:
+.global _first_context_switch
+_first_context_switch:
     sta tmp_new
     stx tmp_new+1
     jsr popax

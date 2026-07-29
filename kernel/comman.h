@@ -47,8 +47,9 @@ extern void return_from_trap(void);
 extern void irq_handler(void);
 extern void nmi_handler(void);
 extern void kernel_vector(void);
-extern void switch_threads(Proc* old, Proc* new);
-extern void switch_to_new_thread(Proc* old, Proc* new);
+extern void context_switch(Proc* old, Proc* new);
+extern void first_context_switch(Proc* old, Proc* new);
+extern void make_stack(uint8_t frame);
 
 // initcode.s
 extern uint8_t init_code[];

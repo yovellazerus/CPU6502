@@ -53,16 +53,15 @@ void proc_init(void){
     current_process = NULL;
 }
 
-#define C_SP_OFFSET 0x0004
-static uint16_t inital_csp = 0x1000;
-
-// create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW ad a kernel stack
+/*
+create a new Proc struct with an empty page table, 
+new pid, SP set to $ff and a state of PROC_STATE_NEW,
+and a kernel stack frame alocted.
+*/
 Proc* palloc(void){
     Proc* p = 0;
     uint8_t i;
     uint8_t stack_frame;
-    uint8_t old_frame;
-    uint16_t offset;
 
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
@@ -81,16 +80,13 @@ Proc* palloc(void){
         return NULL;
     }
 
-    // Initialize the software kernel stack by writing to it's c_sp zero page register
-    // TODO: c_sp is currently hard code, both the offset and the inital value  
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-    MMIO8(MMU_PAGE_TABLE + 1) = stack_frame;                       
-    memcpy((void*)(WINDOW1 + C_SP_OFFSET), &inital_csp, sizeof(inital_csp));
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;      
+    // initialize the software kernel stack by writing to it's c_sp zero page register   
+    make_stack(stack_frame);    
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
     p->ctx.sp = 0xff;
+    p->ctx.ksp = 0xff;
     for (i = 0; i < PAGE_TABLE_SIZE; i++) {
         p->page_table[i] = FRAME_UNUSED;
     }
@@ -243,17 +239,15 @@ void kernel_epilogue(void){
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
-    // Save the process's CPU context and page table INTO the Trap Segment "Life Raft"
-    // NOTE: not install the kernel stack, it is saving it!
-    // so it can be loaded to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
+    
+    // save the process's CPU context and page table INTO the Trap Segment "Life Raft"
+    // NOTE: not installing the kernel stack frame, it is just saving it to the trampoline!
+    // so it can be loaded back to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
 
-    // 1. Copies all 8 bytes (0-7), WHICH INCLUDES ksp at byte 7!
     memcpy(life_raft, &current_process->ctx, sizeof(Context));
     
-    // 2. Safely copies the page table starting at byte 8. Zero collisions.
     memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
     
-    // 3. Setup the kernel segment 0 swap
     kernel_page_table[0] = current_process->kernel_stack_frame;
 }
 
@@ -265,7 +259,9 @@ void kernel_prologue(void){
         sys_exit();
     }
 
-    // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer of the process,
+    // are loaded bye the _nmi_handler() and _irq_handler() assembly trampoline.s routines
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
@@ -310,6 +306,7 @@ void wakeup(void* channel){
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
+            proc_table[i].channel = NULL;
         }
     }
 }
@@ -336,23 +333,26 @@ void scheduler(void) {
                 p->ticks = QUANTUM; 
 
                 if (old == NULL) {
-                    //  "init" first run so, no previous process to save
+                    //  "init" first run, so no previous process to save
                     kernel_epilogue();
                     return_from_trap();
 
                 } else if (is_new) {
                     // new process created bye sys_fork()
-                    switch_to_new_thread(old, p);
+                    first_context_switch(old, p);
                     return; 
 
                 } else {
-                    switch_threads(old, p);
+                    context_switch(old, p);
                     return;
                 }
             }
         }
 
-        // idle state, no process is READY to run so we must enable interrupt's to avoid deadlock ("WAI" instruction would have been nice...)
+        // idle state. 
+        // no process is READY to run,
+        // so we must enable interrupt's to avoid deadlock 
+        // a "WAI" instruction would have been nice...
         asm("cli"); 
         asm("nop"); 
         asm("nop");
@@ -366,40 +366,37 @@ int sys_wait(void){
     bool has_children = false;
     uint16_t user_exit_code = proc_get_ax(current_process);
 
-    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
-        if(proc_table[i].parent == current_process){
-            has_children = true;
+    while(true){
+        for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+            if(proc_table[i].parent == current_process){
+                has_children = true;
 
-            if(proc_table[i].state == PROC_STATE_ZOMBIE){
-                if(user_exit_code != 0){
-                    if(copy_to_user(&proc_table[i].exit_code, user_exit_code, 
-                                    sizeof(proc_table[i].exit_code), current_process->page_table) < 0)
-                    {
-                        current_process->ctx.a = SEGFAULT;
-                        sys_exit(); 
+                if(proc_table[i].state == PROC_STATE_ZOMBIE){
+                    if(user_exit_code != 0){
+                        if(copy_to_user(&proc_table[i].exit_code, user_exit_code, 
+                                        sizeof(proc_table[i].exit_code), current_process->page_table) < 0)
+                        {
+                            current_process->ctx.a = SEGFAULT;
+                            sys_exit(); 
+                        }
                     }
+                    res = proc_table[i].pid;
+                    pfree(&proc_table[i]);
+                    return res; 
                 }
-                res = proc_table[i].pid;
-                pfree(&proc_table[i]);
-                return res; 
             }
         }
+
+        // no children
+        if(!has_children){
+            return -1;
+        }
+
+        // there are children, but they are all not zombies, 
+        // when one of them exits, it will wake this process up and it will return here to the while loop
+        // to reap the new zombie child process
+        sleep(current_process);
     }
-
-    // no children
-    if(!has_children){
-        return -1;
-    }
-
-    // have children, but none are zombie, so we must block
-    // a way to block in this no "Trail of Breadcrumbs" stateless kernel
-    // rewind the PC by 2.
-    current_process->ctx.pc -= 2;
-
-    sleep(current_process);
-
-    // for the compiler...
-    return -1; 
 }
 
 int sys_exit(void){
@@ -410,9 +407,9 @@ int sys_exit(void){
         panic("init exited");
     }
 
-    // TODO: close(decrement reference count of) open files and cwd 
+    // TODO: close (decrement reference count of) open files and cwd 
 
-    // free process memory frames 
+    // free process memory frames, not including the kernel stack frame, that will be freed bye pfree()
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
         if(current_process->page_table[segment] != FRAME_UNUSED){
             kfree(current_process->page_table[segment]);
@@ -426,7 +423,7 @@ int sys_exit(void){
 
     current_process->state = PROC_STATE_ZOMBIE;
 
-    // re-parent its children
+    // re-parent its children to "init" and if a child is zombie it will wake up "init" so "init" can reap it
     for(i = 0; i < ARRAY_SIZE(proc_table); i++){
         if(proc_table[i].parent == current_process){
             proc_table[i].parent = init_process;
@@ -438,6 +435,8 @@ int sys_exit(void){
 
     // yield the CPU forever...
     scheduler();
+
+    panic("zombie exit");
 
     // for the compiler...
     return -1;
@@ -519,23 +518,23 @@ int sys_fork(void){
     MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
     MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
 
-    // copy the context
+    // copy the context, including the kernel hardware stack pointer
     memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
 
     // TODO: this should be deeper... using reference count
     memcpy(child->fd_table, current_process->fd_table, sizeof(child->fd_table));
     child->cwd_inode = current_process->cwd_inode;
 
-    // name
+    // copy the name
     memcpy(child->name, current_process->name, MAX_PROC_NAME);
 
-    // process tree
+    // construct the process tree
     child->parent  = current_process;
 
-    // PROC_STATE_NEW to indicate to the scheduler() that it is is first run
+    // PROC_STATE_NEW to indicate to the scheduler() that it is its first run
     child->state = PROC_STATE_NEW;
 
-    // fork magic, returning 0 for the child and child pid for the parent
+    // fork magic, returning 0 for the child and the child pid for the parent
     proc_set_ax(child, 0);
     return child->pid;
 }

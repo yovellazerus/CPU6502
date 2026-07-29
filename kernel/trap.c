@@ -9,7 +9,6 @@ void kernel_brk(void){
     Syscall syscall;
     uint16_t return_value = -1;
 
-    // load process ctx from "Life Raft"
     kernel_prologue();
 
     // get the syscall and call it
@@ -28,11 +27,12 @@ void kernel_brk(void){
     proc_set_ax(current_process, return_value);
 
     kernel_epilogue();
-    
+    // return to irq_handler in trampoline.s that called it, 
+    // and the trampoline will jump to: return_from_trap and resume the user processs
 }
 
 /*
-Kernel NMI handler, it serves as a "watchdog" for security purposes.
+kernel NMI handler, it serves as a "watchdog" for security purposes.
 it's job is to terminate a user process with flag "I" set.
 the "watchdog" is the only source for NMI's in this system
 */
@@ -40,11 +40,12 @@ void kernel_nmi(void){
     kernel_prologue();
     printk("kernel: prosess \"%s\" [%d] was terminated do to having \"I\" flag set\n", proc_get_name(current_process), proc_get_pid(current_process));
     proc_set_ax(current_process, IFLAGEON);
-    sys_exit();    
+    sys_exit();   
+    // no return 
 }
 
 /*
-This function handles hardware interrupts from system devices,
+this function handles hardware interrupts from system devices,
 it differs from device_interrupt() in that it is called from user space, 
 whereas device_interrupt() can also be called from an IRQ in kernel space.
 */
@@ -54,15 +55,14 @@ void kernel_irq(void){
         panic("is this possible?");
     }
 
-    // load process ctx from "Life Raft"
     kernel_prologue();
 
     // if true it is the timer
     if(device_interrupt()){
         /* 
         the kernel timer interrupt handler, 
-        If the process has any quantum remaining, it will return to user space here.
-        Otherwise, it will by pass to the scheduler() and yield the CPU.
+        if the process has any quantum remaining, it will return to user space here.
+        otherwise, it will by pass to the scheduler() and yield the CPU.
         */
         if(proc_ticks_dec(current_process) == 0){
 
@@ -75,7 +75,9 @@ void kernel_irq(void){
 
     // process has quantum remaining, so we will return to it
     kernel_epilogue();
-    
+
+    // return to irq_handler in trampoline.s that called it, 
+    // and the trampoline will jump to: return_from_trap and resume the user processs
 }
 
 // this is doing the work of a device IRQ
@@ -86,7 +88,6 @@ bool device_interrupt(void){
     if(++systicks == 0) panic("systicks");
 
     return true; // for timer interrupt
-
 }
 
 // can be used for a kernel debugare?
