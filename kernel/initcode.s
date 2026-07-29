@@ -34,13 +34,12 @@ child:
 grandson:
 
     ;; watchdog test
-    ; sei
-    
+    sei
 
     ;; segfault test 
-    ; lda $fe20
-    ; sta $0300
-    ; sta $1000
+    lda $fe20
+    sta $0300
+    sta $1000
 
 grandson_loop:
     ldy #'P'

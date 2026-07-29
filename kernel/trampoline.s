@@ -1,11 +1,17 @@
 
+.segment "ZEROPAGE"
+
+tmp_old: .res 2
+tmp_new: .res 2
+
 .segment "TRAMPOLINE"
 
-.import __STACK_START__ 
-
+;; form ca65
 .importzp c_sp
 .importzp ptr1
 .importzp ptr2
+
+.import popax
 
 .import _kernel_brk
 .import _kernel_irq
@@ -13,6 +19,7 @@
 
 .import _kernel_software_interrupt
 .import _device_interrupt
+.import _kernel_epilogue
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
 USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
@@ -63,9 +70,11 @@ _irq_handler:
     lda user_context + 1   ;; Load Status (P)
     and #%00010000         ;; Check the B flag
     beq @irq
-    jmp _kernel_brk
+    jsr _kernel_brk
+    jmp _return_from_trap
 @irq:
-    jmp _kernel_irq
+    jsr _kernel_irq
+    jmp _return_from_trap
     
 
 .global _nmi_handler
@@ -108,10 +117,13 @@ _nmi_handler:
     ;; NOTE: not enable IRQ in here!
 
     ;; jmp to C function in the kernel
-    jmp _kernel_nmi
+    jsr _kernel_nmi
+    jmp _return_from_trap
 
 ; Assembly routine that installs the page table, restores context, install return to user stub
+;
 ; void return_from_trap(void);
+;
 .global _return_from_trap
 _return_from_trap:  
 
@@ -188,6 +200,72 @@ _kernel_vector:
     pla
     rti
 
+;;
+;; void switch_threads(Proc* old, Proc* new);
+;;
+.global _switch_threads
+_switch_threads:
+    ; cc65 passes the right argument 'new' in A and X
+    sta tmp_new+0
+    stx tmp_new+1
+    
+    ; The left argument 'old' is on the C param stack. Pop it.
+    jsr popax
+    sta tmp_old+0
+    stx tmp_old+1
+    
+    ; 1. Save current hardware stack pointer to old->ksp (Offset 7 in Proc)
+    ldy #7
+    tsx
+    txa
+    sta (tmp_old), y
+    
+    ; 2. Read new->ksp (Offset 7) and new->kernel_stack_frame (Offset 24 in Proc)
+    lda (tmp_new), y
+    tax              ; X = new process hardware stack pointer
+    ldy #24
+    lda (tmp_new), y ; A = new process Segment 0 physical frame
+    
+    ; 3. THE BRAIN TRANSPLANT: Swap Segment 0 memory instantly!
+    sta MMU_PAGE_TABLE + 0        
+    
+    ; 4. Restore the new process's hardware stack pointer
+    txs
+    
+    ; 5. Return (This pulls the return address from the NEW process's stack!)
+    rts
+
+;;
+;; void switch_to_new_thread(Proc* old, Proc* new);
+;;
+.global _switch_to_new_thread
+_switch_to_new_thread:
+    sta tmp_new
+    stx tmp_new+1
+    jsr popax
+    sta tmp_old
+    stx tmp_old+1
+    
+    ; Save old->ksp
+    ldy #7
+    tsx
+    txa
+    sta (tmp_old), y
+    
+    ; Read new frame (Offset 24), ignore ksp since it is empty
+    ldy #24
+    lda (tmp_new), y
+    
+    ; Swap memory
+    sta MMU_PAGE_TABLE + 0
+    
+    ; Set a fresh hardware stack for the new kernel thread
+    ldx #$ff
+    txs
+    
+    ; Jump directly to user space
+    jsr _kernel_epilogue
+    jmp _return_from_trap
 
 .global _life_raft
 _life_raft:

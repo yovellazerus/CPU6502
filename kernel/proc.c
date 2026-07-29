@@ -6,8 +6,8 @@ struct Proc {
     // CPU and memory context
     Context ctx; 
     uint8_t page_table[PAGE_TABLE_SIZE];
-    uint16_t top;
     uint8_t kernel_stack_frame;
+    uint16_t top;
      
     // scheduler
     Proc_State state; 
@@ -53,6 +53,7 @@ void proc_init(void){
     current_process = NULL;
 }
 
+#define C_SP_OFFSET 0x0004
 static uint16_t inital_csp = 0x1000;
 
 // create a new Proc struct with an empty page table, new pid, SP set to $ff and a state of PROC_STATE_NEW ad a kernel stack
@@ -61,7 +62,7 @@ Proc* palloc(void){
     uint8_t i;
     uint8_t stack_frame;
     uint8_t old_frame;
-    // for now hard coded...
+    uint16_t offset;
 
     for (i = 0; i < MAX_PROC_COUNT; i++) {
         if (proc_table[i].state == PROC_STATE_UNUSED) {
@@ -85,7 +86,7 @@ Proc* palloc(void){
     old_frame = MMIO8(MMU_PAGE_TABLE + 1);
     MMIO8(MMU_PAGE_TABLE + 1) = stack_frame;                       
     memcpy((void*)(WINDOW1 + C_SP_OFFSET), &inital_csp, sizeof(inital_csp));
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;                      
+    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;      
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
@@ -309,7 +310,6 @@ void wakeup(void* channel){
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
-            proc_table[i].channel = NULL;
         }
     }
 }
@@ -318,43 +318,45 @@ void scheduler(void) {
     static uint8_t round_robin_index = 0;
     Proc* p;
     uint8_t i;
+    bool is_new;
+    Proc* old = current_process;
     
     while (1) {
-        // scan the entire process table exactly once
         for (i = 0; i < MAX_PROC_COUNT; i++) {
-            
             p = &proc_table[round_robin_index++];
             if (round_robin_index >= MAX_PROC_COUNT) {
                 round_robin_index = 0;
             }
             
-            if (p->state == PROC_STATE_READY) {
-
-                p->state = PROC_STATE_RUNING;
-
-                current_process = p;
-
-                // debug
-                // printk("kernel: current process [%d] is in scheduler loop\n", current_process->pid);
+            if (p->state == PROC_STATE_READY || p->state == PROC_STATE_NEW) {
                 
+                is_new = (p->state == PROC_STATE_NEW);
+                p->state = PROC_STATE_RUNING;
+                current_process = p;
                 p->ticks = QUANTUM; 
 
-                kernel_epilogue();
+                if (old == NULL) {
+                    //  "init" first run so, no previous process to save
+                    kernel_epilogue();
+                    return_from_trap();
 
-                // no return
-                return_from_trap(); 
+                } else if (is_new) {
+                    // new process created bye sys_fork()
+                    switch_to_new_thread(old, p);
+                    return; 
+
+                } else {
+                    switch_threads(old, p);
+                    return;
+                }
             }
         }
 
-        // idle state, no processes are ready, open interrupt window so hardware can wake them up
-
-        asm("cli"); // open the window
-
-        // a "WAI" could have been nice here...
+        // idle state, no process is READY to run so we must enable interrupt's to avoid deadlock ("WAI" instruction would have been nice...)
+        asm("cli"); 
         asm("nop"); 
         asm("nop");
-
-        asm("sei"); // close the window before we scan the table again
+        asm("sei"); 
     }
 }
 
@@ -530,8 +532,8 @@ int sys_fork(void){
     // process tree
     child->parent  = current_process;
 
-    // wake up the child
-    child->state = PROC_STATE_READY;
+    // PROC_STATE_NEW to indicate to the scheduler() that it is is first run
+    child->state = PROC_STATE_NEW;
 
     // fork magic, returning 0 for the child and child pid for the parent
     proc_set_ax(child, 0);

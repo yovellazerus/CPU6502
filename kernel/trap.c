@@ -2,10 +2,7 @@
 #include "comman.h"
 
 /* 
-the kernel syscall entry, 
-fast call return here (then return to user space), 
-and sleeping syscalls will yield the CPU by doing:
-    sleep() -> scheduler() -> (different process)
+the kernel syscall entry.
 */
 void kernel_brk(void){
     uint8_t sys_number;
@@ -25,17 +22,13 @@ void kernel_brk(void){
     }
     else{
         // NOTE: it is the responsibility of the system call to fetch and parse it's arguments
-        // for a blocking syscall, like: sys_read, sys_write, sys_wait...
-        // the process will call sleep() that will transfer control to the scheduler() and wont retrun.
         return_value = syscall();
     }
 
-    // fast syscall return back here to resume the process
     proc_set_ax(current_process, return_value);
 
     kernel_epilogue();
     
-    return_from_trap();
 }
 
 /*
@@ -83,7 +76,6 @@ void kernel_irq(void){
     // process has quantum remaining, so we will return to it
     kernel_epilogue();
     
-    return_from_trap();
 }
 
 // this is doing the work of a device IRQ

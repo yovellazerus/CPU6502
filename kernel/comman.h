@@ -35,10 +35,9 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
+typedef struct Proc Proc;
+
 // form cc65
-// extern uint16_t c_sp; 
-// extern void __STACK_START__;
-#define C_SP_OFFSET 0x0000
 extern void* memset(void *dst, int value, uint16_t size);
 
 // trampoline.s
@@ -48,6 +47,8 @@ extern void return_from_trap(void);
 extern void irq_handler(void);
 extern void nmi_handler(void);
 extern void kernel_vector(void);
+extern void switch_threads(Proc* old, Proc* new);
+extern void switch_to_new_thread(Proc* old, Proc* new);
 
 // initcode.s
 extern uint8_t init_code[];
@@ -128,7 +129,6 @@ typedef struct Context {
     uint8_t ksp;
 } Context;
 
-typedef struct Proc Proc;
 extern Proc* current_process;
 
 void interrupts_push(void);
