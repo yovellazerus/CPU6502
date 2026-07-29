@@ -76,6 +76,8 @@ typedef struct Timer
 struct Machine 
 {
 
+    bool pending_irq;
+
     // bus
     MCS6502DataReadByteFunction  read;
     MCS6502DataWriteByteFunction write;
@@ -123,6 +125,13 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
 uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
+
+
+    // It is essential for interrupts to feach the vector from the trap frame
+    if (addr >= 0xfffa && m->pending_irq) {
+        m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
+        m->pending_irq = false;
+    }
 
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
 
@@ -194,12 +203,13 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
 
     // ---------------- TIMER ----------------
-    if(physical_addr == TIMER_ENABLE){
-        m->timer->ctrl = TIME_ENABLE_TRUE; // writing to the TIMER_ENABLE register tern ON the timer nmi
-        return;
-    }
-    if(physical_addr == TIMER_DISABLE){
-        m->timer->ctrl = TIME_ENABLE_FALSE; // writing to the TIMER_DISABLE register tern OFF the timer nmi
+    if(physical_addr == TIMER_CTRL){
+        m->timer->ctrl = byte;
+        
+        if (byte == TIMER_ENABLE_TRUE) {
+            m->timer->counter_high = m->timer->latch_high;
+            m->timer->counter_low = m->timer->latch_low;
+        }
         return;
     }
     if(physical_addr == TIMER_LATCH_HIGH){
@@ -431,7 +441,7 @@ Timer* Timer_create(void){
     Timer* timer = (Timer*)calloc(1, sizeof(Timer));
     if(!timer) return NULL;
     timer->m = NULL;
-    timer->ctrl = TIME_ENABLE_FALSE;
+    timer->ctrl = TIMER_ENABLE_FALSE;
     return timer;
 }
 
@@ -439,6 +449,8 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
     Machine* m = (Machine*)calloc(1, sizeof(Machine));
     if (!m) return NULL;
+
+    m->pending_irq = false;
 
     // connecting the bus
     m->read = Machine_read;
@@ -532,20 +544,28 @@ bool Uart_step(Uart* uart){
 
 bool Timer_step(Timer* timer){
     if(!timer) return false; 
-    if(timer->ctrl == TIME_ENABLE_FALSE) return true;
+    
+    if(timer->ctrl == TIMER_ENABLE_FALSE) return true;
+    
     uint16_t counter = (uint16_t)timer->counter_high << 8;
     counter |= (uint16_t)timer->counter_low;
-    // the timer has expired
+    
     if(--counter == 0){
+    
         timer->counter_high = timer->latch_high;
         timer->counter_low = timer->latch_low;
-        timer->m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
-        MCS6502NMI(timer->m->cpu);
+        
+        // Raise the hardware IRQ line
+        // the IRQ itself is triggered in the CPU_step() function 
+        timer->m->pending_irq = true;
+
         return true;
     }
-    // commit to the counter
+    
+    // commit the decremented value back to the counter
     timer->counter_high = (uint8_t)(counter >> 8);
     timer->counter_low = (uint8_t)(counter >> 0);
+    
     return true;
 }
 
@@ -555,13 +575,24 @@ bool CPU_step(CPU* cpu){
     Machine* m = (Machine*)cpu->readWriteContext;
 
     for(int i = 0; i < CPU_PER_STEP; i++){
-
-        // is it going to execute "brk"? simulating VPB pin
-        if(m->read(cpu->pc, m) == 0x00){
-            m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT ? m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT : false;
-            m->timer->ctrl = TIME_ENABLE_FALSE;
+        
+        // The hardware IRQ trigger line
+        if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
+            MCS6502IRQ(m->cpu); 
         }
 
+        // hardware BRK Check simulating VPB pin
+        if (m->read(cpu->pc, m) == 0x00) {
+            m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
+        }
+
+        // an hardware "watchdog" for detecting user "SEI" feach cycle using SYNC pin
+        if(m->read(cpu->pc, m) == 0x78 && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
+            m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
+            MCS6502NMI(m->cpu);
+        }
+        
+        // execute the instruction (or the interrupt sequence)
         MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
     
         // debug

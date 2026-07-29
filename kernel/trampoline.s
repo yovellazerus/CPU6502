@@ -15,16 +15,11 @@
 .import _device_interrupt
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
-TIMER_DISABLE  = $fe41 ;; 1 byte 
-TIMER_ENABLE   = $fe40 ;; 1 byte
 USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
 VECTORS        = $fffa
 
 .global _irq_handler
 _irq_handler:
-
-    ;; pause timer NMI
-    sta TIMER_DISABLE
 
     ;; save user CPU registers to the life raft
     sta user_context + 6
@@ -72,9 +67,6 @@ _irq_handler:
 .global _nmi_handler
 _nmi_handler:
 
-    ;; pause timer NMI
-    sta TIMER_DISABLE
-
     ;; save user CPU registers to the life raft
     sta user_context + 6
     sty user_context + 5
@@ -105,7 +97,7 @@ _nmi_handler:
     lda #>_kernel_vector
     sta VECTORS+5
 
-    ;; NOTE: not enable IRQ in here! for time-critical timer interrupts
+    ;; NOTE: not enable IRQ in here!
 
     ;; jmp to C function in the kernel
     jmp _kernel_nmi
@@ -160,17 +152,12 @@ _return_from_trap:
     ldy user_context + 5         ;; Y
     lda user_context + 6         ;; A
     pha                          ;; for use in the user return stub 
-
-    ;; resume timer NMI
-    sta TIMER_ENABLE
     
     jmp USER_RTI     
 
 in_user_return_stub:
     lda user_page_table + 15
     sta MMU_PAGE_TABLE  + 15
-    nop
-    nop
     pla
     rti   
 in_user_return_stub_end:   

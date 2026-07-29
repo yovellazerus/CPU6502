@@ -12,7 +12,7 @@ void kernel_brk(void){
     Syscall syscall;
     uint16_t return_value = -1;
 
-    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
+    // load process ctx from "Life Raft"
     kernel_prologue();
 
     // get the syscall and call it
@@ -38,25 +38,39 @@ void kernel_brk(void){
     return_from_trap();
 }
 
-/* 
-the kernel timer interrupt handler, 
-If the process has any quantum remaining, it will return to user space here.
-Otherwise, it will by pass to the scheduler() and yield the CPU.
-In addition, it serves as a "watchdog" for security purposes.
-Only source of NMI in this system is the Timer. 
+/*
+Kernel NMI handler, it serves as a "watchdog" for security purposes.
+it's job is to terminate a user process with flag "I" set.
+the "watchdog" is the only source for NMI's in this system
 */
 void kernel_nmi(void){
+    kernel_prologue();
+    printk("kernel: prosess \"%s\" [%d] was terminated do to having \"I\" flag set\n", proc_get_name(current_process), proc_get_pid(current_process));
+    proc_set_ax(current_process, IFLAGEON);
+    sys_exit();    
+}
 
-    // increment global system timer
-    if(++systicks == 0) panic("systicks");
+/*
+This function handles hardware interrupts from system devices,
+it differs from device_interrupt() in that it is called from user space, 
+whereas device_interrupt() can also be called from an IRQ in kernel space.
+*/
+void kernel_irq(void){
 
     if(!current_process){
         panic("is this possible?");
     }
 
-    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
+    // load process ctx from "Life Raft"
     kernel_prologue();
 
+    device_interrupt();
+
+    /* 
+    the kernel timer interrupt handler, 
+    If the process has any quantum remaining, it will return to user space here.
+    Otherwise, it will by pass to the scheduler() and yield the CPU.
+    */
     if(proc_ticks_dec(current_process) == 0){
 
         proc_set_state(current_process, PROC_STATE_READY);
@@ -70,26 +84,13 @@ void kernel_nmi(void){
     return_from_trap();
 }
 
-/*
-This function handles hardware interrupts from system devices,
-it differs from device_interrupt() in that it is called from user space, 
-whereas device_interrupt() can also be called from an IRQ in kernel space.
-*/
-void kernel_irq(void){
-
-    // load process ctx from "Life Raft". Has the "watchdog" trait if the process has "I" flag set terminate it
-    kernel_prologue();
-
-    device_interrupt();
-
-    kernel_epilogue();
-    
-    return_from_trap();
-}
-
 // this is doing the work of a device IRQ
+// TODO: only Timer IRQ's for now
 void device_interrupt(void){
-    panic("device_interrupt");
+
+    // increment global system timer
+    if(++systicks == 0) panic("systicks");
+
 }
 
 // can be used for a kernel debugare?

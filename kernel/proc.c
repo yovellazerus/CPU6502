@@ -121,9 +121,7 @@ uint16_t proc_get_pid(const Proc* p){
 }
 
 uint8_t proc_ticks_dec(Proc* p){
-    uint8_t ticks = p->ticks;
-    p->ticks--;
-    return ticks;
+    return --p->ticks;
 }
 
 void proc_set_state(Proc* p, Proc_State state){
@@ -240,13 +238,6 @@ void kernel_prologue(void){
     // Load the process's CPU context and page table FROM the Trap Segment "Life Raft"
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
     memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
-
-    // the "watchdog" trait, check for "I" flag bing on for a user process
-    if((proc_get_ctx(current_process)->p & P_I)) {
-        printk("kernel: \"%s\" [%d] terminated do to 'I' flage bing on\n", proc_get_name(current_process), proc_get_pid(current_process));
-        proc_set_ax(current_process, IFLAGEON);
-        sys_exit();
-    }
 }
 
 // global counter to track how deep we are in nested critical sections
@@ -313,6 +304,9 @@ void scheduler(void) {
                 p->state = PROC_STATE_RUNING;
 
                 current_process = p;
+
+                // debug
+                // printk("kernel: current process [%d] is in scheduler loop\n", current_process->pid);
                 
                 p->ticks = QUANTUM; 
 

@@ -18,9 +18,7 @@
 #define UART_STAT    0x0000fe12
 
 #define MMU_PAGE_TABLE  0x0000fe20 // 16 bytes
-
-#define TIMER_ENABLE        0x0000fe40
-#define TIMER_DISABLE       0x0000fe41            
+       
 #define TIMER_LATCH_LOW     0x0000fe42
 #define TIMER_LATCH_HIGH    0x0000fe43
 #define TIMER_COUNTER_LOW   0x0000fe44
@@ -64,8 +62,8 @@ typedef enum {
 } ROM_Status;
 
 typedef enum {
-    TIME_ENABLE_FALSE = 0,
-    TIME_ENABLE_TRUE = 1,
+    TIMER_ENABLE_FALSE = 0,
+    TIMER_ENABLE_TRUE = 1,
 } Timer_Ctrl;
 
 typedef enum {

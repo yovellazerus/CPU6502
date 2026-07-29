@@ -16,7 +16,7 @@
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
 #define FRAME_UNUSED MMU_FRAME_INVALID
 
-#define CIRCLES 1 // CPU steps per NMI
+#define CIRCLES 100 // CPU steps per NMI
 
 #define QUANTUM 10 // timer ticks until context switch
 
