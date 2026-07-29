@@ -1,9 +1,4 @@
 
-.segment "ZEROPAGE"
-
-tmp_old: .res 2
-tmp_new: .res 2
-
 .segment "TRAMPOLINE"
 
 ;; form ca65
@@ -247,29 +242,29 @@ old_frame:  .res 1
 .global _context_switch
 _context_switch:
     ;; "new" in AX
-    sta tmp_new+0
-    stx tmp_new+1
+    sta ptr1+0
+    stx ptr1+1
     
     ;; "old" on software stack
     jsr popax
-    sta tmp_old+0
-    stx tmp_old+1
+    sta ptr2+0
+    stx ptr2+1
     
     ;; save current hardware stack pointer to old->ksp (Offset 7 in Proc)
     ldy #7
     tsx
     txa
-    sta (tmp_old), y
+    sta (ptr2), y
     
     ;; read the new process kernel hardware stack form new->ksp (Offset 7) to A and move it to the CPU's SP
-    lda (tmp_new), y
+    lda (ptr1), y
     tax              
     txs
 
     ;; load the new process kernel stack frame  from new->kernel_stack_frame (Offset 24 in Proc) 
     ;; and install it in to the MMU (segment 0)
     ldy #24
-    lda (tmp_new), y
+    lda (ptr1), y
     sta MMU_PAGE_TABLE + 0        
     
     ; return to the NEW process stack! essentially, this is the context switch
@@ -284,23 +279,23 @@ _context_switch:
 _first_context_switch:
 
     ;; "new" in AX
-    sta tmp_new+0
-    stx tmp_new+1
+    sta ptr1+0
+    stx ptr1+1
 
     ;; "old" on software stack
     jsr popax
-    sta tmp_old+0
-    stx tmp_old+1
+    sta ptr2+0
+    stx ptr2+1
     
-    ; save old->ksp (offset 7 in Proc)
+    ; save sp to old->ksp (offset 7 in Proc)
     ldy #7
     tsx
     txa
-    sta (tmp_old), y
+    sta (ptr2), y
     
     ; read new frame (offset 24 in Proc), ignore ksp since it is empty
     ldy #24
-    lda (tmp_new), y
+    lda (ptr1), y
     
     ; swap memory
     sta MMU_PAGE_TABLE + 0
