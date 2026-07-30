@@ -126,12 +126,6 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
 
-    // It is essential for interrupts to feach the vector from the trap frame
-    if (addr >= 0xfffa && m->pending_irq) {
-        m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
-        m->pending_irq = false;
-    }
-
     uint32_t physical_addr = mmu_translate(m->mmu, addr);
 
     // ---------------- TIMER ----------------
@@ -575,20 +569,25 @@ bool CPU_step(CPU* cpu){
     Machine* m = (Machine*)cpu->readWriteContext;
 
     for(int i = 0; i < CPU_PER_STEP; i++){
+
+        uint8_t next_opcode = m->read(cpu->pc, m);
         
         // The hardware IRQ trigger line
+        // NOTE: pending_irq is needed to signal an device interrupt from OUTSIDE the CPU_step() function
         if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
+            m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
+            m->pending_irq = false;
             MCS6502IRQ(m->cpu); 
         }
 
         // hardware BRK Check simulating VPB pin
-        if (m->read(cpu->pc, m) == 0x00) {
+        if (next_opcode == 0x00) {
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         }
 
         // an hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
         // TODO: "RTI" is not implemented do to it been needed for closing the trap frame...
-        if( (m->read(cpu->pc, m) == 0x78 || m->read(cpu->pc, m) == 0x28) && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
+        if( (next_opcode == 0x78 || next_opcode == 0x28) && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
             MCS6502NMI(m->cpu);
         }
