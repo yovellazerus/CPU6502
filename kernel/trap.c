@@ -34,42 +34,37 @@ void kernel_brk(void){
 /*
 kernel NMI handler, it serves as a "watchdog" for security purposes.
 it's job is to terminate a user process that try to execute an invalid opcode.
-and in addition to make shore user processes cant set "I" flag on and kernel space safe,
+and in addition to make shore user processes cant set "I" flag on, and keep kernel space safe,
 by prohibit user code form execute "SEI"/"PLP"/"RTI" instructions.
 the "watchdog" is the only source for NMI's in this system
 */
 void kernel_nmi(void){
 
+    const char* mnemonic;
     uint8_t watchdog = MMIO8(MMU_WATCHDOG_REGISTER);
-
-    // if prev last segment frame was last segment, this NMI is in kernel code
-    // if(MMIO8(MMU_PREV_REGISTER) == MMU_LAST_SEGMENT){
-    //     panic("invalid opcode: <0x%x> in kernel code", watchdog);
-    // }
 
     kernel_prologue();
 
     switch (watchdog)
     {
-    case 0x78:
-        printk("prosess [%d] \"%s\" was terminated do to executing \"SEI\" instruction\n", 
-            proc_get_pid(current_process), proc_get_name(current_process));
-        break;
-    case 0x28:
-        printk("prosess [%d] \"%s\" was terminated do to executing \"PLP\" instruction\n", 
-            proc_get_pid(current_process), proc_get_name(current_process));
-        break;
-    case 0x40:
-        printk("prosess [%d] \"%s\" was terminated do to executing \"RTI\" instruction\n", 
-            proc_get_pid(current_process), proc_get_name(current_process));
-        break;
-    
-    default:
-        printk("prosess [%d] \"%s\" was terminated do to executing invalid opcode: <0x%x>\n", 
-            proc_get_pid(current_process), proc_get_name(current_process), watchdog);
-        break;
+        case 0x78:
+            mnemonic = "SEI";
+            break;
+        case 0x28:
+            mnemonic = "PLP";
+            break;
+        case 0x40:
+            mnemonic = "RTI";
+            break;
+        
+        default:
+            printk("prosess [%d] \"%s\" was terminated do to executing invalid opcode: <0x%x>\n", 
+                proc_get_pid(current_process), proc_get_name(current_process), watchdog);
+            goto end;
     }
-    
+    printk("prosess [%d] \"%s\" was terminated do to executing \"%s\" instruction\n", 
+            proc_get_pid(current_process), proc_get_name(current_process), mnemonic);
+end:
     proc_set_ax(current_process, WATCHDOG);
     sys_exit();   
     // no return 
