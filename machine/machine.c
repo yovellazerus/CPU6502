@@ -579,9 +579,9 @@ bool CPU_step(CPU* cpu){
         uint8_t opcode = m->read(cpu->pc, m);
         bool rti_in_user = false;
         
-        // the hardware IRQ trigger line
-        // "I" flage check for simulating VPB pin
-        // NOTE: pending_irq is needed to signal an device interrupt from OUTSIDE the CPU_step() function
+        // The hardware IRQ trigger line
+        // "I" flage check for not swapping the segment if interrupts are diabled (in real hardware using VPB pin)
+        // NOTE: pending_irq is needed to signal a device interrupt from OUTSIDE the CPU_step() function
         if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
@@ -589,14 +589,13 @@ bool CPU_step(CPU* cpu){
             MCS6502IRQ(m->cpu); 
         }
 
-        // hardware BRK check simulating VPB pin
+        // Check for BRK opcode (in real hardware using VPB pin)
         if (opcode == 0x00) {
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         }
 
-        // an hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
-        // TODO: "RTI" is not implemented do to it been needed for closing the trap frame...
+        // Hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
         // TODO: use "watchdog" for preventing invalid opcode execution
         if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40) && 
             m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT)
@@ -610,10 +609,10 @@ bool CPU_step(CPU* cpu){
         // execute the instruction (or the interrupt sequence)
         MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
 
-        // using the SYNC pin to detect "RTI" opcode,
+        // Check for "RTI" opcode (in real hardware using SYNC pin)
         // for saving the last MMU segment to the MMU prev register
-        // to be used for implementing memory isolation
-        // NODE: the frame swap is done POST execution.
+        // to be used for implementing memory isolation.
+        // NOTE: the frame swap is done POST execution (to alow the "RTI" to be executed...)
         if(opcode == 0x40 && !rti_in_user){
             m->mmu->page_table[MMU_LAST_SEGMENT] = m->mmu->prev;
         }
