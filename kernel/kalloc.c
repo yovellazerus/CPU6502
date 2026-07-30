@@ -41,6 +41,6 @@ void kfree(uint8_t frame) {
     // fill the freed frame with junk
     old_frame = MMIO8(MMU_PAGE_TABLE + 1);
     MMIO8(MMU_PAGE_TABLE + 1) = frame;
-    memset((void*)WINDOW1, 0x42, 4096);
+    memset((void*)WINDOW1, 'F', 4096);
     MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
 }

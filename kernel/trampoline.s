@@ -159,7 +159,7 @@ _return_from_trap:
     sta MMU_PREV_REGISTER    ;; will be installed in the last MMU segment by "RTI"
 
     ;; save the process kernel hardware stack to the "life raft"
-    txs
+    tsx
     stx user_context + 7
 
     ;; restore CPU registers form life raft
