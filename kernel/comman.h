@@ -24,10 +24,10 @@
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
 
-#define SIGKILL      9
-#define SEGFAULT     1
-#define BADSYSCALL   2
-#define WATCHDOG     7
+#define SIGKILL      (-1)
+#define SEGFAULT     (-2)
+#define BADSYSCALL   (-3)
+#define WATCHDOG     (-4)
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 

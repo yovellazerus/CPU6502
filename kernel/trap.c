@@ -38,7 +38,7 @@ the "watchdog" is the only source for NMI's in this system
 */
 void kernel_nmi(void){
     kernel_prologue();
-    printk("prosess \"%s\" [%d] was terminated do to having \"watchdog\" violation\n", proc_get_name(current_process), proc_get_pid(current_process));
+    printk("prosess [%d] \"%s\" was terminated do to a \"watchdog\" violation\n", proc_get_pid(current_process), proc_get_name(current_process));
     proc_set_ax(current_process, WATCHDOG);
     sys_exit();   
     // no return 

@@ -542,8 +542,6 @@ void run_init_process(void){
 
     const char* name = "init";
 
-    memcpy(init_process->name, name, strlen(name));
-
     init_process = palloc();
     if(!init_process){
         panic("palloc in run_init_process");
@@ -560,5 +558,5 @@ void run_init_process(void){
         panic("copy_to_user in run_init_process");
     }
 
-    init_process->state = PROC_STATE_READY;
+    memcpy(init_process->name, name, strlen(name));
 }

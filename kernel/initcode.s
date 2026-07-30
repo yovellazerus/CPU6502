@@ -119,7 +119,7 @@ child1_code:
     
     ;; exit
     ldy #'E'
-    lda #1
+    lda #0
     brk
     nop
 
@@ -135,7 +135,7 @@ child2_code:
     
     ;; exit
     ldy #'E'
-    lda #2 
+    lda #0 
     brk
     nop
 
@@ -143,7 +143,10 @@ child2_code:
 ;; child3 code 
 ;; =======================================================
 child3_code:
+
+    ;; "watchdog" test
     sei
+
     ldy #'P'
     lda #<child3_arg
     ldx #>child3_arg
@@ -152,7 +155,7 @@ child3_code:
     
     ;; exit
     ldy #'E'
-    lda #3 
+    lda #0 
     brk
     nop
 
@@ -168,7 +171,7 @@ child4_code:
     
     ;; exit
     ldy #'E'
-    lda #4
+    lda #0
     brk
     nop
 

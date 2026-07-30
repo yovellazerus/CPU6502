@@ -586,8 +586,9 @@ bool CPU_step(CPU* cpu){
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         }
 
-        // an hardware "watchdog" for detecting user "SEI" feach cycle using SYNC pin
-        if(m->read(cpu->pc, m) == 0x78 && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
+        // an hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
+        // TODO: "RTI" is not implemented do to it been needed for closing the trap frame...
+        if( (m->read(cpu->pc, m) == 0x78 || m->read(cpu->pc, m) == 0x28) && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
             MCS6502NMI(m->cpu);
         }
