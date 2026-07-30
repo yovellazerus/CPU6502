@@ -111,6 +111,10 @@ init_idle:
 ;; child1 code 
 ;; =======================================================
 child1_code:
+
+    ;; "watchdog" test
+    rti
+
     ldy #'P'
     lda #<child1_arg
     ldx #>child1_arg
@@ -127,6 +131,11 @@ child1_code:
 ;; child2 code 
 ;; =======================================================
 child2_code:
+
+    ;; MMU test
+    ; lda $fe27
+    ; sta $fe20
+
     ldy #'P'
     lda #<child2_arg
     ldx #>child2_arg

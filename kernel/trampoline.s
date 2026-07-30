@@ -21,9 +21,9 @@
 .import _device_interrupt
 .import _kernel_epilogue
 
-MMU_PAGE_TABLE = $fe20 ;; 16 bytes
-USER_RTI       = $0100 ;; running in user space to close the trap frame and resume user code
-VECTORS        = $fffa
+MMU_PAGE_TABLE      = $fe20 ;; 16 bytes
+MMU_PREV_REGISTER   = $fe40
+VECTORS             = $fffa
 
 .global _irq_handler
 _irq_handler:
@@ -51,8 +51,12 @@ _irq_handler:
     lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done segments 0 through 14?
     bne @mmu_loop
+
+    ;; load the user last segment from the MMU register to the "life raft"
+    lda MMU_PREV_REGISTER
+    sta user_page_table + 15
 
     ;; install kernel IRQ vector
     lda #<_kernel_vector
@@ -60,7 +64,7 @@ _irq_handler:
     lda #>_kernel_vector
     sta VECTORS+5
 
-    ;; NOTE: for debugging purposes, disable this
+    ;; NOTE: for debugging purposes, this is disabled
     ;; now can take device interrupts in the kernel
     ;; cli
     
@@ -101,8 +105,12 @@ _nmi_handler:
     lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done segments 0 through 14?
     bne @mmu_loop
+
+    ;; load the user last segment from the MMU register to the "life raft"
+    lda MMU_PREV_REGISTER
+    sta user_page_table + 15
 
     ;; install kernel IRQ vector
     lda #<_kernel_vector
@@ -119,9 +127,9 @@ _nmi_handler:
 ;; *********************************    Core system assembly routine    ********************************************
 ;; 1) install the user _irq_handler to the IRQ vector.
 ;; 2) load the user page table to the MMU. 
-;; 3) injecting the in_user_return_stub to the process hardware stack (to close the last segment safely).
-;; 4) restore user context from "life raft".
-;; 5) jump to in_user_return_stub that close the trap frame (the last segment) and preform the "RTI" to resume usr process. 
+;; 3) load the user last segment from the "lift raft" (user_page_table + 15) to the MMU prev register
+;; 4) restore user context from "life raft"
+;; 5) return to user space by preforming "RTI" (hardware will restore user last segment from MMU register)
 
 ;;
 ;; void return_from_trap(void);
@@ -141,17 +149,11 @@ _return_from_trap:
     lda user_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done segments 0 through 14?
     bne @mmu_loop
 
-    ;; inject in user return stub
-    ldx #$00          
-@stub_loop:
-    lda in_user_return_stub, x     
-    sta USER_RTI, x      
-    inx
-    cpx #(in_user_return_stub_end - in_user_return_stub)         
-    bne @stub_loop
+    lda user_page_table + 15 ;; the user last segment
+    sta MMU_PREV_REGISTER    ;; will be put in last segment by "RTI"
 
     ;; restore CPU registers form life raft
     ldx user_context + 0         ;; SP
@@ -165,16 +167,9 @@ _return_from_trap:
     ldx user_context + 4         ;; X
     ldy user_context + 5         ;; Y
     lda user_context + 6         ;; A
-    pha                          ;; for use in the user return stub 
-    
-    jmp USER_RTI     
 
-in_user_return_stub:
-    lda user_page_table + 15
-    sta MMU_PAGE_TABLE  + 15
-    pla
-    rti   
-in_user_return_stub_end:   
+    ;; restore the last user segment from MMU prev register
+    rti  
 
 ;; IRQ handler for device interrupts and BRK's in the kernel
 .global _kernel_vector

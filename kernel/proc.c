@@ -233,6 +233,20 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     return 0; // success
 }
 
+void kernel_prologue(void){
+    if(current_process->killed != 0 && current_process != init_process){
+        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        current_process->ctx.a = SIGKILL;
+        sys_exit();
+    }
+
+    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer of the process,
+    // are loaded bye the _nmi_handler() and _irq_handler() assembly trampoline.s routines
+    memcpy(&current_process->ctx, life_raft, sizeof(Context));
+    memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
+}
+
 void kernel_epilogue(void){
     if(current_process->killed != 0 && current_process != init_process){
         printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
@@ -249,21 +263,6 @@ void kernel_epilogue(void){
     memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
     
     kernel_page_table[0] = current_process->kernel_stack_frame;
-}
-
-
-void kernel_prologue(void){
-    if(current_process->killed != 0 && current_process != init_process){
-        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
-        current_process->ctx.a = SIGKILL;
-        sys_exit();
-    }
-
-    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
-    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer of the process,
-    // are loaded bye the _nmi_handler() and _irq_handler() assembly trampoline.s routines
-    memcpy(&current_process->ctx, life_raft, sizeof(Context));
-    memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
 
 // global counter to track how deep we are in nested critical sections

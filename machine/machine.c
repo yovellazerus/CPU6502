@@ -58,6 +58,7 @@ typedef struct MMU
 {
     Machine* m;
     uint8_t page_table[MMU_PAGE_TABLE_SIZE];
+    uint8_t prev;
 
 } MMU;
 
@@ -96,7 +97,7 @@ struct Machine
 
 /* ================================================= helpers functions ======================================================*/
 
-static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
+static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     uint8_t segment = va >> 12;          
     uint16_t offset = va & 0x0FFF;       
     uint8_t frame = mmu->page_table[segment];
@@ -111,7 +112,7 @@ static uint32_t mmu_translate(MMU* mmu, uint16_t va) {
         fprintf(stderr, "\n\n" COLOR_GREEN);
 
         // TODO: trigger an IRQ on memory access violation
-        // m->pending_irq = true
+        // mmu->m->pending_irq = true;
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
@@ -126,7 +127,7 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if(!ctx) return 0xFF;
     Machine* m = (Machine*)ctx;
 
-    uint32_t physical_addr = mmu_translate(m->mmu, addr);
+    uint32_t physical_addr = MMU_translate(m->mmu, addr);
 
     // ---------------- TIMER ----------------
     if(physical_addr == TIMER_CTRL) return m->timer->ctrl;
@@ -139,6 +140,7 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     // ---------------- MMU ----------------
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table))
         return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
+    if(physical_addr == MMU_PREV_REGISTER) return m->mmu->prev;
 
     // ---------------- ROM ----------------
     if (physical_addr == ROM_ENABLE) return m->rom->rom_enable;
@@ -193,7 +195,7 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     if(!ctx) return;
     Machine* m = (Machine*)ctx;
 
-    uint32_t physical_addr = mmu_translate(m->mmu, addr);
+    uint32_t physical_addr = MMU_translate(m->mmu, addr);
 
     // ---------------- TIMER ----------------
     if(physical_addr == TIMER_CTRL){
@@ -225,6 +227,10 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     // ---------------- MMU ----------------
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table)){
         m->mmu->page_table[physical_addr - MMU_PAGE_TABLE] = byte;
+        return;
+    }
+    if(physical_addr == MMU_PREV_REGISTER){
+        m->mmu->prev = byte;
         return;
     }
 
@@ -570,30 +576,47 @@ bool CPU_step(CPU* cpu){
 
     for(int i = 0; i < CPU_PER_STEP; i++){
 
-        uint8_t next_opcode = m->read(cpu->pc, m);
+        uint8_t opcode = m->read(cpu->pc, m);
+        bool rti_in_user = false;
         
-        // The hardware IRQ trigger line
+        // the hardware IRQ trigger line
+        // "I" flage check for simulating VPB pin
         // NOTE: pending_irq is needed to signal an device interrupt from OUTSIDE the CPU_step() function
         if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
+            m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
             m->pending_irq = false;
             MCS6502IRQ(m->cpu); 
         }
 
-        // hardware BRK Check simulating VPB pin
-        if (next_opcode == 0x00) {
+        // hardware BRK check simulating VPB pin
+        if (opcode == 0x00) {
+            m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         }
 
         // an hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
         // TODO: "RTI" is not implemented do to it been needed for closing the trap frame...
-        if( (next_opcode == 0x78 || next_opcode == 0x28) && m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT){
+        // TODO: use "watchdog" for preventing invalid opcode execution
+        if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40) && 
+            m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT)
+        {
+            rti_in_user = true;
+            m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
             MCS6502NMI(m->cpu);
         }
         
         // execute the instruction (or the interrupt sequence)
         MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
+
+        // using the SYNC pin to detect "RTI" opcode,
+        // for saving the last MMU segment to the MMU prev register
+        // to be used for implementing memory isolation
+        // NODE: the frame swap is done POST execution.
+        if(opcode == 0x40 && !rti_in_user){
+            m->mmu->page_table[MMU_LAST_SEGMENT] = m->mmu->prev;
+        }
     
         // debug
         if (result == MCS6502ExecResultInvalidOperation)
