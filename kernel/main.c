@@ -14,21 +14,21 @@ void hardware_init(void){
 }
 
 void fs_init(void){
-
+    // ...
 }
 
 void main(void) {
 
     hardware_init();
 
-    printk("******* kernel v%d ********\n", 1);
+    printk("version %d.%d.%d is booting...\n", 1, 0, 0);
 
     memory_init();
     proc_init();
     syscall_init();
     fs_init();
 
-    printk("kernel: starting init process...\n");
+    printk("starting init process...\n");
     run_init_process();
 
     // no return

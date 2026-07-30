@@ -1,8 +1,10 @@
+.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
 
 .segment "TRAMPOLINE"
 
 ;; form ca65
 .importzp c_sp
+.importzp tmp1
 .importzp ptr1
 .importzp ptr2
 
@@ -20,7 +22,7 @@
 .import _kernel_epilogue
 
 MMU_PAGE_TABLE = $fe20 ;; 16 bytes
-USER_RTI       = $0100 ;; running in user space to close seg15 and resume user code
+USER_RTI       = $0100 ;; running in user space to close the trap frame and resume user code
 VECTORS        = $fffa
 
 .global _irq_handler
@@ -60,7 +62,7 @@ _irq_handler:
 
     ;; NOTE: for debugging purposes, disable this
     ;; now can take device interrupts in the kernel
-    ; cli
+    ;; cli
     
     ;; jmp to C functions in the kernel
     lda user_context + 1   ;; load Status (P)
@@ -200,15 +202,15 @@ _kernel_vector:
     pla
     rti
 
-;; Initializes the kernel stack pointer in the allocated frame in A
+;; initializes the kernel software stack pointer in the allocated frame in A
 ;;
 ;; void make_stack(uint8_t frame);
 ;;
 .global _make_stack
 _make_stack:
-    ;; save old_frame and map WINDOW1 to frame in A
+    ;; save the old frame of segment 1 to tmp1 and map WINDOW1 to frame in A
     ldx MMU_PAGE_TABLE + 1  
-    stx old_frame
+    stx tmp1
     sta MMU_PAGE_TABLE + 1  
 
     ;; ptr1 set to the base of WINDOW1
@@ -228,11 +230,9 @@ _make_stack:
     sta (ptr1), y           
 
     ;; restore the old_frame of WINDOW1
-    ldx old_frame
+    ldx tmp1
     stx MMU_PAGE_TABLE + 1  
     rts
-
-old_frame:  .res 1
 
 ;; preformed the context switch form process "old" kernel stack to process "new" kernel stack 
 ;; 

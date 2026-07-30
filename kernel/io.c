@@ -8,6 +8,11 @@ static void putc(char c){
     MMIO8(UART_TX) = c;
 }
 
+void print_str(const char* str){
+    if(!str) str = "(null)";
+    for (; *str; str++) putc(*str);
+}
+
 static void print_int(long number, int base, int sign){
     char buffer[20];
     bool negative;
@@ -39,7 +44,6 @@ static void print_ptr(uint16_t ptr){
 
 // main printk engine, only %d, %x, %p, %c, %s are in use
 void vprintk(const char *fmt, va_list ap){
-    char *s;
     int c0, c1, c2, i, state;
 
     state = 0;
@@ -89,8 +93,7 @@ void vprintk(const char *fmt, va_list ap){
                 putc(va_arg(ap, uint16_t));
             } 
             else if(c0 == 's'){
-                if((s = va_arg(ap, char *)) == 0) s = "(null)";
-                for (; *s; s++) putc(*s);
+                print_str(va_arg(ap, char *));
             } 
             else if(c0 == '%'){
                 putc('%');
@@ -109,6 +112,7 @@ void printk(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
+    print_str("kernel: ");
     vprintk(fmt, ap);
     va_end(ap);
 }
@@ -116,7 +120,7 @@ void printk(const char *fmt, ...)
 void panic(const char *fmt, ...){
     va_list ap;
     va_start(ap, fmt);
-    printk("PANIC: ");
+    print_str("PANIC: ");
     vprintk(fmt, ap);
     va_end(ap);
     interrupts_push();

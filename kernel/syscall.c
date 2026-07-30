@@ -35,22 +35,22 @@ int sys_print(void){
 
     // populate the system call argument
     if(copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), user_page_table) < 0){
-        printk("kernel: syscall argument pointer out of user space!\n");
+        printk("syscall argument pointer out of user space!\n");
         return -1;
     }
 
     if(syscall_arg.print.size >= sizeof(print_buffer)){
-        printk("kernel: print syscall is limited to %d bytes for now...", sizeof(print_buffer));
+        printk("print syscall is limited to %d bytes for now...", sizeof(print_buffer));
         return -1;
     }
 
     // take the data from the user pointer to the kernel buffer
     if(copy_from_user(print_buffer, (uint16_t)syscall_arg.print.buffer, syscall_arg.print.size, user_page_table) < 0){
-        printk("kernel: user pointer out of user space!");
+        printk("user pointer out of user space!");
         return -1;
     }
 
-    printk("%s", print_buffer);
+    print_str(print_buffer);
 
     return ('X' << 8) | 'A'; 
 }

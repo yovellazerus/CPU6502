@@ -16,7 +16,7 @@
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
 #define FRAME_UNUSED MMU_FRAME_INVALID
 
-#define CIRCLES 100 // CPU steps per Timer tick
+#define CYCLES 100 // CPU steps per Timer tick
 
 #define QUANTUM 10 // timer ticks until context switch
 
@@ -91,6 +91,8 @@ bool device_interrupt(void);
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
+// debug
+void print_str(const char* str);
 uint16_t gets(char *buf, int max);
 
 // timer.c

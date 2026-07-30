@@ -110,8 +110,8 @@ uint16_t proc_get_ax(const Proc* p){
     uint8_t a;
     uint8_t x;
     uint16_t ax;
-    a = (uint8_t)proc_get_ctx(p)->a;
-    x = (uint8_t)proc_get_ctx(p)->x;
+    a = p->ctx.a;
+    x = p->ctx.x;
     ax = ((uint16_t)x << 8) | a;
     return ax;
 }
@@ -147,9 +147,9 @@ void proc_set_state(Proc* p, Proc_State state){
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
     uint16_t offset;
-    uint8_t seg;
+    uint8_t segment;
     uint8_t physical_frame;
-    uint16_t bytes_in_page;
+    uint16_t bytes_in_frame;
     uint16_t chunk;
     uint8_t* dst_window;
     uint8_t old_frame;
@@ -160,10 +160,10 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 
     while (n > 0) {
         
-        seg = user_dest >> 12;
+        segment = user_dest >> 12;
         offset = user_dest & 0x0FFF;
         
-        physical_frame = page_table[seg];
+        physical_frame = page_table[segment];
         if (physical_frame == FRAME_UNUSED) {
             MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
             return -1; // segfault
@@ -171,8 +171,8 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
         
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
-        bytes_in_page = 4096 - offset;
-        chunk = (n < bytes_in_page) ? n : bytes_in_page;
+        bytes_in_frame = 4096 - offset;
+        chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
 
         dst_window = (uint8_t*)WINDOW1 + offset;
         
@@ -191,9 +191,9 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 
 int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table){
     uint16_t offset;
-    uint8_t seg;
+    uint8_t segment;
     uint8_t physical_frame;
-    uint16_t bytes_in_page;
+    uint16_t bytes_in_frame;
     uint16_t chunk;
     uint8_t* src_window;
     uint8_t old_frame;
@@ -204,10 +204,10 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
     while (n > 0) {
         
-        seg = user_src >> 12;
+        segment = user_src >> 12;
         offset = user_src & 0x0FFF;
         
-        physical_frame = page_table[seg];
+        physical_frame = page_table[segment];
         if (physical_frame == FRAME_UNUSED) {
             MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
             return -1; // segfault
@@ -215,8 +215,8 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
         
         MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
         
-        bytes_in_page = 4096 - offset;
-        chunk = (n < bytes_in_page) ? n : bytes_in_page;
+        bytes_in_frame = 4096 - offset;
+        chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
 
         src_window = (uint8_t*)WINDOW1 + offset;
         
@@ -235,7 +235,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
 void kernel_epilogue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -254,7 +254,7 @@ void kernel_epilogue(void){
 
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -272,7 +272,7 @@ static uint8_t interrupt_depth = 0;
 // always disable hardware IRQ's
 void interrupts_push(void) {
 
-    asm("sei");
+    __asm__("sei");
     
     interrupt_depth++;
 
@@ -290,7 +290,7 @@ void interrupts_pop(void) {
     interrupt_depth--;
     
     if (interrupt_depth == 0) {
-        asm("cli");
+        __asm__("cli");
     }
 }
 
@@ -299,6 +299,7 @@ void sleep(void* channel){
     current_process->channel = channel;
     current_process->state = PROC_STATE_SLEEPING;
     scheduler();
+    current_process->channel = NULL;
 }
 
 void wakeup(void* channel){
@@ -306,7 +307,6 @@ void wakeup(void* channel){
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
         if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
             proc_table[i].state = PROC_STATE_READY;
-            proc_table[i].channel = NULL;
         }
     }
 }
@@ -338,7 +338,7 @@ void scheduler(void) {
                     return_from_trap();
 
                 } else if (is_new) {
-                    // new process created bye sys_fork()
+                    // p is a new process created bye sys_fork()
                     first_context_switch(old, p);
                     return; 
 
@@ -353,10 +353,9 @@ void scheduler(void) {
         // no process is READY to run,
         // so we must enable interrupt's to avoid deadlock 
         // a "WAI" instruction would have been nice...
-        asm("cli"); 
-        asm("nop"); 
-        asm("nop");
-        asm("sei"); 
+        __asm__("cli"); 
+        for(i = 0; i < CYCLES; i++) __asm__("nop");
+        __asm__("sei"); 
     }
 }
 
@@ -452,7 +451,7 @@ int sys_fork(void){
 
     child = palloc();
     if(!child){
-        printk("kernel: process pool exhausted\n");
+        printk("process pool exhausted\n");
         return -1;
     }
 
@@ -494,7 +493,7 @@ int sys_fork(void){
                 MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
                 MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
-                printk("kernel: frame pool exhausted in fork()"); 
+                printk("frame pool exhausted in fork()"); 
                 return -1;
             }
 
@@ -543,33 +542,23 @@ void run_init_process(void){
 
     const char* name = "init";
 
-    Context ctx = {
-       0xff,                // SP
-       0x00,                // P
-       (uint16_t)init_code, // PC
-       0x00,                // X
-       0x00,                // Y
-       0x00,                // A
-       0xff                 // KSP
-    };
+    memcpy(init_process->name, name, strlen(name));
 
     init_process = palloc();
     if(!init_process){
         panic("palloc in run_init_process");
     }
 
-    memcpy(&init_process->ctx, &ctx, sizeof(Context));
-
     init_process->page_table[0] = kalloc();
     if(init_process->page_table[0] == FRAME_UNUSED){
         panic("kalloc in run_init_process");
     }
 
+    init_process->ctx.pc = (uint16_t)init_code;
+
     if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
         panic("copy_to_user in run_init_process");
     }
-
-    memcpy(init_process->name, name, strlen(name));
 
     init_process->state = PROC_STATE_READY;
 }
