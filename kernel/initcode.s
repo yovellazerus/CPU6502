@@ -3,6 +3,8 @@
 .global _init_code
 _init_code:
 
+.importzp ptr1
+.importzp tmp1
 
 ;; =======================================================
 ;; init code
@@ -30,15 +32,22 @@ _start:
     cmp #0
     beq child2_code
 
+    ;; fork child 3
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child3_code
+
 init_wait_loop:
     ;; wait for children
     ldy #'W'
-    lda #0
-    ldx #0
+    lda #<wait_status
+    ldx #>wait_status
     brk
     nop
 
-    ;; sys_wait returns -1 ($FFFF) if there are no children left
+    ;; sys_wait returns -1 ($ffff) if there are no children left
     ;; A contains the low byte, X contains the high byte.
     cmp #$FF
     bne child_reaped
@@ -49,12 +58,36 @@ init_wait_loop:
     jmp init_idle
 
 child_reaped:
-    ;; print a message acknowledging a child was reaped
+    ;; save the pid before any other syscalls overwrite A and X
+    sta wait_pid+0
+    stx wait_pid+1
+
+    ;; print "init: reaped child PID 0x"
     ldy #'P'
     lda #<reaped_arg
     ldx #>reaped_arg
     brk
     nop
+
+    ;; print the PID in hex
+    lda wait_pid+0
+    ldx wait_pid+1
+    jsr print_hex16
+
+    ;; print " with exit code 0x"
+    ldy #'P'
+    lda #<exit_code_arg
+    ldx #>exit_code_arg
+    brk
+    nop
+
+    ;; print the exit code in hex (wait_status + 0)
+    lda wait_status + 0
+    jsr print_hex8
+
+    ;; print a newline character
+    lda #$0a
+    jsr putchar
     
     ;; loop back to wait for the next child
     jmp init_wait_loop
@@ -77,9 +110,9 @@ child1_code:
     brk
     nop
     
-    ;; exit(0)
+    ;; exit
     ldy #'E'
-    lda #0  
+    lda #2
     brk
     nop
 
@@ -93,14 +126,90 @@ child2_code:
     brk
     nop
     
-    ;; exit(0)
+    ;; exit
     ldy #'E'
-    lda #0  
+    lda #3 
     brk
     nop
 
 ;; =======================================================
-;; data 
+;; child3 code 
+;; =======================================================
+child3_code:
+    ldy #'P'
+    lda #<child3_arg
+    ldx #>child3_arg
+    brk
+    nop
+    
+    ;; exit
+    ldy #'E'
+    lda #4 
+    brk
+    nop
+
+;; =======================================================
+;; printing functions
+;; =======================================================
+
+;;
+;; void print_hex16(uint16_t AX);
+;;
+print_hex16:
+    pha             
+    txa             
+    jsr print_hex8  ;; print upper 8 bits
+    pla             ;; 
+    jmp print_hex8  ;; print lower 8 bits
+
+;;
+;; void print_hex8(uint8_t A);
+;;
+print_hex8:
+    pha             
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    jsr print_hex4
+    pla 
+    jmp print_hex4
+
+;;
+;; void print_hex4(uint8_t A);
+;;
+print_hex4:
+    and #$0F        ;; mask out lower 4 bits
+    stx tmp1
+    tax             ;; transfer to x for indexing
+    lda digits, x   ;; load ASCII character from table
+    jsr putchar 
+    ldx tmp1
+    rts 
+
+digits:
+    .byte "0123456789abcdef"
+;;
+;; void putchar(char A);
+;;
+putchar:
+    sta putchar_buffer + 0
+    ldy #'P'
+    lda #<putchar_arg
+    ldx #>putchar_arg
+    brk
+    nop
+    rts
+
+putchar_arg:
+    .word (putchar_buffer_end - putchar_buffer)
+    .word putchar_buffer
+putchar_buffer:
+    .byte 0, 0
+putchar_buffer_end:
+
+;; =======================================================
+;; init data 
 ;; =======================================================
 
 init_start_arg:
@@ -110,12 +219,36 @@ init_start_msg:
     .byte "init: started and spawning children", $0a, 0
 init_start_msg_end:
 
+wait_pid: 
+    .res 2
+
+wait_status: 
+    .res 1
+
+reaped_arg:
+    .word (reaped_msg_end - reaped_msg)
+    .word reaped_msg
+reaped_msg:
+    .byte "init: reaped child PID 0x", 0
+reaped_msg_end:
+
+exit_code_arg:
+    .word (exit_code_msg_end - exit_code_msg)
+    .word exit_code_msg
+exit_code_msg:
+    .byte " with exit code 0x", 0
+exit_code_msg_end:
+
 init_idle_arg:
     .word (init_idle_msg_end - init_idle_msg)
     .word init_idle_msg
 init_idle_msg:
     .byte "init: just chilling here...", $0a, 0
 init_idle_msg_end:
+
+;; =======================================================
+;; children data 
+;; =======================================================
 
 child1_arg:
     .word (child1_msg_end - child1_msg)
@@ -131,9 +264,9 @@ child2_msg:
     .byte "child2: hello and goodbye", $0a, 0
 child2_msg_end:
 
-reaped_arg:
-    .word (reaped_msg_end - reaped_msg)
-    .word reaped_msg
-reaped_msg:
-    .byte "init: a child was reaped!", $0a, 0
-reaped_msg_end:
+child3_arg:
+    .word (child3_msg_end - child3_msg)
+    .word child3_msg
+child3_msg:
+    .byte "child3: hello and goodbye", $0a, 0
+child3_msg_end:

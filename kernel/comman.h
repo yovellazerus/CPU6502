@@ -92,7 +92,7 @@ void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
 // debug
-void print_str(const char* str);
+void print_str(char* str);
 uint16_t gets(char *buf, int max);
 
 // timer.c

@@ -8,7 +8,7 @@ static void putc(char c){
     MMIO8(UART_TX) = c;
 }
 
-void print_str(const char* str){
+void print_str(char* str){
     if(!str) str = "(null)";
     for (; *str; str++) putc(*str);
 }

@@ -21,7 +21,7 @@ void syscall_init(void){
 }
 
 // console syscall demo for debug
-static uint8_t print_buffer[256];
+static char print_buffer[256];
 int sys_print(void){
     SyscallArg syscall_arg;
     uint16_t ax;
