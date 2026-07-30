@@ -141,6 +141,9 @@ child2_code:
     ldx #>child2_arg
     brk
     nop
+
+    ;; invalid opcode test
+    .byte $42
     
     ;; exit
     ldy #'E'
@@ -177,6 +180,9 @@ child4_code:
     ldx #>child4_arg
     brk
     nop
+
+    ;; "watchdog" test
+    plp
     
     ;; exit
     ldy #'E'

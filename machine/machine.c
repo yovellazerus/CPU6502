@@ -59,6 +59,7 @@ typedef struct MMU
     Machine* m;
     uint8_t page_table[MMU_PAGE_TABLE_SIZE];
     uint8_t prev;
+    uint8_t watchdog;
 
 } MMU;
 
@@ -121,6 +122,29 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     return (frame << 12) | offset;
 }
 
+static bool is_invalid_opcode(uint8_t opcode){
+    static bool valid_opcode_table[256] = {
+        //     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xa xb xc xd xe xf
+        /*0x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 
+        /*1x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+        /*2x*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*3x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+        /*4x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*5x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+        /*6x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*7x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+        /*8x*/ 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 
+        /*9x*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 
+        /*ax*/ 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*bx*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*cx*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*dx*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+        /*ex*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+        /*fx*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0  
+    };
+    return !valid_opcode_table[opcode];
+}
+
 /* ============================================== read/write functions ======================================================*/
 
 uint8_t Machine_read(uint16_t addr, void* ctx) {
@@ -141,6 +165,7 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     if (physical_addr >= MMU_PAGE_TABLE && physical_addr < MMU_PAGE_TABLE + sizeof(m->mmu->page_table))
         return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
     if(physical_addr == MMU_PREV_REGISTER) return m->mmu->prev;
+    if(physical_addr == MMU_WATCHDOG_REGISTER) return m->mmu->watchdog;
 
     // ---------------- ROM ----------------
     if (physical_addr == ROM_ENABLE) return m->rom->rom_enable;
@@ -231,6 +256,10 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     }
     if(physical_addr == MMU_PREV_REGISTER){
         m->mmu->prev = byte;
+        return;
+    }
+    if(physical_addr == MMU_WATCHDOG_REGISTER){
+        m->mmu->watchdog = byte;
         return;
     }
 
@@ -595,12 +624,13 @@ bool CPU_step(CPU* cpu){
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         }
 
-        // Hardware "watchdog" for detecting user "SEI"/"PLP"/"RTI" feach cycle using SYNC pin
-        // TODO: use "watchdog" for preventing invalid opcode execution
-        if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40) && 
+        // Hardware "watchdog" 
+        // for detecting user "SEI"/"PLP"/"RTI" or invalid opcode feach cycle using SYNC pin.
+        if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || is_invalid_opcode(opcode)) && 
             m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT)
         {
             rti_in_user = true;
+            m->mmu->watchdog = opcode;
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
             MCS6502NMI(m->cpu);

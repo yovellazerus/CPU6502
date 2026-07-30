@@ -17,8 +17,9 @@
 #define UART_RX      0x0000fe11
 #define UART_STAT    0x0000fe12
 
-#define MMU_PAGE_TABLE     0x0000fe20 // 16 bytes
-#define MMU_PREV_REGISTER  0x0000fe40
+#define MMU_PAGE_TABLE         0x0000fe20 // 16 bytes
+#define MMU_PREV_REGISTER      0x0000fe40
+#define MMU_WATCHDOG_REGISTER  0x0000fe41
        
 #define TIMER_LATCH_LOW     0x0000fe42
 #define TIMER_LATCH_HIGH    0x0000fe43
