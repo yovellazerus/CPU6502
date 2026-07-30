@@ -358,6 +358,31 @@ void scheduler(void) {
     }
 }
 
+int sys_kill(void){
+    uint16_t pid;
+    uint8_t i;
+
+    pid = proc_get_ax(current_process);
+
+    // cant kill "init"
+    if(pid == 1) return -1;
+
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        if(proc_table[i].pid == pid){
+            proc_table[i].killed = 1;
+            // if the victim is asleep wake it up, 
+            // so it can return to user space and the kernel will call sys_exit() on it.
+            if(proc_table[i].state == PROC_STATE_SLEEPING){
+                proc_table[i].state = PROC_STATE_READY;
+            }
+            // success
+            return 0;
+        }
+    }
+    // there is no such process
+    return -1;
+}
+
 int sys_wait(void){
     uint8_t i;
     uint8_t res;

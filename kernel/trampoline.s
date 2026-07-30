@@ -10,17 +10,20 @@
 
 .import popax
 
-;; form linker
+;; form kernel.cfg
 .import __STACK_START__
 
+;; from trap.c
 .import _kernel_brk
 .import _kernel_irq
 .import _kernel_nmi
-
 .import _kernel_software_interrupt
 .import _device_interrupt
+
+;; from proc.c
 .import _kernel_epilogue
 
+;; MMIO registers
 MMU_PAGE_TABLE      = $fe20 ;; 16 bytes
 MMU_PREV_REGISTER   = $fe40
 VECTORS             = $fffa
@@ -33,15 +36,15 @@ _irq_handler:
     sty user_context + 5    ;; Y
     stx user_context + 4    ;; X
     pla
-    sta user_context + 1    ;; P (Status) is always pulled first
+    sta user_context + 1    ;; P 
     pla
-    sta user_context + 2    ;; PCL (PC Low) is pulled second
+    sta user_context + 2    ;; PCL
     pla
-    sta user_context + 3    ;; PCH (PC High) is pulled last
+    sta user_context + 3    ;; PCH 
     tsx
     stx user_context + 0    ;; SP
 
-    ;; switch to the user kernel hardware stack
+    ;; switch to the process kernel hardware stack (aka KSP)
     ldx user_context + 7
     txs
 
@@ -53,8 +56,7 @@ _irq_handler:
     inx
     cpx #$0F          ;; have we done segments 0 through 14?
     bne @mmu_loop
-
-    ;; load the user last segment from the MMU register to the "life raft"
+    ;; load the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
     sta user_page_table + 15
 
@@ -69,8 +71,8 @@ _irq_handler:
     ;; cli
     
     ;; jmp to C functions in the kernel
-    lda user_context + 1   ;; load Status (P)
-    and #%00010000         ;; check the B flag
+    lda user_context + 1   ;; load P
+    and #%00010000         ;; check the "B" flag
     beq @irq
     jsr _kernel_brk
     jmp _return_from_trap
@@ -87,15 +89,15 @@ _nmi_handler:
     sty user_context + 5    ;; Y
     stx user_context + 4    ;; X
     pla
-    sta user_context + 1    ;; P (Status) is always pulled first
+    sta user_context + 1    ;; P
     pla
-    sta user_context + 2    ;; PCL (PC Low) is pulled second
+    sta user_context + 2    ;; PCL
     pla
-    sta user_context + 3    ;; PCH (PC High) is pulled last
+    sta user_context + 3    ;; PCH
     tsx
     stx user_context + 0    ;; SP
 
-    ;; switch to the user kernel hardware stack
+    ;; switch to the user kernel hardware stack (aka KSP)
     ldx user_context + 7
     txs
 
@@ -107,8 +109,7 @@ _nmi_handler:
     inx
     cpx #$0F          ;; have we done segments 0 through 14?
     bne @mmu_loop
-
-    ;; load the user last segment from the MMU register to the "life raft"
+    ;; load the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
     sta user_page_table + 15
 
@@ -118,7 +119,7 @@ _nmi_handler:
     lda #>_kernel_vector
     sta VECTORS+5
 
-    ;; NOTE: not enable IRQ in here!
+    ;; NOTE: not enabling IRQ's in here!
 
     ;; jmp to C function in the kernel
     jsr _kernel_nmi
@@ -153,7 +154,7 @@ _return_from_trap:
     bne @mmu_loop
 
     lda user_page_table + 15 ;; the user last segment
-    sta MMU_PREV_REGISTER    ;; will be put in last segment by "RTI"
+    sta MMU_PREV_REGISTER    ;; will be installed in the last MMU segment by "RTI"
 
     ;; restore CPU registers form life raft
     ldx user_context + 0         ;; SP
@@ -182,7 +183,7 @@ _kernel_vector:
 
     tsx
     lda $0104, x
-    and #%00010000  ;; check the B flag
+    and #%00010000  ;; check the "B" flag
     beq @irq
     jsr _kernel_software_interrupt
     jmp @end
@@ -197,13 +198,13 @@ _kernel_vector:
     pla
     rti
 
-;; initializes the kernel software stack pointer in the allocated frame in A
+;; initializes a kernel software stack pointer in the given frame (the frame in A must be allocated!)
 ;;
 ;; void make_stack(uint8_t frame);
 ;;
 .global _make_stack
 _make_stack:
-    ;; save the old frame of segment 1 to tmp1 and map WINDOW1 to frame in A
+    ;; save the old frame of segment 1 to tmp1, and map WINDOW1 to the given frame
     ldx MMU_PAGE_TABLE + 1  
     stx tmp1
     sta MMU_PAGE_TABLE + 1  
@@ -224,12 +225,12 @@ _make_stack:
     lda #>__STACK_START__
     sta (ptr1), y           
 
-    ;; restore the old_frame of WINDOW1
+    ;; restore the old frame of WINDOW1
     ldx tmp1
     stx MMU_PAGE_TABLE + 1  
     rts
 
-;; preformed the context switch form process "old" kernel stack to process "new" kernel stack 
+;; preformed the context switch form process "old" kernel stack, to process "new" kernel stack.
 ;; 
 ;;
 ;; void context_switch(Proc* old, Proc* new);
@@ -256,7 +257,7 @@ _context_switch:
     tax              
     txs
 
-    ;; load the new process kernel stack frame  from new->kernel_stack_frame (Offset 24 in Proc) 
+    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
     ;; and install it in to the MMU (segment 0)
     ldy #24
     lda (ptr1), y
@@ -265,8 +266,8 @@ _context_switch:
     ; return to the NEW process stack! essentially, this is the context switch
     rts
 
-;; preformed the context switch form process "old" kernel stack to process "new" kernel stack
-;; when "new" is a new process just created bye sys_fork() and it is it's first quantum to run
+;; preformed the context switch form process "old", kernel stack to process "new" kernel stack,
+;; when "new" is a new process just created bye sys_fork() and it is it's first quantum to run.
 ;;
 ;; void first_context_switch(Proc* old, Proc* new);
 ;;
@@ -282,24 +283,23 @@ _first_context_switch:
     sta ptr2+0
     stx ptr2+1
     
-    ; save sp to old->ksp (offset 7 in Proc)
+    ;; save sp to old->ksp (offset 7 in Proc)
     ldy #7
     tsx
     txa
     sta (ptr2), y
-    
-    ; read new frame (offset 24 in Proc), ignore ksp since it is empty
-    ldy #24
-    lda (ptr1), y
-    
-    ; swap memory
-    sta MMU_PAGE_TABLE + 0
-    
-    ; set a fresh hardware stack pointer for the new process
+    ;; set a fresh hardware stack pointer for the new process
     ldx #$ff
     txs
     
-    ; jump directly to user space, because there is nowhere for it to return to in the kernel (no function called it) 
+    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
+    ;; and install it in to the MMU (segment 0)
+    ldy #24
+    lda (ptr1), y
+    sta MMU_PAGE_TABLE + 0
+    
+    ;; jump directly to user space, 
+    ;; because there is nowhere for the new process to return to in the kernel (no function called it). 
     jsr _kernel_epilogue
     jmp _return_from_trap
 

@@ -73,11 +73,13 @@ extern Syscall syscalls_table[256];
 #define SYS_FORK    'F'
 #define SYS_EXIT    'E'
 #define SYS_WAIT    'W'
+#define SYS_KILL    'K'
 
+int sys_print(void);
 int sys_fork(void);
 int sys_exit(void);
 int sys_wait(void);
-int sys_print(void);
+int sys_kill(void);
 
 // trap.c
 void kernel_brk(void);
