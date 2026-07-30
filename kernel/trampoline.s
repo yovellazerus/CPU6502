@@ -54,11 +54,12 @@ _irq_handler:
     lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ;; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done all the segments except the last one?
     bne @mmu_loop
-    ;; load the user last segment from the MMU prev register to the "life raft"
+
+    ;; save the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
-    sta user_page_table + 15
+    sta user_page_table, x
 
     ;; install kernel IRQ vector
     lda #<_kernel_vector
@@ -66,7 +67,7 @@ _irq_handler:
     lda #>_kernel_vector
     sta VECTORS+5
 
-    ;; NOTE: for debugging purposes, this is disabled
+    ;; TODO: for debugging purposes, this is disabled
     ;; now can take device interrupts in the kernel
     ;; cli
     
@@ -107,11 +108,12 @@ _nmi_handler:
     lda _kernel_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ;; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done all the segments except the last one?
     bne @mmu_loop
-    ;; load the user last segment from the MMU prev register to the "life raft"
+
+    ;; save the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
-    sta user_page_table + 15
+    sta user_page_table, x
 
     ;; install kernel IRQ vector
     lda #<_kernel_vector
@@ -127,8 +129,9 @@ _nmi_handler:
 
 ;; *********************************    Core system assembly routine    ********************************************
 ;; 1) install the user _irq_handler to the IRQ vector.
-;; 2) load the user page table to the MMU. 
-;; 3) load the user last segment from the "lift raft" (user_page_table + 15) to the MMU prev register
+;; 2) load the user page table from the "lift raft" to the MMU. 
+;; 3) load the user last segment from the "lift raft" to the MMU prev register
+;; 4) save the process kernel hardware stack (KSP) to the "life raft"
 ;; 4) restore user context from "life raft"
 ;; 5) return to user space by preforming "RTI" (hardware will restore user last segment from MMU register)
 
@@ -150,11 +153,14 @@ _return_from_trap:
     lda user_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
-    cpx #$0F          ;; have we done segments 0 through 14?
+    cpx #$0F          ;; have we done all the segments except the last one?
     bne @mmu_loop
-
-    lda user_page_table + 15 ;; the user last segment
+    lda user_page_table, x   ;; the user last segment
     sta MMU_PREV_REGISTER    ;; will be installed in the last MMU segment by "RTI"
+
+    ;; save the process kernel hardware stack to the "life raft"
+    txs
+    stx user_context + 7
 
     ;; restore CPU registers form life raft
     ldx user_context + 0         ;; SP
@@ -258,12 +264,12 @@ _context_switch:
     txs
 
     ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
-    ;; and install it in to the MMU (segment 0)
+    ;; and install it in to segment 0 of the MMU
     ldy #24
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 0        
     
-    ; return to the NEW process stack! essentially, this is the context switch
+    ; return on the NEW process stack! essentially, this is the context switch
     rts
 
 ;; preformed the context switch form process "old", kernel stack to process "new" kernel stack,
@@ -293,7 +299,7 @@ _first_context_switch:
     txs
     
     ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
-    ;; and install it in to the MMU (segment 0)
+    ;; and install it in to segment 0 of the MMU 
     ldy #24
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 0
