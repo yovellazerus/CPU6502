@@ -135,7 +135,7 @@ child2_code:
     
     ;; exit
     ldy #'E'
-    lda #0 
+    lda #$42
     brk
     nop
 
@@ -171,7 +171,7 @@ child4_code:
     
     ;; exit
     ldy #'E'
-    lda #0
+    lda #$1
     brk
     nop
 

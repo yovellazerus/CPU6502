@@ -19,7 +19,7 @@ KERN_DIR = kernel
 CFLAGS   = -Wall -Wextra -O2
 
 # --- Files ---
-MACH_SRC = $(MACH_DIR)/main.c $(MACH_DIR)/MCS6502.c
+MACH_SRC = $(MACH_DIR)/machine.c $(MACH_DIR)/MCS6502.c
 MACH_OBJ = $(MACH_SRC:.c=.o)
 EMULATOR = $(MACH_DIR)/machine.exe
 
