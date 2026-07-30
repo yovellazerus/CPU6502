@@ -314,7 +314,7 @@ void wakeup(void* channel){
 void scheduler(void) {
     static uint8_t round_robin_index = 0;
     Proc* p;
-    uint8_t i;
+    uint16_t i;
     bool is_new;
     Proc* old = current_process;
     

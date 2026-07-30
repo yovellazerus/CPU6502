@@ -39,6 +39,13 @@ _start:
     cmp #0
     beq child3_code
 
+    ;; fork child 4
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child4_code
+
 init_wait_loop:
     ;; wait for children
     ldy #'W'
@@ -112,7 +119,7 @@ child1_code:
     
     ;; exit
     ldy #'E'
-    lda #2
+    lda #1
     brk
     nop
 
@@ -128,7 +135,7 @@ child2_code:
     
     ;; exit
     ldy #'E'
-    lda #3 
+    lda #2 
     brk
     nop
 
@@ -144,7 +151,23 @@ child3_code:
     
     ;; exit
     ldy #'E'
-    lda #4 
+    lda #3 
+    brk
+    nop
+
+;; =======================================================
+;; child4 code 
+;; =======================================================
+child4_code:
+    ldy #'P'
+    lda #<child4_arg
+    ldx #>child4_arg
+    brk
+    nop
+    
+    ;; exit
+    ldy #'E'
+    lda #4
     brk
     nop
 
@@ -270,3 +293,10 @@ child3_arg:
 child3_msg:
     .byte "child3: hello and goodbye", $0a, 0
 child3_msg_end:
+
+child4_arg:
+    .word (child4_msg_end - child4_msg)
+    .word child4_msg
+child4_msg:
+    .byte "child4: hello and goodbye", $0a, 0
+child4_msg_end:
