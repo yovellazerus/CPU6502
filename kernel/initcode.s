@@ -143,6 +143,7 @@ child2_code:
 ;; child3 code 
 ;; =======================================================
 child3_code:
+    sei
     ldy #'P'
     lda #<child3_arg
     ldx #>child3_arg

@@ -27,7 +27,7 @@
 #define SIGKILL      9
 #define SEGFAULT     1
 #define BADSYSCALL   2
-#define IFLAGEON     3
+#define WATCHDOG     7
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
