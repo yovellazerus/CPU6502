@@ -235,7 +235,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -252,7 +252,7 @@ void kernel_prologue(void){
 
 void kernel_epilogue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("\"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -478,7 +478,7 @@ int sys_fork(void){
 
     child = palloc();
     if(!child){
-        printk("process pool exhausted\n");
+        printk("kernel: process pool exhausted\n");
         return -1;
     }
 
@@ -520,7 +520,7 @@ int sys_fork(void){
                 MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
                 MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
-                printk("frame pool exhausted in fork()"); 
+                printk("kernel: frame pool exhausted in fork()"); 
                 return -1;
             }
 

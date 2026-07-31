@@ -9,7 +9,14 @@
 
 #define NULL ((void*)0)
 
-#define P_I 0x04
+// 6502 "P" register flags
+#define FLAG_N 0x80 // negative
+#define FLAG_V 0x40 // overflow
+#define FLAG_B 0x10 // break
+#define FLAG_D 0x08 // decimal
+#define FLAG_I 0x04 // interrupt Disable
+#define FLAG_Z 0x02 // zero
+#define FLAG_C 0x01 // carry
 
 #define WINDOW1 0x1000
 #define WINDOW2 0x2000
@@ -37,6 +44,17 @@
 
 typedef struct Proc Proc;
 
+// order is importent for trampoline!
+typedef struct Context {
+    uint8_t sp;
+    uint8_t p;
+    uint16_t pc; 
+    uint8_t x;
+    uint8_t y;
+    uint8_t a;
+    uint8_t ksp;
+} Context;
+
 // form cc65
 extern void* memset(void *dst, int value, uint16_t size);
 
@@ -50,6 +68,7 @@ extern void kernel_vector(void);
 extern void context_switch(Proc* old, Proc* new);
 extern void first_context_switch(Proc* old, Proc* new);
 extern void make_kernel_stack(uint8_t frame);
+extern void get_cpu_state(Context* ctx);
 
 // initcode.s
 extern uint8_t init_code[];
@@ -93,8 +112,6 @@ bool device_interrupt(void);
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
-// debug
-void print_str(char* str);
 uint16_t gets(char *buf, int max);
 
 // timer.c
@@ -122,17 +139,6 @@ typedef enum Proc_State{
     PROC_STATE_SLEEPING,
     PROC_STATE_ZOMBIE
 } Proc_State;
-
-// order is importent for trampoline!
-typedef struct Context {
-    uint8_t sp;
-    uint8_t p;
-    uint16_t pc; 
-    uint8_t x;
-    uint8_t y;
-    uint8_t a;
-    uint8_t ksp;
-} Context;
 
 extern Proc* current_process;
 

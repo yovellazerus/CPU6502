@@ -15,7 +15,7 @@ void kernel_brk(void){
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
     if(!syscall){
-        printk("\"%s\" [%d] terminated do to invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
+        printk("kernel: \"%s\" [%d] terminated do to invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
         proc_set_ax(current_process, BADSYSCALL);
         sys_exit();
     }
@@ -58,11 +58,11 @@ void kernel_nmi(void){
             break;
         
         default:
-            printk("prosess [%d] \"%s\" was terminated do to executing invalid opcode: <0x%x>\n", 
+            printk("kernel: prosess [%d] \"%s\" was terminated do to executing invalid opcode: <0x%x>\n", 
                 proc_get_pid(current_process), proc_get_name(current_process), watchdog);
             goto end;
     }
-    printk("prosess [%d] \"%s\" was terminated do to executing \"%s\" instruction\n", 
+    printk("kernel: prosess [%d] \"%s\" was terminated do to executing \"%s\" instruction\n", 
             proc_get_pid(current_process), proc_get_name(current_process), mnemonic);
 end:
     proc_set_ax(current_process, WATCHDOG);
@@ -116,7 +116,34 @@ bool device_interrupt(void){
     return true; // for timer interrupt
 }
 
-// can be used for a kernel debugare?
+// kernel debugger 
 void kernel_software_interrupt(void){
+    Context ctx;
+    get_cpu_state(&ctx);
+
+    printk("\n=================================\n");
+    printk("       kernel breakpoint:            \n");
+    printk("=================================\n");
+    
+    // PC and SP
+    printk("PC = %p          SP = 0x01%x\n", ctx.pc, ctx.sp);
+    
+    // A, X, Y
+    printk("A = 0x%x    X = 0x%x    Y = 0x%x\n", ctx.a, ctx.x, ctx.y);
+    
+    // P
+    printk("P  = 0x%x  [ ", ctx.p);
+    printk("%c ", (ctx.p & FLAG_N) ? 'N' : '-');
+    printk("%c ", (ctx.p & FLAG_V) ? 'V' : '-');
+    printk("- "); // bit 5 is unused/always set
+    printk("%c ", (ctx.p & FLAG_B) ? 'B' : '-');
+    printk("%c ", (ctx.p & FLAG_D) ? 'D' : '-');
+    printk("%c ", (ctx.p & FLAG_I) ? 'I' : '-');
+    printk("%c ", (ctx.p & FLAG_Z) ? 'Z' : '-');
+    printk("%c ", (ctx.p & FLAG_C) ? 'C' : '-');
+    printk("]\n");
+    
+    printk("=================================\n");
+    
     panic("kernel break point");
 }

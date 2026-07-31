@@ -21,14 +21,14 @@ void main(void) {
 
     hardware_init();
 
-    printk("version %d.%d.%d is booting...\n", 1, 0, 0);
+    printk("kernel: version %d.%d.%d is booting...\n", 1, 0, 0);
 
     memory_init();
     proc_init();
     syscall_init();
     fs_init();
 
-    printk("starting init process...\n");
+    printk("kernel: starting init process...\n");
     run_init_process();
 
     // no return

@@ -210,6 +210,69 @@ _kernel_vector:
     pla
     rti
 
+;; kernel debugger core to save the CPU registers to a Context pointer given in AX
+;;
+;; void get_cpu_state(Context* ctx);
+;;
+.global _get_cpu_state
+_get_cpu_state:
+
+    ;; context pointer in AX
+    sta ptr1+0
+    stx ptr1+1
+
+    tsx
+
+    ;; skip 4 bytes of "_kernel_software_interrupt" and "_get_cpu_state" return address 
+    ;; plus 1 byte to point to the first pushed register (Y)
+    inx
+    inx
+    inx
+    inx
+    inx 
+
+    ;; load Y 
+    lda $0100, x
+    ldy #5    
+    sta (ptr1), y
+
+    ;; load X
+    inx
+    lda $0100, x
+    ldy #4    
+    sta (ptr1), y
+
+    ;; load A
+    inx
+    lda $0100, x
+    ldy #6    
+    sta (ptr1), y
+
+    ;; load P 
+    inx
+    lda $0100, x
+    ldy #1    
+    sta (ptr1), y
+
+    ;; load PCL
+    inx
+    lda $0100, x
+    ldy #2   
+    sta (ptr1), y
+
+    ;; load PCH 
+    inx
+    lda $0100, x
+    ldy #3   
+    sta (ptr1), y
+
+    ;; X is now at the the value of the original SP was before the "BRK"
+    txa
+    ldy #0
+    sta (ptr1), y
+
+    rts
+
 ;; initializes a kernel software stack pointer in the given frame (the frame in A must be allocated!)
 ;;
 ;; void make_kernel_stack(uint8_t frame);

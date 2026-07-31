@@ -632,6 +632,7 @@ bool CPU_step(CPU* cpu){
             m->mmu->watchdog = opcode;
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
+            //fprintf(stderr, COLOR_RED "\nNMI: PC = 0x%.4x\n" COLOR_GREEN, cpu->pc);
             MCS6502NMI(m->cpu);
         }
         
@@ -694,7 +695,7 @@ int main(int argc, char** argv)
     if(!m){
         fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);
         return 1;
-    } 
+    }
     while(Machine_step(m));
     Machine_coredump(m, ".\\machine\\coredump.bin");
     Machine_destroy(m);

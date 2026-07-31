@@ -8,7 +8,7 @@ static void putc(char c){
     MMIO8(UART_TX) = c;
 }
 
-void print_str(char* str){
+static void print_str(char* str){
     if(!str) str = "(null)";
     for (; *str; str++) putc(*str);
 }
@@ -112,7 +112,6 @@ void printk(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    print_str("kernel: ");
     vprintk(fmt, ap);
     va_end(ap);
 }
@@ -120,7 +119,7 @@ void printk(const char *fmt, ...)
 void panic(const char *fmt, ...){
     va_list ap;
     va_start(ap, fmt);
-    print_str("PANIC: ");
+    printk("PANIC: ");
     vprintk(fmt, ap);
     va_end(ap);
     interrupts_push();
