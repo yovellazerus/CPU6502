@@ -60,6 +60,11 @@ typedef struct Context {
 // form cc65
 extern void* memset(void *dst, int value, uint16_t size);
 
+// kernel.cfg
+extern uint8_t _INITCODE_LOAD__[];
+extern uint8_t _INITCODE_RUN__[];
+extern uint8_t _INITCODE_SIZE__[];
+
 // trampoline.s
 extern uint8_t life_raft[];
 extern uint8_t kernel_page_table[PAGE_TABLE_SIZE];
@@ -74,9 +79,6 @@ extern void get_cpu_state(Context* ctx);
 
 // initcode.s
 extern uint8_t init_code[];
-extern uint8_t _INITCODE_LOAD__[];
-extern uint8_t _INITCODE_RUN__[];
-extern uint8_t _INITCODE_SIZE__[];
 
 // kalloc.c
 void memory_init(void);

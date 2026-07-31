@@ -265,9 +265,13 @@ void kernel_prologue(void){
     memcpy(current_process->page_table, life_raft + 8, sizeof(current_process->page_table));
 
     current_process->kernel_stack_frame = kernel_page_table[0];
+
+    __asm__("cli");
 }
 
 void kernel_epilogue(void){
+
+    __asm__("sei");
 
     if(current_process->killed != 0 && current_process != init_process){
         printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));

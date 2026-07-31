@@ -12,6 +12,7 @@
 
 ;; form kernel.cfg
 .import __STACK_START__
+.import __ZEROPAGE_SIZE__
 
 ;; from trap.c
 .import _kernel_brk
@@ -197,14 +198,33 @@ _kernel_vector:
     tya
     pha
 
+    ;; push the cc65 zp register to the hardware stack
+    ldx #0
+@push:
+    lda $0000, x
+    pha
+    inx
+    cpx #<__ZEROPAGE_SIZE__
+    bne @push
+
+    ;; check the "B" flag
     tsx
-    lda $0104, x
-    and #%00010000  ;; check the "B" flag
+    lda $0104 + <__ZEROPAGE_SIZE__, x
+    and #%00010000  
     beq @irq
     jsr _kernel_debugger
-    jmp @end
+    jmp @restore_zp      ;; Jump to the ZP restore block, NOT @end!
 @irq:
     jsr _device_interrupt
+
+;; pull the cc65 zp register from the hardware stack
+@restore_zp:
+    ldx #<__ZEROPAGE_SIZE__ - 1
+@pop:
+    pla
+    sta $0000, x
+    dex
+    bpl @pop         
 
 @end:
     pla

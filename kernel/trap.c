@@ -119,6 +119,8 @@ bool device_interrupt(void){
 /*
 Interactive kernel debugger,
 it is called from "BRK" in kernel space
+NOTE: not from user space! can not be used to debug user code and user context
+TODO: this "eats" to much RAM... consider remove it...
 */
 void kernel_debugger(void) {
     char input[32];
@@ -130,7 +132,7 @@ void kernel_debugger(void) {
 
     printk("Type 'h' or 'help' for available debugger commands.\n\n");
 
-    while (1) {
+    while (true) {
         printk("> ");
         
         // clear buffer and read input
