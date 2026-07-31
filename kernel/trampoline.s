@@ -31,7 +31,7 @@ VECTORS             = $fffa
 .global _irq_handler
 _irq_handler:
 
-    ;; decimal mode not used in kernel
+    ;; decimal mode is not used in the kernel
     cld
 
     ;; save user CPU registers to the life raft
@@ -64,15 +64,15 @@ _irq_handler:
     lda MMU_PREV_REGISTER
     sta user_page_table, x
 
+    ;; save the kernel last segment to prev register to be used by "RTI" in KERNEL space!
+    lda _kernel_page_table, x
+    sta MMU_PREV_REGISTER
+
     ;; install kernel IRQ vector
     lda #<_kernel_vector
     sta VECTORS+4
     lda #>_kernel_vector
     sta VECTORS+5
-
-    ;; TODO: for debugging purposes, this is disabled
-    ;; now can take device interrupts in the kernel
-    cli
     
     ;; jmp to C functions in the kernel
     lda user_context + 1   ;; load P
@@ -88,7 +88,7 @@ _irq_handler:
 .global _nmi_handler
 _nmi_handler:
 
-    ;; decimal mode not used in kernel
+    ;; decimal mode is not used in the kernel
     cld
 
     ;; save user CPU registers to the life raft
@@ -120,6 +120,10 @@ _nmi_handler:
     ;; save the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
     sta user_page_table, x
+
+    ;; save the kernel last segment to prev register to be used by "RTI" in KERNEL space!
+    lda _kernel_page_table, x
+    sta MMU_PREV_REGISTER
 
     ;; install kernel IRQ vector
     lda #<_kernel_vector
