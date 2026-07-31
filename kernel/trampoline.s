@@ -190,6 +190,16 @@ _return_from_trap:
     rti  
 
 ;; IRQ handler for device interrupts and BRK's in the kernel
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; NOTE: for interrupt's execution in KERNEL space,
+;; we must not corrupt the current process kernel stack frame.
+;; so we SWAP it for the kernel stack 0 (frame 0) that was used during the booting process
+;; and make it the dedicated booting/interrupts kernel stack.
+
+;; must not be in $0000-$0fff because they are used for the swap!
+tmp_ksp:         .res 1
+tmp_stack_frame: .res 1
+
 .global _kernel_vector
 _kernel_vector:
     pha
@@ -198,33 +208,58 @@ _kernel_vector:
     tya
     pha
 
-    ;; push the cc65 zp register to the hardware stack
-    ldx #0
-@push:
-    lda $0000, x
-    pha
-    inx
-    cpx #<__ZEROPAGE_SIZE__
-    bne @push
-
-    ;; check the "B" flag
+    ;; checking the "B" flag, must be before swapping memory because the "P"
+    ;; register is currently on the OLD stack
     tsx
-    lda $0104 + <__ZEROPAGE_SIZE__, x
+    lda $0104, x
     and #%00010000  
-    beq @irq
-    jsr _kernel_debugger
-    jmp @restore_zp      ;; Jump to the ZP restore block, NOT @end!
-@irq:
+    bne @software_brk
+
+@hardware_irq:
+
+    ;; check for nested kernel interrupt's,
+    ;; if the stack is already stack 0, there is no need to perform the swap.
+    ;; just call the C handler
+    lda MMU_PAGE_TABLE + 0
+    bne @not_nested
+    ;; it is nested
+    jsr _device_interrupt
+    jmp @end
+
+@not_nested:
+    
+    ;; save the current hardware stack pointer
+    tsx
+    stx tmp_ksp
+
+    ;; save the current kernel stack frame
+    lda MMU_PAGE_TABLE + 0
+    sta tmp_stack_frame
+
+    ;; swap the stack frame to frame 0 (The dedicated kernel boot/interrupt frame)
+    ;; frame 0 contains its own zero page register and hardware stack
+    lda #$00                  
+    sta MMU_PAGE_TABLE + 0
+
+    ;; reset the hardware stack pointer
+    ldx #$FF
+    txs
+
+    ;; can now safely execute C code on frame 0 without corrupting the current process
     jsr _device_interrupt
 
-;; pull the cc65 zp register from the hardware stack
-@restore_zp:
-    ldx #<__ZEROPAGE_SIZE__ - 1
-@pop:
-    pla
-    sta $0000, x
-    dex
-    bpl @pop         
+    ;; restore the old kernel stack frame
+    lda tmp_stack_frame
+    sta MMU_PAGE_TABLE + 0
+
+    ;; restore the old hardware stack pointer
+    ldx tmp_ksp
+    txs
+    jmp @end
+
+    ;; not swapping memory for the kernel debugger 
+@software_brk:
+    jsr _kernel_debugger
 
 @end:
     pla
