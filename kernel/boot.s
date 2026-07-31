@@ -8,6 +8,10 @@
 
 .segment "BOOT"
 entry:
+    sei
+    cld
+    ldx #$ff
+    txs
 
     lda #<msg_banner
     ldx #>msg_banner

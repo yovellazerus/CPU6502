@@ -122,28 +122,25 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     return (frame << 12) | offset;
 }
 
-static bool is_invalid_opcode(uint8_t opcode){
-    static bool valid_opcode_table[256] = {
-        //     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xa xb xc xd xe xf
-        /*0x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 
-        /*1x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
-        /*2x*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*3x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
-        /*4x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*5x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
-        /*6x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*7x*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
-        /*8x*/ 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 
-        /*9x*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 
-        /*ax*/ 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*bx*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*cx*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*dx*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
-        /*ex*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
-        /*fx*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0  
-    };
-    return !valid_opcode_table[opcode];
-}
+static bool valid_opcode_table[256] = {
+    //    x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xa xb xc xd xe xf
+    /*0*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 
+    /*1*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+    /*2*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*3*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+    /*4*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*5*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+    /*6*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*7*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+    /*8*/ 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 
+    /*9*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 
+    /*a*/ 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*b*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*c*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*d*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 
+    /*e*/ 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 
+    /*f*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0  
+};
 
 /* ============================================== read/write functions ======================================================*/
 
@@ -265,8 +262,7 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
 
     // ---------------- ROM ENABLE ----------------
     if (physical_addr == ROM_ENABLE){
-        // TODO: for debug, cant reenable the ROM
-        if(m->rom->rom_enable == ROM_ENABLE_TRUE) m->rom->rom_enable = byte;
+        m->rom->rom_enable = byte;
         return;
     } 
 
@@ -605,12 +601,16 @@ bool CPU_step(CPU* cpu){
 
     for(int i = 0; i < CPU_PER_STEP; i++){
 
+        // feach opcode to be executed (using SYNC pin in hardware)
         uint8_t opcode = m->read(cpu->pc, m);
-        bool rti_in_user = false;
+
+        // if the last memory segment is NOT mapped to the MMIO/trap frame we are in user space
+        bool in_user = m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT;
         
         // The hardware IRQ trigger line
         // "I" flage check for not swapping the segment if interrupts are diabled (in real hardware using VPB pin)
         // NOTE: pending_irq is needed to signal a device interrupt from OUTSIDE the CPU_step() function
+        // <device>_step() functions should not trigger an IRQ on there on! just raise the pending_irq line high(to true).
         if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
@@ -625,11 +625,10 @@ bool CPU_step(CPU* cpu){
         }
 
         // Hardware "watchdog" 
-        // for detecting user "SEI"/"PLP"/"RTI" or invalid opcode feach cycle using SYNC pin.
-        if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || is_invalid_opcode(opcode)) && 
-            m->mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT)
+        // for detecting user space "SEI"/"PLP"/"RTI" or invalid opcode feach cycle using SYNC pin.
+        if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || !valid_opcode_table[opcode]) && 
+            in_user == true)
         {
-            rti_in_user = true;
             m->mmu->watchdog = opcode;
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
@@ -643,7 +642,7 @@ bool CPU_step(CPU* cpu){
         // for saving the last MMU segment to the MMU prev register
         // to be used for implementing memory isolation.
         // NOTE: the frame swap is done POST execution (to alow the "RTI" to be executed...)
-        if(opcode == 0x40 && !rti_in_user){
+        if(opcode == 0x40 && !in_user){
             m->mmu->page_table[MMU_LAST_SEGMENT] = m->mmu->prev;
         }
     

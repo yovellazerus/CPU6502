@@ -31,6 +31,9 @@ VECTORS             = $fffa
 .global _irq_handler
 _irq_handler:
 
+    ;; decimal mode not used in kernel
+    cld
+
     ;; save user CPU registers to the life raft
     sta user_context + 6    ;; A
     sty user_context + 5    ;; Y
@@ -84,6 +87,9 @@ _irq_handler:
 
 .global _nmi_handler
 _nmi_handler:
+
+    ;; decimal mode not used in kernel
+    cld
 
     ;; save user CPU registers to the life raft
     sta user_context + 6    ;; A   
@@ -206,10 +212,10 @@ _kernel_vector:
 
 ;; initializes a kernel software stack pointer in the given frame (the frame in A must be allocated!)
 ;;
-;; void make_stack(uint8_t frame);
+;; void make_kernel_stack(uint8_t frame);
 ;;
-.global _make_stack
-_make_stack:
+.global _make_kernel_stack
+_make_kernel_stack:
     ;; save the old frame of segment 1 to tmp1, and map WINDOW1 to the given frame
     ldx MMU_PAGE_TABLE + 1  
     stx tmp1

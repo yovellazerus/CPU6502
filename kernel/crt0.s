@@ -13,6 +13,11 @@
 
 __STARTUP__:
 
+    sei
+    cld
+    ldx #$ff
+    txs
+
     lda #<__STACK_START__
     sta c_sp+0
     lda #>__STACK_START__

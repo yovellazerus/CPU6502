@@ -49,7 +49,7 @@ extern void nmi_handler(void);
 extern void kernel_vector(void);
 extern void context_switch(Proc* old, Proc* new);
 extern void first_context_switch(Proc* old, Proc* new);
-extern void make_stack(uint8_t frame);
+extern void make_kernel_stack(uint8_t frame);
 
 // initcode.s
 extern uint8_t init_code[];

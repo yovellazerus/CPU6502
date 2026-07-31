@@ -81,7 +81,7 @@ Proc* palloc(void){
     }
 
     // initialize the software kernel stack by writing to it's c_sp zero page register   
-    make_stack(stack_frame);    
+    make_kernel_stack(stack_frame);    
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
@@ -240,10 +240,14 @@ void kernel_prologue(void){
         sys_exit();
     }
 
-    // load the process's CPU context FROM the Trap Segment "Life Raft"
+    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
     // NOTE: the kernel_stack_frame and the kernel hardware stack pointer (KSP) of the process,
-    // are loaded by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
+    // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
+
+    memcpy(current_process->page_table, life_raft + 8, sizeof(current_process->page_table));
+
+    current_process->kernel_stack_frame = kernel_page_table[0];
 }
 
 void kernel_epilogue(void){
@@ -259,7 +263,7 @@ void kernel_epilogue(void){
 
     memcpy(life_raft, &current_process->ctx, sizeof(Context));
     
-    memcpy(life_raft + 8, current_process->page_table, PAGE_TABLE_SIZE);
+    memcpy(life_raft + 8, current_process->page_table, sizeof(current_process->page_table));
     
     kernel_page_table[0] = current_process->kernel_stack_frame;
 }
