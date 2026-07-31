@@ -240,11 +240,10 @@ void kernel_prologue(void){
         sys_exit();
     }
 
-    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
-    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer of the process,
-    // are loaded bye the _nmi_handler() and _irq_handler() assembly trampoline.s routines
+    // load the process's CPU context FROM the Trap Segment "Life Raft"
+    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer (KSP) of the process,
+    // are loaded by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
     memcpy(&current_process->ctx, life_raft, sizeof(Context));
-    memcpy(current_process->page_table, life_raft + 8, PAGE_TABLE_SIZE);
 }
 
 void kernel_epilogue(void){
@@ -337,7 +336,7 @@ void scheduler(void) {
                     return_from_trap();
 
                 } else if (is_new) {
-                    // p is a new process created bye sys_fork()
+                    // p is a new process created by sys_fork()
                     first_context_switch(old, p);
                     return; 
 
@@ -432,7 +431,7 @@ int sys_exit(void){
 
     // TODO: close (decrement reference count of) open files and cwd 
 
-    // free process memory frames, not including the kernel stack frame, that will be freed bye pfree()
+    // free process memory frames, not including the kernel stack frame, that will be freed by pfree()
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
         if(current_process->page_table[segment] != FRAME_UNUSED){
             kfree(current_process->page_table[segment]);
