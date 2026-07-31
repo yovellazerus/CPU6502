@@ -17,7 +17,7 @@
 .import _kernel_brk
 .import _kernel_irq
 .import _kernel_nmi
-.import _kernel_software_interrupt
+.import _kernel_debugger
 .import _device_interrupt
 
 ;; from proc.c
@@ -72,7 +72,7 @@ _irq_handler:
 
     ;; TODO: for debugging purposes, this is disabled
     ;; now can take device interrupts in the kernel
-    ;; cli
+    cli
     
     ;; jmp to C functions in the kernel
     lda user_context + 1   ;; load P
@@ -197,7 +197,7 @@ _kernel_vector:
     lda $0104, x
     and #%00010000  ;; check the "B" flag
     beq @irq
-    jsr _kernel_software_interrupt
+    jsr _kernel_debugger
     jmp @end
 @irq:
     jsr _device_interrupt

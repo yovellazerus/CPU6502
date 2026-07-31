@@ -101,6 +101,23 @@ void pfree(Proc* p){
     p->state = PROC_STATE_UNUSED;
 }
 
+void print_process_state(Proc* p) {
+    uint8_t i;
+    printk(" Process Control Block:\n");
+    if (p != NULL) {
+        printk("   Name : \"%s\"\n", proc_get_name(p));
+        printk("   PID  : %d\n", proc_get_pid(p));
+        printk("   Page Table: ");
+        for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+            if(i % 4 == 0) printk("\n\t");
+            printk("0x%x ", proc_get_page_table(p)[i]);
+        }
+    } else {
+        printk("\n    (null)\n");
+    }
+    printk("\n+---------------------------------------+\n");
+}
+
 const Context* proc_get_ctx(const Proc* p){
     return &p->ctx;
 }
@@ -319,7 +336,7 @@ void scheduler(void) {
     uint16_t i;
     bool is_new;
     Proc* old = current_process;
-    
+
     while (1) {
         for (i = 0; i < MAX_PROC_COUNT; i++) {
             p = &proc_table[round_robin_index++];

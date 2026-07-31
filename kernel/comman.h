@@ -38,6 +38,8 @@
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+#define BRK __asm__("brk"); __asm__("nop")
+
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
@@ -104,8 +106,9 @@ int sys_kill(void);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
-void kernel_software_interrupt(void);
+void kernel_debugger(void);
 bool device_interrupt(void);
+void print_cpu_state(Context* ctx);
 
 // io.c
 // TODO: need to be uart.c console.c and printk.c
@@ -155,6 +158,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 void proc_init(void);
 Proc* palloc(void);
 void pfree(Proc* p);
+void print_process_state(Proc* p);
 const Context* proc_get_ctx(const Proc* p);
 uint8_t proc_get_ticks(const Proc* p);
 const char* proc_get_name(const Proc* p);
