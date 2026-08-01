@@ -6,6 +6,8 @@ _init_code:
 .importzp ptr1
 .importzp tmp1
 
+.import __INITCODE_SIZE__
+
 ;; =======================================================
 ;; init code
 ;; =======================================================
@@ -183,6 +185,30 @@ child4_code:
 
     ;; "watchdog" test
     plp
+
+    ;; sys_sbrk() test
+    ; ldy #'S'
+    ; lda #$00
+    ; ldx #$70
+    ; brk
+    ; nop
+
+    ; ldy #'S'
+    ; lda #$00
+    ; ldx #$70
+    ; brk
+    ; nop
+
+    ; ldy #'S'
+    ; lda #$00
+    ; ldx #$10
+    ; brk
+    ; nop
+
+    ; lda #$42
+    ; sta $f000
+
+    jmp *
     
     ;; exit
     ldy #'E'

@@ -19,11 +19,22 @@ void memory_init(void){
 }
 
 uint8_t kalloc(void) {
+    uint8_t frame;
+    uint8_t old_frame;
+
     if (free_top == 0) {
         return FRAME_UNUSED;
     }
     free_top--;
-    return free_frames[free_top];
+    frame = free_frames[free_top];
+
+    // clear the memory for use
+    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
+    MMIO8(MMU_PAGE_TABLE + 1) = frame;
+    memset((void*)WINDOW1, 0, 4096);
+    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+
+    return frame;
 }
 
 void kfree(uint8_t frame) {

@@ -366,6 +366,76 @@ void scheduler(void) {
     }
 }
 
+int sys_sbrk(void) {
+
+    uint8_t old_segment;
+    uint8_t new_segment;
+    uint8_t segment;
+    uint8_t frame;
+    uint16_t new_top;
+
+    // can be negative
+    int16_t increment = (int16_t)proc_get_ax(current_process);
+    
+    // we will return this to the user on success
+    uint16_t old_top = current_process->top;
+    
+    int32_t overflow_check = old_top + increment;
+
+    // user is request exceeds the maximum virtual address range
+    if (overflow_check >= 0x10000 || overflow_check < 0) { 
+        return -1; 
+    }
+
+    new_top = (uint16_t)overflow_check;
+
+    // converting form bytes to segment indexes
+    // calculate the highest segment for the old top and new top
+    // subtract 1 to account for a 4KB page boundary
+    old_segment = (old_top == 0) ? 0 : (old_top - 1) >> 12;
+    new_segment = (new_top == 0) ? 0 : (new_top - 1) >> 12;
+
+    // growing the heap
+    if (increment > 0) {
+        
+        // allocate the missing frames between the old segment and the new segment
+        for (segment = old_segment; segment <= new_segment; segment++) {
+            if (current_process->page_table[segment] == FRAME_UNUSED) {
+                frame = kalloc();
+                // no more memory
+                if (frame == FRAME_UNUSED) {
+                    // roll back and free the new allocated frames and return exit code of -1
+                    for(segment; segment >= old_segment; segment--){
+                        if (current_process->page_table[segment] != FRAME_UNUSED) {
+                            kfree(current_process->page_table[segment]);
+                            current_process->page_table[segment] = FRAME_UNUSED;
+                        }
+                    }
+                    return -1; 
+                }
+                
+                current_process->page_table[segment] = frame;
+            }
+        }
+    } 
+
+    // shrinking the heap
+    else if (increment < 0) {
+
+        for (segment = old_segment; segment > new_segment; segment--) {
+            if (current_process->page_table[segment] != FRAME_UNUSED) {
+                kfree(current_process->page_table[segment]);
+                current_process->page_table[segment] = FRAME_UNUSED;
+            }
+        }
+    }
+
+    // commit to the new top
+    current_process->top = new_top;
+
+    return old_top;
+}
+
 int sys_kill(void){
     uint16_t pid;
     uint8_t i;
@@ -585,6 +655,7 @@ void run_init_process(void){
     }
 
     init_process->ctx.pc = (uint16_t)init_code;
+    init_process->top = (uint16_t)init_code + (uint16_t)_INITCODE_SIZE__;
 
     if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
         panic("copy_to_user in run_init_process");
