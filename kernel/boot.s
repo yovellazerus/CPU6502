@@ -1,4 +1,5 @@
 
+.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
 .include "../machine/machine.inc"
 
 .import __KERNEL_START__
@@ -54,20 +55,20 @@ to_kernel:
 ;;
 read_sector:
 
-    sta PTR+0
-    stx PTR+1
+    sta ptr1+0
+    stx ptr1+1
 
     ldy #0
-    lda (PTR),y
-    sta BUF+0
+    lda (ptr1),y
+    sta tmp1+0
     iny
-    lda (PTR),y
-    sta BUF+1
+    lda (ptr1),y
+    sta tmp1+1
     iny
-    lda (PTR), y
+    lda (ptr1), y
     sta DISK_LBA+0
     iny
-    lda (PTR), y
+    lda (ptr1), y
     sta DISK_LBA+1
 
     lda #DISK_CMD_READ
@@ -79,24 +80,24 @@ read_sector:
     bne @wait
 
     lda #<DISK_BUF
-    sta SRC+0
+    sta ptr2+0
     lda #>DISK_BUF
-    sta SRC+1
+    sta ptr2+1
 
     ldy #0
 @copy_low_page:
-    lda (SRC),y
-    sta (BUF),y
+    lda (ptr2),y
+    sta (tmp1),y
     iny
     bne @copy_low_page
 
-    inc SRC+1
-    inc BUF+1
+    inc ptr2+1
+    inc tmp1+1
 
     ldy #0
 @copy_high_page:
-    lda (SRC),y
-    sta (BUF),y
+    lda (ptr2),y
+    sta (tmp1),y
     iny
     bne @copy_high_page
     rts
@@ -118,11 +119,11 @@ putchar:
 ;; void prints(const char* str)
 ;;
 prints:
-  sta STR+0
-  stx STR+1
+  sta ptr1+0
+  stx ptr1+1
   ldy #0
 @loop:
-  lda (STR),y
+  lda (ptr1),y
   beq @end
   jsr putchar
   iny

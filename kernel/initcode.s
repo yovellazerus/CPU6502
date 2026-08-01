@@ -1,12 +1,10 @@
+
+.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
+
 .segment "INITCODE"
 .org $0200
 .global _init_code
 _init_code:
-
-.importzp ptr1
-.importzp tmp1
-
-.import __INITCODE_SIZE__
 
 ;; =======================================================
 ;; init code

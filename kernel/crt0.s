@@ -1,15 +1,10 @@
 .segment "STARTUP"
 
 .global __STARTUP__
-.import _main
-
-.import __STACK_START__
-.importzp c_sp
-
-.import __BSS_LOAD__
-.import __BSS_SIZE__
-.importzp ptr1
-.importzp ptr2
+.import _main           ;; form main.c
+.import zerobss         ;; form cc65
+.import __STACK_START__ ;; form kernel.cfg
+.importzp c_sp          ;; from cc65
 
 __STARTUP__:
 
@@ -19,34 +14,11 @@ __STARTUP__:
     txs
 
     lda #<__STACK_START__
-    sta c_sp+0
+    sta c_sp + 0
     lda #>__STACK_START__
-    sta c_sp+1
+    sta c_sp + 1
 
-    lda #<__BSS_LOAD__
-    sta ptr1
-    lda #>__BSS_LOAD__
-    sta ptr1+1
-
-    lda #<__BSS_SIZE__
-    sta ptr2
-    lda #>__BSS_SIZE__
-    sta ptr2+1
-
-    lda #0
-    ldy #0
-bss_loop:
-    sta (ptr1),y
-    inc ptr1
-    bne :+
-    inc ptr1+1
-:
-
-    lda ptr1
-    cmp ptr2
-    lda ptr1+1
-    sbc ptr2+1
-    bcc bss_loop
+    jsr zerobss
 
     jsr _main
 
