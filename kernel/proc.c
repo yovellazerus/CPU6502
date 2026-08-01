@@ -440,8 +440,6 @@ int sys_exit(void){
 
     // TODO: close (decrement reference count of) open files and cwd
     
-    BRK;
-
     // free process memory frames, not including the kernel stack frame, that will be freed by pfree()
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
         if(current_process->page_table[segment] != FRAME_UNUSED){
