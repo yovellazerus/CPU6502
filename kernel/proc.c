@@ -442,22 +442,28 @@ int sys_kill(void){
 
     pid = proc_get_ax(current_process);
 
-    // cant kill "init"
-    if(pid == 1) return -1;
+    // cannot kill "init" and pid 0 is invalid
+    if(pid <= 1) return -1;
 
     for(i = 0; i < ARRAY_SIZE(proc_table); i++){
-        if(proc_table[i].pid == pid){
+    
+        if(proc_table[i].state != PROC_STATE_UNUSED && 
+           proc_table[i].state != PROC_STATE_ZOMBIE && 
+           proc_table[i].pid == pid) {
+            
             proc_table[i].killed = 1;
-            // if the victim is asleep wake it up, 
-            // so it can return to user space and the kernel will call sys_exit() on it.
+            
+            // if the victim is asleep, wake it up so it is scheduled to run
+            // so the kernel can kill
             if(proc_table[i].state == PROC_STATE_SLEEPING){
                 proc_table[i].state = PROC_STATE_READY;
             }
-            // success
-            return 0;
+            
+            return 0; // success
         }
     }
-    // there is no such process
+    
+    // there is no such active process
     return -1;
 }
 
