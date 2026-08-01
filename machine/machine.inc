@@ -39,6 +39,7 @@ UART_TX      = $fe10
 UART_RX      = $fe11
 UART_STAT    = $fe12
 MMU_PAGE_TABLE     = $fe20 ;; 16 bytes
+MMU_PREV_REGISTER  = $fe40
 
 ;; ROM
 ROM_BASE     = $ff00

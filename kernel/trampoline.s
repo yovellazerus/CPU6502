@@ -1,33 +1,26 @@
+
 .include "..\cc65-snapshot-win64\asminc\zeropage.inc"
+.include "..\machine\machine.inc"
 
 .segment "TRAMPOLINE"
 
 ;; form ca65
-.importzp c_sp
-.importzp tmp1
-.importzp ptr1
-.importzp ptr2
-
 .import popax
 
 ;; form kernel.cfg
 .import __STACK_START__
-.import __ZEROPAGE_SIZE__
 
 ;; from trap.c
 .import _kernel_brk
 .import _kernel_irq
 .import _kernel_nmi
-.import _kernel_debugger
 .import _device_interrupt
+
+;; from debugger.c
+.import _kernel_debugger
 
 ;; from proc.c
 .import _kernel_epilogue
-
-;; MMIO registers
-MMU_PAGE_TABLE      = $fe20 ;; 16 bytes
-MMU_PREV_REGISTER   = $fe40
-VECTORS             = $fffa
 
 .global _irq_handler
 _irq_handler:
@@ -229,6 +222,7 @@ _kernel_vector:
     lda MMU_PAGE_TABLE + 0
     bne @not_nested
     ;; it is nested
+    cli ;; alow more nested interrupts
     jsr _device_interrupt
     jmp @end
 
@@ -252,6 +246,7 @@ _kernel_vector:
     txs
 
     ;; can now safely execute C code on frame 0 without corrupting the current process
+    cli ;; alow more nested interrupts
     jsr _device_interrupt
 
     ;; restore the old kernel stack frame
@@ -277,8 +272,8 @@ _kernel_vector:
 
 .else
 
-STACK = $0100 + <__ZEROPAGE_SIZE__
-ZP_ON_STACK = <__ZEROPAGE_SIZE__
+STACK = $0100 + zpsavespace 
+ZP_ON_STACK = zpsavespace 
 
 ;; IRQ handler for device interrupts and BRK's in the kernel
 ;; to execute C code we need to save the zero page registers on the kernel HARDWARE stack
@@ -298,13 +293,13 @@ _kernel_vector:
     lda $0000, x
     pha
     inx
-    cpx #<__ZEROPAGE_SIZE__
+    cpx #<zpsavespace 
     bne @push
 
     ;; check the "B" flag
     ;; the "P" register is offset by the exact size of the number of zero page bytes we pushed
     tsx
-    lda $0104 + __ZEROPAGE_SIZE__, x
+    lda $0104 + zpsavespace , x
     and #%00010000  
     beq @irq
     jsr _kernel_debugger
@@ -312,11 +307,12 @@ _kernel_vector:
 
 @irq:
     ;; now we can execute C code on the current process kernel stack frame
+    cli ;; alow more nested interrupts
     jsr _device_interrupt
 
 @restore_zp:
     ;; pop the zero page form the kernel HARDWARE stack 
-    ldx #<__ZEROPAGE_SIZE__
+    ldx #<zpsavespace 
     dex
 @pop:
     pla

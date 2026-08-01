@@ -184,29 +184,30 @@ child4_code:
     nop
 
     ;; "watchdog" test
-    plp
+    ;;plp
 
-    ;; sys_sbrk() test
-    ; ldy #'S'
-    ; lda #$00
-    ; ldx #$70
-    ; brk
-    ; nop
+    ;; sbrk() test
+    ldy #'S'
+    lda #$00
+    ldx #$70
+    brk
+    nop
 
-    ; ldy #'S'
-    ; lda #$00
-    ; ldx #$70
-    ; brk
-    ; nop
+    ldy #'S'
+    lda #$00
+    ldx #$70
+    brk
+    nop
 
-    ; ldy #'S'
-    ; lda #$00
-    ; ldx #$10
-    ; brk
-    ; nop
+    ldy #'S'
+    lda #$00
+    ldx #$10
+    brk
+    nop
 
-    ; lda #$42
-    ; sta $f000
+    ;; testing to write to the MMU register
+    lda #$42
+    sta $fe2f
 
     jmp *
     
