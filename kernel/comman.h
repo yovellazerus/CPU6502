@@ -118,7 +118,6 @@ void print_cpu_state(Context* ctx);
 void print_process_state(Proc* p);
 
 // io.c
-// TODO: need to be uart.c console.c and printk.c
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
