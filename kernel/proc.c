@@ -19,13 +19,13 @@ struct Proc {
     uint8_t  ticks;   
 
     // inter process communication
-    struct Proc* parent;    
-    void* channel;       
-    uint8_t  killed;      
+    Proc* parent;
+    void* channel;
+    uint16_t  killed;
 
     // file system
     uint16_t cwd_inode;     
-    uint8_t  fd_table[MAX_FILES_PER_PROC];          
+    uint16_t fd_table[MAX_FILES_PER_PROC];          
 
     // debug 
     char name[MAX_PROC_NAME];
@@ -235,7 +235,10 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("kernel: \"%s\" [%d] terminated by a process <%d>\n", 
+            proc_get_name(current_process), 
+            proc_get_pid(current_process), 
+            current_process->killed);
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -257,7 +260,10 @@ void kernel_epilogue(void){
     __asm__("sei");
 
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a different process\n", proc_get_name(current_process), proc_get_pid(current_process));
+        printk("kernel: \"%s\" [%d] terminated by a process <%d>\n", 
+            proc_get_name(current_process), 
+            proc_get_pid(current_process), 
+            current_process->killed);
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -405,7 +411,7 @@ int sys_sbrk(void) {
                 // no more memory
                 if (frame == FRAME_UNUSED) {
                     // roll back and free the new allocated frames and return exit code of -1
-                    for(segment; segment >= old_segment; segment--){
+                    for(segment; segment > old_segment; segment--){
                         if (current_process->page_table[segment] != FRAME_UNUSED) {
                             kfree(current_process->page_table[segment]);
                             current_process->page_table[segment] = FRAME_UNUSED;
@@ -449,12 +455,14 @@ int sys_kill(void){
     
         if(proc_table[i].state != PROC_STATE_UNUSED && 
            proc_table[i].state != PROC_STATE_ZOMBIE && 
-           proc_table[i].pid == pid) {
+           proc_table[i].pid == pid && 
+           proc_table[i].uid == current_process->uid
+        ) 
+        {
+            // the killed field store the pid of the process that killed this one
+            proc_table[i].killed = current_process->pid;
             
-            proc_table[i].killed = 1;
-            
-            // if the victim is asleep, wake it up so it is scheduled to run
-            // so the kernel can kill
+            // if the victim is asleep, wake it up, so the kernel can kill it
             if(proc_table[i].state == PROC_STATE_SLEEPING){
                 proc_table[i].state = PROC_STATE_READY;
             }
