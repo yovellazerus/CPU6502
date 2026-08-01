@@ -17,3 +17,10 @@ void timer_pause(void){
     MMIO8(TIMER_CTRL) = TIMER_ENABLE_FALSE;
 }
 
+void timer_interrupt(void){
+    // increment global system timer
+    if(++systicks == 0) panic("systicks");
+    // interrupt acknowledge
+    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_TIMER;
+}
+

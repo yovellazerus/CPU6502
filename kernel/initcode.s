@@ -142,6 +142,10 @@ child2_code:
     brk
     nop
 
+    ;; MMU test
+    lda $fe27
+    sta $fe20
+
     ;; invalid opcode test
     .byte $42
     

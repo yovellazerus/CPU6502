@@ -110,7 +110,7 @@ int sys_sbrk(void);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
-bool device_interrupt(void);
+uint8_t device_interrupt(void);
 
 // debugger.c
 void kernel_debugger(void);
@@ -128,6 +128,7 @@ extern volatile uint32_t systicks;
 void timer_init(void);
 void timer_pause(void);
 void timer_resume(void);
+void timer_interrupt(void);
 
 // string.c
 char*   strcpy(char *s, const char *t);

@@ -27,8 +27,10 @@
 #define TIMER_COUNTER_HIGH  0x0000fe45
 #define TIMER_CTRL          0x0000fe46
 
+#define PLIC_INTERRUPT_LINES  0x0000fe50
 
-#define ROM_ENABLE  0x0000fef0
+
+#define ROM_ENABLE   0x0000fef0
 #define ROM_BASE     0x0000ff00
 #define ROM_SIZE     0x0100
 
@@ -75,5 +77,11 @@ typedef enum {
     DISK_STATUS_ERROR = 3,
 } Disk_Status;
 
+typedef enum {
+    PLIC_PIN_TIMER = 0x01,
+    PLIC_PIN_MMU   = 0x02,
+    PLIC_PIN_UART  = 0x04,
+    PLIC_PIN_DISK  = 0x08
+} PLIC_Pin;
 
 #endif // MACHINE_H

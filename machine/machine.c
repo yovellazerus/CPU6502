@@ -74,12 +74,17 @@ typedef struct Timer
 
 } Timer;
 
+typedef struct PLIC
+{
+    Machine* m;
+    uint8_t interrupts_lines;
+    bool pending_irq;
+
+} PLIC;
+
 // the Machine itself
 struct Machine 
 {
-
-    bool pending_irq;
-
     // bus
     MCS6502DataReadByteFunction  read;
     MCS6502DataWriteByteFunction write;
@@ -91,6 +96,7 @@ struct Machine
     Disk* disk;
     MMU*  mmu;
     Timer* timer;
+    PLIC* plic;
 
     // ...
 
@@ -106,14 +112,14 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     if(frame == MMU_FRAME_INVALID){
         
         // debug
-        fprintf(stderr, COLOR_RED "\nMMU:\n");
-        fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
-        fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
-        for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
-        fprintf(stderr, "\n\n" COLOR_GREEN);
+        // fprintf(stderr, COLOR_RED "\nMMU:\n");
+        // fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
+        // fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
+        // for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
+        // fprintf(stderr, "\n\n" COLOR_GREEN);
 
-        // TODO: trigger an IRQ on memory access violation
-        // mmu->m->pending_irq = true;
+        mmu->m->plic->pending_irq = true;
+        mmu->m->plic->interrupts_lines |= PLIC_PIN_MMU;
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
@@ -149,6 +155,9 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
     Machine* m = (Machine*)ctx;
 
     uint32_t physical_addr = MMU_translate(m->mmu, addr);
+
+    // ---------------- PLIC ----------------
+    if(physical_addr == PLIC_INTERRUPT_LINES) return m->plic->interrupts_lines;
 
     // ---------------- TIMER ----------------
     if(physical_addr == TIMER_CTRL) return m->timer->ctrl;
@@ -218,6 +227,12 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
     Machine* m = (Machine*)ctx;
 
     uint32_t physical_addr = MMU_translate(m->mmu, addr);
+
+    // ---------------- PLIC ----------------
+    if(physical_addr == PLIC_INTERRUPT_LINES){
+        m->plic->interrupts_lines = byte;
+        return;
+    }
 
     // ---------------- TIMER ----------------
     if(physical_addr == TIMER_CTRL){
@@ -357,6 +372,10 @@ void Timer_destroy(Timer* timer){
     free(timer);
 }
 
+void PLIC_destroy(PLIC* plic){
+    free(plic);
+}
+
 void Machine_destroy(Machine* m) {
     if (!m) return;
     CPU_destroy(m->cpu);
@@ -470,12 +489,17 @@ Timer* Timer_create(void){
     return timer;
 }
 
+PLIC* PLIC_create(void){
+    PLIC* plic = (PLIC*)calloc(1, sizeof(PLIC));
+    if(!plic) return NULL;
+    plic->m = NULL;
+    return plic;
+}
+
 Machine* Machine_create(const char* rom_path, const char* disk_path) {
 
     Machine* m = (Machine*)calloc(1, sizeof(Machine));
     if (!m) return NULL;
-
-    m->pending_irq = false;
 
     // connecting the bus
     m->read = Machine_read;
@@ -487,9 +511,10 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->disk = Disk_create(disk_path);
     m->timer = Timer_create();
     m->mmu = MMU_create();
+    m->plic = PLIC_create();
     m->cpu = CPU_create(m);
     
-    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->timer || !m->mmu || !m->cpu){
+    if (!m->ram || !m->rom || !m->uart || !m->disk || !m->timer || !m->mmu || !m->plic || !m->cpu){
         Machine_destroy(m);
         return NULL;
     }
@@ -499,6 +524,7 @@ Machine* Machine_create(const char* rom_path, const char* disk_path) {
     m->disk->m = m;
     m->timer->m = m;
     m->mmu->m = m;
+    m->plic->m = m;
 
     return m;
 }
@@ -582,7 +608,8 @@ bool Timer_step(Timer* timer){
         
         // Raise the hardware IRQ line
         // the IRQ itself is triggered in the CPU_step() function 
-        timer->m->pending_irq = true;
+        timer->m->plic->pending_irq = true;
+        timer->m->plic->interrupts_lines |= PLIC_PIN_TIMER;
 
         return true;
     }
@@ -609,12 +636,10 @@ bool CPU_step(CPU* cpu){
         
         // The hardware IRQ trigger line
         // "I" flage check for not swapping the segment if interrupts are diabled (in real hardware using VPB pin)
-        // NOTE: pending_irq is needed to signal a device interrupt from OUTSIDE the CPU_step() function
-        // <device>_step() functions should not trigger an IRQ on there on! just raise the pending_irq line high(to true).
-        if (m->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
+        if (m->plic->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
             m->mmu->prev = m->mmu->page_table[MMU_LAST_SEGMENT];
             m->mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
-            m->pending_irq = false;
+            m->plic->pending_irq = false;
             MCS6502IRQ(m->cpu); 
         }
 

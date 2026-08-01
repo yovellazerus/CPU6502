@@ -15,7 +15,7 @@ void kernel_brk(void){
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
     if(!syscall){
-        printk("kernel: \"%s\" [%d] terminated do to invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
+        printk("kernel: \"%s\" [%d] terminated due to an invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
         proc_set_ax(current_process, BADSYSCALL);
         sys_exit();
     }
@@ -58,12 +58,12 @@ void kernel_nmi(void){
             break;
         
         default:
-            printk("kernel: prosess [%d] \"%s\" was terminated do to executing invalid opcode: <0x%x>\n", 
-                proc_get_pid(current_process), proc_get_name(current_process), watchdog);
+            printk("kernel: prosess \"%s\" [%d] was terminated due to executing invalid opcode: <0x%x>\n", 
+                proc_get_name(current_process), proc_get_pid(current_process), watchdog);
             goto end;
     }
-    printk("kernel: prosess [%d] \"%s\" was terminated do to executing \"%s\" instruction\n", 
-            proc_get_pid(current_process), proc_get_name(current_process), mnemonic);
+    printk("kernel: prosess \"%s\" [%d] was terminated due to executing \"%s\" instruction\n", 
+            proc_get_name(current_process), proc_get_pid(current_process), mnemonic);
 end:
     proc_set_ax(current_process, WATCHDOG);
     sys_exit();   
@@ -76,6 +76,7 @@ it differs from device_interrupt() in that it is called from user space,
 whereas device_interrupt() can also be called from an IRQ in kernel space.
 */
 void kernel_irq(void){
+    uint8_t which_device;
 
     if(!current_process){
         panic("is this possible?");
@@ -83,35 +84,54 @@ void kernel_irq(void){
 
     kernel_prologue();
 
-    // if true it is the timer
-    if(device_interrupt()){
+    which_device = device_interrupt();
+
+    // MMU
+    if(which_device & PLIC_PIN_MMU){
+        printk("kernel: process \"%s\" [%d] terminated due to a segmentation fault\n", 
+            proc_get_name(current_process), proc_get_pid(current_process));
+        proc_set_ax(current_process, SEGFAULT);
+        sys_exit();
+    }
+
+    // Timer
+    if(which_device & PLIC_PIN_TIMER){
         /* 
         the kernel timer interrupt handler, 
         if the process has any quantum remaining, it will return to user space here.
         otherwise, it will by pass to the scheduler() and yield the CPU.
         */
         if(proc_ticks_dec(current_process) == 0){
-
             proc_set_state(current_process, PROC_STATE_READY);
-
             scheduler();
         }
+        // process has quantum remaining, so we will return to it
     }
-    // else, not the timer
 
-    // process has quantum remaining, so we will return to it
     kernel_epilogue();
 
     // return to irq_handler in trampoline.s that called it, 
     // and the trampoline will jump to: return_from_trap and resume the user processs
 }
 
-// this is doing the work of a device IRQ
-// TODO: only Timer IRQ's for now
-bool device_interrupt(void){
+// This function is doing the work of a device interrupt request handler,
+// returns the bitfield from the PLIC indicate which device caused the interrupt,
+// for handleing the interrupt in the kernel_irq() function, for IRQ's for, user space.
+// NOTE: can be called form user space or kernel code! 
+uint8_t device_interrupt(void){
 
-    // increment global system timer
-    if(++systicks == 0) panic("systicks");
+    uint8_t which_device = MMIO8(PLIC_INTERRUPT_LINES);
 
-    return true; // for timer interrupt
+    // Timer
+    if(which_device & PLIC_PIN_TIMER){
+        timer_interrupt();
+    }
+
+    // MMU
+    if(which_device & PLIC_PIN_MMU){
+        // interrupt acknowledge
+        MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_MMU;
+    }
+
+    return which_device;
 }
