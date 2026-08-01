@@ -108,9 +108,12 @@ int sys_kill(void);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
-void kernel_debugger(void);
 bool device_interrupt(void);
+
+// debugger.c
+void kernel_debugger(void);
 void print_cpu_state(Context* ctx);
+void print_process_state(Proc* p);
 
 // io.c
 // TODO: need to be uart.c console.c and printk.c
@@ -160,7 +163,6 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
 void proc_init(void);
 Proc* palloc(void);
 void pfree(Proc* p);
-void print_process_state(Proc* p);
 const Context* proc_get_ctx(const Proc* p);
 uint8_t proc_get_ticks(const Proc* p);
 const char* proc_get_name(const Proc* p);

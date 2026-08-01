@@ -189,6 +189,97 @@ _return_from_trap:
     ;; restore the last user segment from MMU prev register
     rti  
 
+;; NO_PREEMPTIVE_KERNEL := 1
+.ifdef NO_PREEMPTIVE_KERNEL
+
+;; IRQ handler for device interrupts and BRK's in the kernel
+;; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;; NOTE: for interrupt's execution in KERNEL space and it will fail if for a PREEMPTIVE kernel!
+;; we must not corrupt the current process kernel stack frame.
+;; so we SWAP it for the kernel stack 0 (frame 0) that was used during the booting process
+;; and make it the dedicated booting/interrupts kernel stack.
+
+STACK = $0100
+ZP_ON_STACK = 0
+
+;; must not be in $0000-$0fff because they are used for the swap!
+tmp_ksp:         .res 1
+tmp_stack_frame: .res 1
+
+.global _kernel_vector
+_kernel_vector:
+    pha
+    txa
+    pha
+    tya
+    pha
+
+    ;; checking the "B" flag, must be before swapping memory because the "P"
+    ;; register is currently on the OLD stack
+    tsx
+    lda $0104, x
+    and #%00010000
+    bne @software_brk
+
+@hardware_irq:
+
+    ;; check for nested kernel interrupt's,
+    ;; if the stack is already stack 0, there is no need to perform the swap.
+    ;; just call the C handler
+    lda MMU_PAGE_TABLE + 0
+    bne @not_nested
+    ;; it is nested
+    jsr _device_interrupt
+    jmp @end
+
+@not_nested:
+
+    ;; save the current hardware stack pointer
+    tsx
+    stx tmp_ksp
+
+    ;; save the current kernel stack frame
+    lda MMU_PAGE_TABLE + 0
+    sta tmp_stack_frame
+
+    ;; swap the stack frame to frame 0 (The dedicated kernel boot/interrupt frame)
+    ;; frame 0 contains its own zero page register and hardware stack
+    lda #$00
+    sta MMU_PAGE_TABLE + 0
+
+    ;; reset the hardware stack pointer
+    ldx #$FF
+    txs
+
+    ;; can now safely execute C code on frame 0 without corrupting the current process
+    jsr _device_interrupt
+
+    ;; restore the old kernel stack frame
+    lda tmp_stack_frame
+    sta MMU_PAGE_TABLE + 0
+
+    ;; restore the old hardware stack pointer
+    ldx tmp_ksp
+    txs
+    jmp @end
+
+    ;; not swapping memory for the kernel debugger 
+@software_brk:
+    jsr _kernel_debugger
+
+@end:
+    pla
+    tay
+    pla
+    tax
+    pla
+    rti
+
+.else
+
+STACK = $0100 + <__ZEROPAGE_SIZE__
+ZP_ON_STACK = <__ZEROPAGE_SIZE__
+
 ;; IRQ handler for device interrupts and BRK's in the kernel
 ;; to execute C code we need to save the zero page registers on the kernel HARDWARE stack
 ;; so we can support nested kernel space interrupt's and a preemptive kernel 
@@ -241,6 +332,8 @@ _kernel_vector:
     pla
     rti
 
+.endif
+
 ;; kernel debugger core to save the CPU registers to a Context pointer given in AX
 ;;
 ;; void get_cpu_state(Context* ctx);
@@ -254,7 +347,7 @@ _get_cpu_state:
 
     tsx
 
-    ;; skip 4 bytes of "_kernel_software_interrupt" and "_get_cpu_state" return address 
+    ;; skip 4 bytes of "_kernel_debugger" and "_get_cpu_state" return address 
     ;; plus 1 byte to point to the first pushed register (Y)
     inx
     inx
@@ -263,42 +356,44 @@ _get_cpu_state:
     inx 
 
     ;; load Y 
-    lda $0100, x
+    lda STACK, x
     ldy #5    
     sta (ptr1), y
 
     ;; load X
     inx
-    lda $0100, x
+    lda STACK, x
     ldy #4    
     sta (ptr1), y
 
     ;; load A
     inx
-    lda $0100, x
+    lda STACK, x
     ldy #6    
     sta (ptr1), y
 
     ;; load P 
     inx
-    lda $0100, x
+    lda STACK, x
     ldy #1    
     sta (ptr1), y
 
     ;; load PCL
     inx
-    lda $0100, x
+    lda STACK, x
     ldy #2   
     sta (ptr1), y
 
     ;; load PCH 
     inx
-    lda $0100, x
+    lda STACK, x
     ldy #3   
     sta (ptr1), y
 
-    ;; X is now at the the value of the original SP was before the "BRK"
+    ;; X is now at the value of the original SP was before the "BRK" (mines the number of bytes pushed o the stack)
     txa
+    clc
+    adc #ZP_ON_STACK
     ldy #0
     sta (ptr1), y
 

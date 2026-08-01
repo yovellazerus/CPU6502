@@ -101,23 +101,6 @@ void pfree(Proc* p){
     p->state = PROC_STATE_UNUSED;
 }
 
-void print_process_state(Proc* p) {
-    uint8_t i;
-    printk(" Process Control Block:\n");
-    if (p != NULL) {
-        printk("   Name : \"%s\"\n", proc_get_name(p));
-        printk("   PID  : %d\n", proc_get_pid(p));
-        printk("   Page Table: ");
-        for (i = 0; i < PAGE_TABLE_SIZE; i++) {
-            if(i % 4 == 0) printk("\n\t");
-            printk("0x%x ", proc_get_page_table(p)[i]);
-        }
-    } else {
-        printk("\n    (null)\n");
-    }
-    printk("\n+---------------------------------------+\n");
-}
-
 const Context* proc_get_ctx(const Proc* p){
     return &p->ctx;
 }
@@ -350,7 +333,7 @@ void scheduler(void) {
             }
             
             if (p->state == PROC_STATE_READY || p->state == PROC_STATE_NEW) {
-                
+
                 is_new = (p->state == PROC_STATE_NEW);
                 p->state = PROC_STATE_RUNING;
                 current_process = p;
@@ -455,7 +438,9 @@ int sys_exit(void){
         panic("init exited");
     }
 
-    // TODO: close (decrement reference count of) open files and cwd 
+    // TODO: close (decrement reference count of) open files and cwd
+    
+    BRK;
 
     // free process memory frames, not including the kernel stack frame, that will be freed by pfree()
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
