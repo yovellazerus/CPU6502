@@ -40,7 +40,6 @@ the "watchdog" is the only source for NMI's in this system
 */
 void kernel_nmi(void){
 
-    const char* mnemonic;
     uint8_t watchdog = MMIO8(MMU_WATCHDOG_REGISTER);
 
     kernel_prologue();

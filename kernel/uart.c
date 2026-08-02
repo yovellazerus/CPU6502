@@ -17,12 +17,19 @@ void uart_init(void){
 // PUSH to ring buffer
 void uart_rx_interrupt(void){
 
-    uint8_t data = MMIO8(UART_RX);
+    uint8_t data;
 
-    if(ring_buffer.head + 1 != ring_buffer.tail){
-        ring_buffer.buffer[ring_buffer.head] = data;
-        ring_buffer.head++;
-        wakeup(&ring_buffer);
+    // to avoid double reading in nested interrupts, 
+    // we interrogate the hardware to make sure there is real input in the UART RX register
+    if (MMIO8(UART_STAT) & UART_STATUS_RX_READY) {
+        
+        data = MMIO8(UART_RX);
+
+        if(ring_buffer.head + 1 != ring_buffer.tail){
+            ring_buffer.buffer[ring_buffer.head] = data;
+            ring_buffer.head++;
+            wakeup(&ring_buffer);
+        }
     }
     // else, ring buffer is full, trop the input
 

@@ -637,7 +637,6 @@ bool Uart_step(Uart* uart){
     if (!(uart->m->uart->status & UART_STATUS_TX_READY))
     {
         uint8_t byte = uart->m->uart->tx;
-        if(byte == '\r') byte = '\n';
         _putch(byte);
         uart->m->uart->status |= UART_STATUS_TX_READY;
     }
@@ -738,7 +737,7 @@ int main(int argc, char** argv)
         fprintf(stderr, COLOR_RED "USAGE: %s <disk.img>.\n" COLOR_RESET, argv[0]);
         return 1;
     }
-    
+
     Machine* m = Machine_create("machine\\rom.bin", argv[1]);
     if(!m){
         fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);

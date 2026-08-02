@@ -37,13 +37,19 @@ int console_read(File* file, void* dst, uint16_t n){
         }
 
         // TODO: need to check for '\0'?
-        if(c == '\n' || c == '\r'){
-            // add to user buffer
-            dest[bytes_read++] = c;
+        // --- NEW: Drop the lingering \n from VS Code ---
+        if(c == '\n'){
+            continue; 
+        }
 
+        // Handle the actual Enter key (\r)
+        if(c == '\r'){
+            // ALWAYS save it as a standard UNIX \n in the user buffer
+            dest[bytes_read++] = '\n';
+
+            // Echo the full CRLF back to the screen
             uart_putc_sync('\r');
             uart_putc_sync('\n');
-            // done with the line
             break;
         }
 
@@ -61,9 +67,9 @@ int console_write(File* file, void* src, uint16_t n){
     char* source = (char*)src;
     (void)file;
     for(bytes_written = 0; bytes_written < n; bytes_written++){
-        // if(source[bytes_written] == '\n'){
-        //     uart_putc('\r');
-        // }
+        if(source[bytes_written] == '\n'){
+            uart_putc('\r');
+        }
         uart_putc(source[bytes_written]);
     }
     return bytes_written;
