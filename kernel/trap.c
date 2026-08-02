@@ -15,7 +15,7 @@ void kernel_brk(void){
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
     if(!syscall){
-        printk("kernel: \"%s\" [%d] terminated due to an invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
+        printk("\t\"%s\" [%d] terminated due to an invalid syscall number: 0x%x\n", proc_get_name(current_process), proc_get_pid(current_process), sys_number);
         proc_set_ax(current_process, BADSYSCALL);
         sys_exit();
     }
@@ -58,11 +58,11 @@ void kernel_nmi(void){
             break;
         
         default:
-            printk("kernel: prosess \"%s\" [%d] was terminated due to executing invalid opcode: <0x%x>\n", 
+            printk("\tprosess \"%s\" [%d] was terminated due to executing invalid opcode: <0x%x>\n", 
                 proc_get_name(current_process), proc_get_pid(current_process), watchdog);
             goto end;
     }
-    printk("kernel: prosess \"%s\" [%d] was terminated due to executing \"%s\" instruction\n", 
+    printk("\tprosess \"%s\" [%d] was terminated due to executing \"%s\" instruction\n", 
             proc_get_name(current_process), proc_get_pid(current_process), mnemonic);
 end:
     proc_set_ax(current_process, WATCHDOG);
@@ -88,7 +88,7 @@ void kernel_irq(void){
 
     // MMU
     if(which_device & PLIC_PIN_MMU){
-        printk("kernel: process \"%s\" [%d] terminated due to a segmentation fault\n", 
+        printk("\tprocess \"%s\" [%d] terminated due to a segmentation fault\n", 
             proc_get_name(current_process), proc_get_pid(current_process));
         proc_set_ax(current_process, SEGFAULT);
         sys_exit();

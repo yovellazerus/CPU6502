@@ -25,7 +25,7 @@ struct Proc {
 
     // file system
     uint16_t cwd_inode;     
-    uint16_t fd_table[MAX_FILES_PER_PROC];          
+    File* open_files[MAX_FILES_PER_PROC];          
 
     // debug 
     char name[MAX_PROC_NAME];
@@ -127,6 +127,15 @@ const uint8_t* proc_get_page_table(const Proc* p){
 
 uint8_t proc_get_ticks(const Proc* p){
     return p->ticks;
+}
+
+uint16_t proc_get_top(const Proc* p){
+    return p->top;
+}
+
+File* proc_get_file(const Proc* p, int fd){
+    if(fd < 0 || fd >= MAX_FILES_PER_PROC) return NULL;
+    return p->open_files[fd];
 }
 
 const char* proc_get_name(const Proc* p){
@@ -235,7 +244,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a process <%d>\n", 
+        printk("\t\"%s\" [%d] terminated by a process <%d>\n", 
             proc_get_name(current_process), 
             proc_get_pid(current_process), 
             current_process->killed);
@@ -260,7 +269,7 @@ void kernel_epilogue(void){
     __asm__("sei");
 
     if(current_process->killed != 0 && current_process != init_process){
-        printk("kernel: \"%s\" [%d] terminated by a process <%d>\n", 
+        printk("\t\"%s\" [%d] terminated by a process <%d>\n", 
             proc_get_name(current_process), 
             proc_get_pid(current_process), 
             current_process->killed);
@@ -567,7 +576,7 @@ int sys_fork(void){
 
     child = palloc();
     if(!child){
-        printk("kernel: process pool exhausted\n");
+        printk("\tprocess pool exhausted\n");
         return -1;
     }
 
@@ -609,7 +618,7 @@ int sys_fork(void){
                 MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
                 MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
-                printk("kernel: frame pool exhausted in fork()"); 
+                printk("\tframe pool exhausted in fork()"); 
                 return -1;
             }
 
@@ -637,7 +646,7 @@ int sys_fork(void){
     memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
 
     // TODO: this should be deeper... using reference count
-    memcpy(child->fd_table, current_process->fd_table, sizeof(child->fd_table));
+    memcpy(child->open_files, current_process->open_files, sizeof(child->open_files));
     child->cwd_inode = current_process->cwd_inode;
 
     // copy the name
@@ -663,17 +672,24 @@ void run_init_process(void){
         panic("palloc in run_init_process");
     }
 
+    // give the init process 1 frame to use
     init_process->page_table[0] = kalloc();
     if(init_process->page_table[0] == FRAME_UNUSED){
         panic("kalloc in run_init_process");
     }
 
+    // manually open the 3 first file descriptors to the console
+    init_process->open_files[0] = file_get_by_global_index(0); // stdin
+    init_process->open_files[1] = file_get_by_global_index(0); // stdout
+    init_process->open_files[2] = file_get_by_global_index(0); // stderr
+
+    // inject the code to bootstrap the "/init" process
     init_process->ctx.pc = (uint16_t)init_code;
     init_process->top = (uint16_t)init_code + (uint16_t)_INITCODE_SIZE__;
-
     if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
         panic("copy_to_user in run_init_process");
     }
 
+    // name
     memcpy(init_process->name, name, strlen(name));
 }

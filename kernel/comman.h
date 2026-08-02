@@ -27,6 +27,8 @@
 
 #define QUANTUM 10 // timer ticks until context switch
 
+#define MAX_GLOBAL_OPEN_FILES 128
+
 #define MAX_PROC_COUNT 64
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
@@ -86,25 +88,48 @@ uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
 // syscall.c
-typedef union SyscallArg SyscallArg;
+typedef union SyscallArg{
+    struct {
+        uint16_t size;
+        void* buffer;
+    } print;
+
+    struct {
+        int fd;
+        void* buffer;
+        uint16_t size;
+    } read;
+
+    struct {
+        int fd;
+        void* buffer;
+        uint16_t size;
+    } write;
+
+    struct {
+        const char* path;
+        uint16_t mode;
+        uint16_t flags;
+    } open;
+    
+    // ...
+
+} SyscallArg;
+
 typedef int (*Syscall)(void);
+extern Syscall syscalls_table[256];
 void syscall_init(void);
 
-extern Syscall syscalls_table[256];
-
-#define SYS_PRINT   'P'
 #define SYS_FORK    'F'
 #define SYS_EXIT    'E'
 #define SYS_WAIT    'W'
 #define SYS_KILL    'K'
 #define SYS_SBRK    'S'
 
-int sys_print(void);
-int sys_fork(void);
-int sys_exit(void);
-int sys_wait(void);
-int sys_kill(void);
-int sys_sbrk(void);
+#define SYS_OPEN     'o'
+#define SYS_CLOSE    'c'
+#define SYS_READ     'r'
+#define SYS_WRITE    'w'
 
 // trap.c
 void kernel_brk(void);
@@ -120,12 +145,40 @@ uint16_t gets(char *buf, int max);
 
 // uart.c
 typedef struct Ring_Buffer Ring_Buffer;
-void Ring_Buffer_push(Ring_Buffer* rb, char c);
-char Ring_Buffer_pop(Ring_Buffer* rb);
+extern Ring_Buffer ring_buffer;
+void uart_init(void);
 void uart_rx_interrupt(void);
 void uart_putc_sync(char c);
-char uart_getc_sync(void);
-char uart_getc(void);
+void uart_putc(char c);
+int  uart_getc_sync(void);
+int  uart_getc(void);
+
+// vfs.c
+typedef enum {
+    VFILE_TYPE_DEVICE = 0,
+    VFILE_TYPE_INODE
+} VFile_Type;
+
+typedef enum {
+    DEVICE_MAJOR_CONSOLE = 0,
+    DEVICE_MAJOR_DISK,
+} Device_Major;
+
+typedef struct File File;
+typedef struct Device_Operation Device_Operation;
+
+void vfs_init(void);
+File* file_get_by_global_index(uint8_t index);
+
+int sys_read(void);
+int sys_write(void);
+int sys_close(void);
+int sys_open(void);
+
+// consol.c
+int console_read(File* file, void* dst, uint16_t n);
+int console_write(File* file, void* src, uint16_t n);
+int console_close(File* file);
 
 // printk.c
 void panic(const char *fmt, ...);
@@ -161,6 +214,12 @@ typedef enum Proc_State{
 
 extern Proc* current_process;
 
+int sys_fork(void);
+int sys_exit(void);
+int sys_wait(void);
+int sys_kill(void);
+int sys_sbrk(void);
+
 void interrupts_push(void);
 void interrupts_pop(void);
 void sleep(void* channel);
@@ -181,6 +240,8 @@ uint16_t proc_get_pid(const Proc* p);
 uint8_t proc_ticks_dec(Proc* p);
 uint16_t proc_get_ax(const Proc* p);
 void proc_set_ax(Proc* p, uint16_t ax);
+uint16_t proc_get_top(const Proc* p);
+File* proc_get_file(const Proc* p, int fd);
 void proc_set_state(Proc* p, Proc_State state);
 const uint8_t* proc_get_page_table(const Proc* p);
 

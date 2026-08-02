@@ -123,11 +123,11 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     if(frame == MMU_FRAME_INVALID){
         
         // debug
-        // fprintf(stderr, COLOR_RED "\nMMU:\n");
-        // fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
-        // fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
-        // for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
-        // fprintf(stderr, "\n\n" COLOR_GREEN);
+        fprintf(stderr, COLOR_RED "\nMMU:\n");
+        fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
+        fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
+        for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
+        fprintf(stderr, "\n\n" COLOR_GREEN);
 
         // raise the hardware IRQ line
         PLIC_raise(mmu->m->plic, PLIC_PIN_MMU);

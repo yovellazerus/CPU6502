@@ -29,7 +29,6 @@
 
 #define PLIC_INTERRUPT_LINES  0x0000fe50
 
-
 #define ROM_ENABLE   0x0000fef0
 #define ROM_BASE     0x0000ff00
 #define ROM_SIZE     0x0100

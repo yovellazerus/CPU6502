@@ -3,39 +3,61 @@
 
 // warp around using uint8_t overflow
 struct Ring_Buffer {
-    uint8_t buffer;
+    char    buffer[256];
     uint8_t head;
     uint8_t tail;
 };
 
-void Ring_Buffer_push(Ring_Buffer* rb, char c){
+Ring_Buffer ring_buffer;
 
+void uart_init(void){
+    ring_buffer.head = ring_buffer.tail = 0;
 }
 
-char Ring_Buffer_pop(Ring_Buffer* rb){
-    
-}
-
+// PUSH to ring buffer
 void uart_rx_interrupt(void){
 
-    // TODO: push to ring buffer, or sleep
+    uint8_t data = MMIO8(UART_RX);
+
+    if(ring_buffer.head + 1 != ring_buffer.tail){
+        ring_buffer.buffer[ring_buffer.head] = data;
+        ring_buffer.head++;
+        wakeup(&ring_buffer);
+    }
+    // else, ring buffer is full, trop the input
 
     // interrupt acknowledge
     MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_UART_RX;
 }
 
-// for printk, not using interrupts
+// for printk, not using interrupts or yielding the CPU
 void uart_putc_sync(char c){
     while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)){/* busy wait */};
     MMIO8(UART_TX) = c;
 }
 
-// for gets and kernel debugger, not using interrupts
-char uart_getc_sync(void){
+void uart_putc(char c){
+    // yield the CPU until the tx register is empty
+    while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)){
+        scheduler();
+    }
+    MMIO8(UART_TX) = c;
+}
+
+// for gets in the kernel debugger, not using interrupts
+int uart_getc_sync(void){
     while(!(MMIO8(UART_STAT) & UART_STATUS_RX_READY)){/* busy wait */};
     return MMIO8(UART_RX);
 }
 
-char uart_getc(void){
-
+// POP from ring buffer
+int uart_getc(void){
+    uint16_t data;
+    if(ring_buffer.head == ring_buffer.tail){
+        // if ring buffer is empty
+        return -1;
+    }
+    data = ring_buffer.buffer[ring_buffer.tail];
+    ring_buffer.tail++;
+    return data;
 }

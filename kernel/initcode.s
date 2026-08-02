@@ -6,13 +6,88 @@
 .global _init_code
 _init_code:
 
+; _start:
+;     ; 1. Print the prompt ("Enter text: ")
+;     lda #<write_prompt_arg
+;     ldx #>write_prompt_arg
+;     ldy #'w'            ; SYS_WRITE
+;     brk
+;     nop                 ; Padding for standard 6502 BRK behavior
+
+; read_loop:
+;     ; 2. Read from stdin (fd = 0)
+;     lda #<read_arg
+;     ldx #>read_arg
+;     ldy #'r'            ; SYS_READ
+;     brk
+;     nop
+
+;     ; 3. Save the number of bytes read
+;     ; The kernel returns the byte count in AX. 
+;     ; We dynamically overwrite the 'size' field of our write_echo_arg struct.
+;     sta write_echo_arg + 4  ; Low byte of size
+;     stx write_echo_arg + 5  ; High byte of size
+
+;     ; 4. Print the prefix ("You typed: ")
+;     lda #<write_prefix_arg
+;     ldx #>write_prefix_arg
+;     ldy #'w'            ; SYS_WRITE
+;     brk
+;     nop
+
+;     ; 5. Echo the user's input back to stdout (fd = 1)
+;     lda #<write_echo_arg
+;     ldx #>write_echo_arg
+;     ldy #'w'            ; SYS_WRITE
+;     brk
+;     nop
+
+;     ; 6. Loop back to the start
+;     jmp _start
+
+
+; ; ------------------------------------------------------------------
+; ; System Call Argument Structs & Data
+; ; ------------------------------------------------------------------
+
+; prompt_str: .byte "Enter text: "
+; prompt_len = * - prompt_str
+
+; prefix_str: .byte "You typed: "
+; prefix_len = * - prefix_str
+
+; ; SyscallArg union structure: { int fd; void* buffer; uint16_t size; }
+; ; Each field is 16-bit (2 bytes) in cc65.
+
+; write_prompt_arg:
+;     .word 1             ; fd = 1 (stdout)
+;     .word prompt_str    ; buffer pointer
+;     .word prompt_len    ; size
+
+; read_arg:
+;     .word 0             ; fd = 0 (stdin)
+;     .word user_buffer   ; buffer pointer
+;     .word 128           ; maximum size to read
+
+; write_prefix_arg:
+;     .word 1             ; fd = 1 (stdout)
+;     .word prefix_str    ; buffer pointer
+;     .word prefix_len    ; size
+
+; write_echo_arg:
+;     .word 1             ; fd = 1 (stdout)
+;     .word user_buffer   ; buffer pointer
+;     .word 0             ; size (populated dynamically at runtime)
+
+; user_buffer: .res 128
+
 ;; =======================================================
 ;; init code
 ;; =======================================================
 _start:
 
     ;; print init starting message
-    ldy #'P'
+    ldy #'w'
     lda #<init_start_arg
     ldx #>init_start_arg
     brk
@@ -70,7 +145,7 @@ child_reaped:
     stx wait_pid+1
 
     ;; print "init: reaped child PID 0x"
-    ldy #'P'
+    ldy #'w'
     lda #<reaped_arg
     ldx #>reaped_arg
     brk
@@ -82,7 +157,7 @@ child_reaped:
     jsr print_hex16
 
     ;; print " with exit code 0x"
-    ldy #'P'
+    ldy #'w'
     lda #<exit_code_arg
     ldx #>exit_code_arg
     brk
@@ -100,7 +175,7 @@ child_reaped:
     jmp init_wait_loop
 
 init_idle:
-    ldy #'P'
+    ldy #'w'
     lda #<init_idle_arg
     ldx #>init_idle_arg
     brk
@@ -115,7 +190,7 @@ child1_code:
     ;; "watchdog" test
     rti
 
-    ldy #'P'
+    ldy #'w'
     lda #<child1_arg
     ldx #>child1_arg
     brk
@@ -133,18 +208,14 @@ child1_code:
 child2_code:
 
     ;; MMU test
-    ; lda $fe27
-    ; sta $fe20
+    ; lda #$33
+    ; sta $fe2f
 
-    ldy #'P'
+    ldy #'w'
     lda #<child2_arg
     ldx #>child2_arg
     brk
     nop
-
-    ;; MMU test
-    lda $fe27
-    sta $fe20
 
     ;; invalid opcode test
     .byte $42
@@ -163,7 +234,7 @@ child3_code:
     ;; "watchdog" test
     sei
 
-    ldy #'P'
+    ldy #'w'
     lda #<child3_arg
     ldx #>child3_arg
     brk
@@ -179,7 +250,7 @@ child3_code:
 ;; child4 code 
 ;; =======================================================
 child4_code:
-    ldy #'P'
+    ldy #'w'
     lda #<child4_arg
     ldx #>child4_arg
     brk
@@ -265,7 +336,7 @@ digits:
 ;;
 putchar:
     sta putchar_buffer + 0
-    ldy #'P'
+    ldy #'w'
     lda #<putchar_arg
     ldx #>putchar_arg
     brk
@@ -273,8 +344,9 @@ putchar:
     rts
 
 putchar_arg:
-    .word (putchar_buffer_end - putchar_buffer)
+    .word 1
     .word putchar_buffer
+    .word (putchar_buffer_end - putchar_buffer)
 putchar_buffer:
     .byte 0, 0
 putchar_buffer_end:
@@ -283,9 +355,18 @@ putchar_buffer_end:
 ;; init data 
 ;; =======================================================
 
+init_input_arg:
+    .word 0 
+    .word init_input_buffer
+    .word (init_input_buffer_end - init_input_buffer) 
+init_input_buffer:
+    .res 32
+init_input_buffer_end:
+
 init_start_arg:
+    .word 1 
+    .word init_start_msg 
     .word (init_start_msg_end - init_start_msg)
-    .word init_start_msg
 init_start_msg:
     .byte "init: started and spawning children", $0a, 0
 init_start_msg_end:
@@ -297,22 +378,25 @@ wait_status:
     .res 1
 
 reaped_arg:
-    .word (reaped_msg_end - reaped_msg)
+    .word 1
     .word reaped_msg
+    .word (reaped_msg_end - reaped_msg)
 reaped_msg:
     .byte "init: reaped child PID 0x", 0
 reaped_msg_end:
 
 exit_code_arg:
-    .word (exit_code_msg_end - exit_code_msg)
+    .word 1
     .word exit_code_msg
+    .word (exit_code_msg_end - exit_code_msg)
 exit_code_msg:
     .byte " with exit code 0x", 0
 exit_code_msg_end:
 
 init_idle_arg:
-    .word (init_idle_msg_end - init_idle_msg)
+    .word 1
     .word init_idle_msg
+    .word (init_idle_msg_end - init_idle_msg)
 init_idle_msg:
     .byte "init: just chilling here...", $0a, 0
 init_idle_msg_end:
@@ -322,29 +406,33 @@ init_idle_msg_end:
 ;; =======================================================
 
 child1_arg:
-    .word (child1_msg_end - child1_msg)
+    .word 1
     .word child1_msg
+    .word (child1_msg_end - child1_msg)
 child1_msg:
     .byte "child1: hello and goodbye", $0a, 0
 child1_msg_end:
 
 child2_arg:
-    .word (child2_msg_end - child2_msg)
+    .word 1
     .word child2_msg
+    .word (child2_msg_end - child2_msg)
 child2_msg:
     .byte "child2: hello and goodbye", $0a, 0
 child2_msg_end:
 
 child3_arg:
-    .word (child3_msg_end - child3_msg)
+    .word 1
     .word child3_msg
+    .word (child3_msg_end - child3_msg)
 child3_msg:
     .byte "child3: hello and goodbye", $0a, 0
 child3_msg_end:
 
 child4_arg:
-    .word (child4_msg_end - child4_msg)
+    .word 1
     .word child4_msg
+    .word (child4_msg_end - child4_msg)
 child4_msg:
     .byte "child4: hello and goodbye", $0a, 0
 child4_msg_end:

@@ -9,11 +9,12 @@ void hardware_init(void){
     MMIO16(0xfffe) = (uint16_t)kernel_vector;
 
     timer_init();
-
+    uart_init();
     // ...
 }
 
 void fs_init(void){
+    vfs_init();
     // ...
 }
 
