@@ -116,12 +116,21 @@ uint8_t device_interrupt(void);
 void kernel_debugger(void);
 void print_cpu_state(Context* ctx);
 void print_process_state(Proc* p);
+uint16_t gets(char *buf, int max);
 
-// io.c
+// uart.c
+typedef struct Ring_Buffer Ring_Buffer;
+void Ring_Buffer_push(Ring_Buffer* rb, char c);
+char Ring_Buffer_pop(Ring_Buffer* rb);
+void uart_rx_interrupt(void);
+void uart_putc_sync(char c);
+char uart_getc_sync(void);
+char uart_getc(void);
+
+// printk.c
 void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
-uint16_t gets(char *buf, int max);
 
 // timer.c
 extern volatile uint32_t systicks;

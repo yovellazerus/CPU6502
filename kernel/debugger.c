@@ -92,3 +92,18 @@ void print_cpu_state(Context* ctx) {
     );
     printk("\n");
 }
+
+uint16_t gets(char* buffer, int max)
+{
+    uint16_t i;
+    char c;
+
+    for (i = 0; i + 1 < max;){
+        c = uart_getc_sync();
+        uart_putc_sync(c);
+        buffer[i++] = c;
+        if(c == '\n' || c == '\r' || c == '\0') break;
+    }
+    buffer[i] = '\0';
+    return i;
+}

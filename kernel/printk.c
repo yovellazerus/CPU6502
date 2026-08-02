@@ -3,14 +3,9 @@
 
 static const char digits[] = "0123456789abcdef";
   
-static void putc(char c){
-    while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)){/* busy wait */};
-    MMIO8(UART_TX) = c;
-}
-
 static void print_str(char* str){
     if(!str) str = "(null)";
-    for (; *str; str++) putc(*str);
+    for (; *str; str++) uart_putc_sync(*str);
 }
 
 static void print_int(long number, int base, int sign){
@@ -30,15 +25,15 @@ static void print_int(long number, int base, int sign){
     } 
     while((number /= base) != 0);
     if(negative) buffer[i++] = '-';
-    while(--i >= 0) putc(buffer[i]);
+    while(--i >= 0) uart_putc_sync(buffer[i]);
 }
 
 static void print_ptr(uint16_t ptr){
     int i;
-    putc('0');
-    putc('x');
+    uart_putc_sync('0');
+    uart_putc_sync('x');
     for (i = 0; i < (sizeof(uint16_t) * 2); i++, ptr <<= 4){
-        putc(digits[ptr >> (sizeof(uint16_t) * 8 - 4)]);
+        uart_putc_sync(digits[ptr >> (sizeof(uint16_t) * 8 - 4)]);
     }
 }
 
@@ -56,7 +51,7 @@ void vprintk(const char *fmt, va_list ap){
                 state = '%';
             } 
             else{
-                putc(c0);
+                uart_putc_sync(c0);
             }
         }
         else if(state == '%'){
@@ -90,18 +85,18 @@ void vprintk(const char *fmt, va_list ap){
                 print_ptr(va_arg(ap, uint16_t));
             } 
             else if(c0 == 'c'){
-                putc(va_arg(ap, uint16_t));
+                uart_putc_sync(va_arg(ap, uint16_t));
             } 
             else if(c0 == 's'){
                 print_str(va_arg(ap, char *));
             } 
             else if(c0 == '%'){
-                putc('%');
+                uart_putc_sync('%');
             } 
             else {
                 // unknown format, print it for debug
-                putc('%');
-                putc(c0);
+                uart_putc_sync('%');
+                uart_putc_sync(c0);
             }
             state = 0;
         }
@@ -124,24 +119,4 @@ void panic(const char *fmt, ...){
     va_end(ap);
     __asm__("sei");
     while (true) { /* halt */ }
-}
-
-static char getc(void){
-    while(!(MMIO8(UART_STAT) & UART_STATUS_RX_READY)){/* busy wait */};
-    return MMIO8(UART_RX);
-}
-
-uint16_t gets(char* buffer, int max)
-{
-    uint16_t i;
-    char c;
-
-    for (i = 0; i + 1 < max;){
-        c = getc();
-        putc(c);
-        buffer[i++] = c;
-        if(c == '\n' || c == '\r' || c == '\0') break;
-    }
-    buffer[i] = '\0';
-    return i;
 }

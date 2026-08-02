@@ -103,7 +103,17 @@ struct Machine
 
 };
 
-/* ================================================= MMU functions ======================================================*/
+/* ================================================= MMU and PLIC functions ======================================================*/
+
+void PLIC_raise(PLIC* plic, PLIC_Pin pin_to_raise){
+    plic->m->plic->pending_irq = true;
+    plic->m->plic->interrupts_lines |= pin_to_raise;
+}
+
+// NOTE: only lower the irq_panding line, acknowledge the interrupt must be done in software!
+void PLIC_lower(PLIC* plic){
+    plic->m->plic->pending_irq = false;
+}
 
 static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     uint8_t segment = va >> 12;          
@@ -119,8 +129,8 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
         // for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
         // fprintf(stderr, "\n\n" COLOR_GREEN);
 
-        mmu->m->plic->pending_irq = true;
-        mmu->m->plic->interrupts_lines |= PLIC_PIN_MMU;
+        // raise the hardware IRQ line
+        PLIC_raise(mmu->m->plic, PLIC_PIN_MMU);
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
@@ -158,7 +168,7 @@ void MMU_vbp(MMU* mmu){
     if(m->plic->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)){
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
-        m->plic->pending_irq = false;
+        PLIC_lower(m->plic);
         MCS6502IRQ(m->cpu); 
     }
     // check for BRK opcode (in real hardware using VPB pin)
@@ -423,6 +433,7 @@ void Machine_destroy(Machine* m) {
     Disk_destroy(m->disk);
     MMU_destroy(m->mmu);
     Timer_destroy(m->timer);
+    PLIC_destroy(m->plic);
     free(m);
 }
 
@@ -616,10 +627,13 @@ bool Uart_step(Uart* uart){
         if (c != -1){
             uart->m->uart->rx = (uint8_t)c;
             uart->m->uart->status |= UART_STATUS_RX_READY;
+            // raise the hardware IRQ line
+            PLIC_raise(uart->m->plic, PLIC_PIN_UART_RX);
         }
     }
 
     // display
+    // TODO: no tx interrupt for now
     if (!(uart->m->uart->status & UART_STATUS_TX_READY))
     {
         uint8_t byte = uart->m->uart->tx;
@@ -644,10 +658,8 @@ bool Timer_step(Timer* timer){
         timer->counter_high = timer->latch_high;
         timer->counter_low = timer->latch_low;
         
-        // Raise the hardware IRQ line
-        // the IRQ itself is triggered in the CPU_step() function 
-        timer->m->plic->pending_irq = true;
-        timer->m->plic->interrupts_lines |= PLIC_PIN_TIMER;
+        // raise the hardware IRQ line
+        PLIC_raise(timer->m->plic, PLIC_PIN_TIMER);
 
         return true;
     }

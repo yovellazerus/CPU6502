@@ -133,5 +133,10 @@ uint8_t device_interrupt(void){
         MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_MMU;
     }
 
+    // UART
+    if(which_device & PLIC_PIN_UART_RX){
+        uart_rx_interrupt();
+    }
+
     return which_device;
 }

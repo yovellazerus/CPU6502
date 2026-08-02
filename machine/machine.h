@@ -78,10 +78,11 @@ typedef enum {
 } Disk_Status;
 
 typedef enum {
-    PLIC_PIN_TIMER = 0x01,
-    PLIC_PIN_MMU   = 0x02,
-    PLIC_PIN_UART  = 0x04,
-    PLIC_PIN_DISK  = 0x08
+    PLIC_PIN_TIMER      = 0x01,
+    PLIC_PIN_MMU        = 0x02,
+    PLIC_PIN_UART_RX    = 0x04,
+    PLIC_PIN_UART_TX    = 0x08,
+    PLIC_PIN_DISK       = 0x10
 } PLIC_Pin;
 
 #endif // MACHINE_H
