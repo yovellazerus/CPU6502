@@ -42,6 +42,8 @@
 
 #define BRK __asm__("brk"); __asm__("nop")
 
+#define LOG(msg) printk("\t[" __FILE__ ":%d] " msg " \n", __LINE__)
+
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)

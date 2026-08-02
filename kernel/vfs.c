@@ -59,85 +59,115 @@ Unified system call interface for devices and regular files:
 */
 
 int sys_read(void){
-    static char read_buffer[256];
     SyscallArg syscall_argument;
     File* file;
     int bytes_read;
+    uint8_t buffer_frame;
+    uint8_t old_frame;
+    char* read_buffer = (char*)WINDOW2;
     uint16_t ax = proc_get_ax(current_process);
     const uint8_t* page_table = proc_get_page_table(current_process);
 
-    memset(read_buffer, 0, sizeof(read_buffer));
-
-    // populate the system call argument
+    // populate the system call argument struct
     if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){
-        printk("\tsyscall argument pointer out of user space!\n");
+        LOG();
         return -1;
     }
 
-    if(syscall_argument.read.size >= sizeof(read_buffer)){
-        printk("\tread is limited to %d bytes for now", sizeof(read_buffer));
-        return -1;
-    }
-
+    // validate fd and permissions
     if(syscall_argument.read.fd < 0 || syscall_argument.read.fd >= MAX_FILES_PER_PROC){
-        printk("\tfd %d is not valid", syscall_argument.read.fd);
+        LOG();
         return -1;
     }
     
     file = proc_get_file(current_process, syscall_argument.read.fd);
     if(!file || !file->readable){
-        printk("\tfd %d is not open for reading", syscall_argument.read.fd);
+        LOG();
         return -1;
     }
 
-    // dispatch using the devsw
+    // limit size to the maximum size of a single frame
+    if(syscall_argument.read.size > 4096){
+        syscall_argument.read.size = 4096; 
+    }
+
+    // allocate a physical frame for the buffer
+    buffer_frame = kalloc();
+    if(buffer_frame == FRAME_UNUSED){
+        LOG();
+        return -1;
+    }
+
+    // map the new frame to WINDOW2
+    old_frame = MMIO8(MMU_PAGE_TABLE + 2);
+    MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
+
+    // 6. Dispatch the read command (fills the dynamically mapped WINDOW2)
     bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
     
-    // copy the data from the kernel read buffer to the user 
+    // copy the data from WINDOW2 to the user's buffer
     if(copy_to_user(read_buffer, (uint16_t)syscall_argument.read.buffer, bytes_read, (uint8_t*)page_table) < 0){
-        printk("\tfailed to copy data to user space");
-        return -1;
+        LOG();
+        bytes_read = -1;
+    } else {
+        file->offset += bytes_read;
     }
 
-    file->offset += bytes_read;
+    // remap and free the physical frame
+    MMIO8(MMU_PAGE_TABLE + 2) = old_frame; 
+    kfree(buffer_frame);
+
     return bytes_read;
 }
 
 int sys_write(void){
-    static char write_buffer[256];
     SyscallArg syscall_argument;
     File* file;
     int bytes_written;
+    uint8_t buffer_frame;
+    uint8_t old_frame;
+    char* write_buffer = (char*)WINDOW2;
     uint16_t ax = proc_get_ax(current_process);
     const uint8_t* page_table = proc_get_page_table(current_process);
 
-    memset(write_buffer, 0, sizeof(write_buffer));
-
-    // 1. Populate the system call argument struct
+    // populate the system call argument struct
     if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){
-        printk("\tsyscall argument pointer out of user space!\n");
+        LOG();
         return -1;
     }
 
-    if(syscall_argument.write.size >= sizeof(write_buffer)){
-        printk("\twrite is limited to %d bytes for now", sizeof(write_buffer));
-        return -1;
-    }
-
+    // validate fd and permissions
     if(syscall_argument.write.fd < 0 || syscall_argument.write.fd >= MAX_FILES_PER_PROC){
-        printk("\tfd %d is not valid", syscall_argument.write.fd);
+        LOG();
         return -1;
     }
     
     file = proc_get_file(current_process, syscall_argument.write.fd);
     if(!file || !file->writable){
-        printk("\tfd %d is not open for writing", syscall_argument.write.fd);
+        LOG();
         return -1;
     }
 
-    // copy the data form the user's buffer to the kernel's write buffer
+    // limit size to the maximum size of a single frame
+    if(syscall_argument.write.size > 4096){
+        syscall_argument.write.size = 4096; 
+    }
+
+    // allocate a physical frame for the buffer
+    buffer_frame = kalloc();
+    if(buffer_frame == FRAME_UNUSED){
+        LOG();
+        return -1;
+    }
+
+    // map the new frame to WINDOW2
+    old_frame = MMIO8(MMU_PAGE_TABLE + 2);
+    MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
+
+    
+    // copy the data form the user's buffer to WINDOW2
     if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, page_table) < 0){
-        printk("\tuser pointer out of user space");
+        LOG();
         return -1;
     }
 
@@ -145,6 +175,11 @@ int sys_write(void){
     bytes_written = devsw_table[file->major].write(file, write_buffer, syscall_argument.write.size);
     
     file->offset += bytes_written;
+
+    // remap and free the physical frame
+    MMIO8(MMU_PAGE_TABLE + 2) = old_frame; 
+    kfree(buffer_frame);
+
     return bytes_written;
 }
 

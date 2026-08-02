@@ -244,10 +244,7 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 
 void kernel_prologue(void){
     if(current_process->killed != 0 && current_process != init_process){
-        printk("\t\"%s\" [%d] terminated by a process <%d>\n", 
-            proc_get_name(current_process), 
-            proc_get_pid(current_process), 
-            current_process->killed);
+        LOG();
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -269,10 +266,7 @@ void kernel_epilogue(void){
     __asm__("sei");
 
     if(current_process->killed != 0 && current_process != init_process){
-        printk("\t\"%s\" [%d] terminated by a process <%d>\n", 
-            proc_get_name(current_process), 
-            proc_get_pid(current_process), 
-            current_process->killed);
+        LOG();
         current_process->ctx.a = SIGKILL;
         sys_exit();
     }
@@ -576,7 +570,7 @@ int sys_fork(void){
 
     child = palloc();
     if(!child){
-        printk("\tprocess pool exhausted\n");
+        LOG();
         return -1;
     }
 
@@ -618,7 +612,7 @@ int sys_fork(void){
                 MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
                 MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
-                printk("\tframe pool exhausted in fork()"); 
+                LOG();
                 return -1;
             }
 
