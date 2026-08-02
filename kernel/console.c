@@ -37,17 +37,12 @@ int console_read(File* file, void* dst, uint16_t n){
         }
 
         // TODO: need to check for '\0'?
-        // --- NEW: Drop the lingering \n from VS Code ---
-        if(c == '\n'){
-            continue; 
-        }
 
-        // Handle the actual Enter key (\r)
-        if(c == '\r'){
-            // ALWAYS save it as a standard UNIX \n in the user buffer
+        // is it the end of the line?
+        if(c == '\r' || c == '\n'){
+            // standard UNIX '\n' in the user buffer
             dest[bytes_read++] = '\n';
 
-            // Echo the full CRLF back to the screen
             uart_putc_sync('\r');
             uart_putc_sync('\n');
             break;

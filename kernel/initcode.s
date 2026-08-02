@@ -7,48 +7,46 @@
 _init_code:
 
 _start:
-    ; 1. Print the prompt ("Enter text: ")
+    ;; print the prompt
     lda #<write_prompt_arg
     ldx #>write_prompt_arg
-    ldy #'w'            ; SYS_WRITE
+    ldy #'w'            
     brk
-    nop                 ; Padding for standard 6502 BRK behavior
+    nop                 
 
 read_loop:
-    ; 2. Read from stdin (fd = 0)
+    ;; read from stdin
     lda #<read_arg
     ldx #>read_arg
-    ldy #'r'            ; SYS_READ
+    ldy #'r'           
     brk
     nop
 
-    ; 3. Save the number of bytes read
-    ; The kernel returns the byte count in AX. 
-    ; We dynamically overwrite the 'size' field of our write_echo_arg struct.
-    sta write_echo_arg + 4  ; Low byte of size
-    stx write_echo_arg + 5  ; High byte of size
+    ;; save the number of bytes read
+    sta write_echo_arg + 4
+    stx write_echo_arg + 5
 
-    ; 4. Print the prefix ("You typed: ")
+    ; print the prefix ("You typed: ")
     lda #<write_prefix_arg
     ldx #>write_prefix_arg
-    ldy #'w'            ; SYS_WRITE
+    ldy #'w'     
     brk
     nop
 
-    ; 5. Echo the user's input back to stdout (fd = 1)
+    ;; echo the user input to stdout
     lda #<write_echo_arg
     ldx #>write_echo_arg
-    ldy #'w'            ; SYS_WRITE
+    ldy #'w'           
     brk
     nop
 
-    ; 6. Loop back to the start
+    ;; back tio the start
     jmp _start
 
 
-; ------------------------------------------------------------------
-; System Call Argument Structs & Data
-; ------------------------------------------------------------------
+;; ------------------------------------------------------------------
+;; data
+;; ------------------------------------------------------------------
 
 prompt_str: .byte "Enter text: "
 prompt_len = * - prompt_str
@@ -56,28 +54,26 @@ prompt_len = * - prompt_str
 prefix_str: .byte "You typed: "
 prefix_len = * - prefix_str
 
-; SyscallArg union structure: { int fd; void* buffer; uint16_t size; }
-; Each field is 16-bit (2 bytes) in cc65.
 
 write_prompt_arg:
-    .word 1             ; fd = 1 (stdout)
-    .word prompt_str    ; buffer pointer
-    .word prompt_len    ; size
+    .word 1             
+    .word prompt_str    
+    .word prompt_len    
 
 read_arg:
-    .word 0             ; fd = 0 (stdin)
-    .word user_buffer   ; buffer pointer
-    .word 128           ; maximum size to read
+    .word 0             
+    .word user_buffer   
+    .word 128           
 
 write_prefix_arg:
-    .word 1             ; fd = 1 (stdout)
-    .word prefix_str    ; buffer pointer
-    .word prefix_len    ; size
+    .word 1             
+    .word prefix_str    
+    .word prefix_len    
 
 write_echo_arg:
-    .word 1             ; fd = 1 (stdout)
-    .word user_buffer   ; buffer pointer
-    .word 0             ; size (populated dynamically at runtime)
+    .word 1             
+    .word user_buffer   
+    .word 0             
 
 user_buffer: .res 128
 
