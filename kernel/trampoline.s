@@ -222,7 +222,6 @@ _kernel_vector:
     lda MMU_PAGE_TABLE + 0
     bne @not_nested
     ;; it is nested
-    cli ;; alow more nested interrupts
     jsr _device_interrupt
     jmp @end
 
@@ -246,7 +245,6 @@ _kernel_vector:
     txs
 
     ;; can now safely execute C code on frame 0 without corrupting the current process
-    cli ;; alow more nested interrupts
     jsr _device_interrupt
 
     ;; restore the old kernel stack frame
@@ -307,7 +305,6 @@ _kernel_vector:
 
 @irq:
     ;; now we can execute C code on the current process kernel stack frame
-    cli ;; alow more nested interrupts
     jsr _device_interrupt
 
 @restore_zp:

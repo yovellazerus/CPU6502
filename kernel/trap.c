@@ -11,6 +11,9 @@ void kernel_brk(void){
 
     kernel_prologue();
 
+    // syscalls take a long time so we enable interrupts here
+    __asm__("cli");
+
     // get the syscall and call it
     sys_number = proc_get_ctx(current_process)->y;
     syscall = syscalls_table[sys_number];
@@ -80,7 +83,11 @@ void kernel_irq(void){
 
     kernel_prologue();
 
+    // top half of the interrupt handler, we run it with interrupts disable
     which_device = device_interrupt();
+
+    // bottom half of the interrupt handler, so we alow nested interrupts from here
+    __asm__("cli");
 
     // MMU
     if(which_device & PLIC_PIN_MMU){

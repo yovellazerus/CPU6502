@@ -19,7 +19,7 @@ void uart_rx_interrupt(void){
 
     uint8_t data;
 
-    // to avoid double reading in nested interrupts, 
+    // for the sake of safety and for future development,
     // we interrogate the hardware to make sure there is real input in the UART RX register
     if (MMIO8(UART_STAT) & UART_STATUS_RX_READY) {
         

@@ -258,7 +258,7 @@ void kernel_prologue(void){
 
     current_process->kernel_stack_frame = kernel_page_table[0];
 
-    __asm__("cli");
+    // NOTE: not enabling interrupts here yet!
 }
 
 void kernel_epilogue(void){
