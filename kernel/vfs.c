@@ -23,34 +23,39 @@ File* file_get_by_global_index(uint8_t index){
     return NULL;
 }
 
-struct Device_Operation {
-    int (*read)(File*, void*, uint16_t);
-    int (*write)(File*, void*, uint16_t);
-    int (*close)(File*);
-};
+bool file_open_global(uint8_t index,
+                        VFile_Type type,
+                        Device_Major major,
+                        uint8_t  readable,
+                        uint8_t  writable,
+                        uint32_t offset)
+{
+    File* file = file_get_by_global_index(index);
+    if(!file) return false;
+    file->type     = type;
+    file->major    = major;
+    file->readable = readable;
+    file->writable = writable;
+    file->offset   = offset;
+    return true;
+}                
 
-#define MACK_DEVICE(major_number, read_fn, write_fn, close_fn)      \
-    devsw_table[major_number].read = read_fn;                       \
-    devsw_table[major_number].write = write_fn;                     \
-    devsw_table[major_number].close = close_fn
+Device_Ops devsw_table[MAX_REGISTER_DEVICES];
 
-Device_Operation devsw_table[256];
+bool register_device(Device_Major major, Device_Ops* devops){
+    if(major >= ARRAY_SIZE(devsw_table)){
+        return false;
+    }
+    memcpy(&devsw_table[major], devops, sizeof(Device_Ops));
+    return true;
+}
 
 void vfs_init(void){
 
     memset(global_file_table, 0, sizeof(global_file_table));
-    
-    // manually configure the very first entry in the global file table to the console
-    global_file_table[0].type = VFILE_TYPE_DEVICE;
-    global_file_table[0].major = DEVICE_MAJOR_CONSOLE;
-    global_file_table[0].readable = 1;
-    global_file_table[0].writable = 1;
-    global_file_table[0].offset = 0;
-    // ...
-
     memset(devsw_table, 0, sizeof(devsw_table));
     
-    MACK_DEVICE(DEVICE_MAJOR_CONSOLE, console_read, console_write, console_close);
+    console_init();
     // ...
 }
 
@@ -102,10 +107,10 @@ int sys_read(void){
     old_frame = MMIO8(MMU_PAGE_TABLE + 2);
     MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
 
-    // 6. Dispatch the read command (fills the dynamically mapped WINDOW2)
+    // dispatch useing the devsw (fill the dynamic buffer with the read data)
     bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
     
-    // copy the data from WINDOW2 to the user's buffer
+    // copy the data from the dynamic buffer to the user's buffer
     if(copy_to_user(read_buffer, (uint16_t)syscall_argument.read.buffer, bytes_read, (uint8_t*)page_table) < 0){
         LOG();
         bytes_read = -1;
@@ -165,13 +170,13 @@ int sys_write(void){
     MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
 
     
-    // copy the data form the user's buffer to WINDOW2
+    // copy the data form the user's buffer to the dynamic buffer
     if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, page_table) < 0){
         LOG();
         return -1;
     }
 
-    // dispatch useing the devsw
+    // dispatch useing the devsw (write the data form the dynamic buffer)
     bytes_written = devsw_table[file->major].write(file, write_buffer, syscall_argument.write.size);
     
     file->offset += bytes_written;

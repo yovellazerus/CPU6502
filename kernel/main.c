@@ -13,11 +13,6 @@ void hardware_init(void){
     // ...
 }
 
-void fs_init(void){
-    vfs_init();
-    // ...
-}
-
 void main(void) {
 
     hardware_init();
@@ -27,7 +22,7 @@ void main(void) {
     memory_init();
     proc_init();
     syscall_init();
-    fs_init();
+    vfs_init();
 
     printk("kernel: starting init process...\n");
     run_init_process();

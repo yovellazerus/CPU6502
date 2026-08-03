@@ -28,6 +28,7 @@
 #define QUANTUM 10 // timer ticks until context switch
 
 #define MAX_GLOBAL_OPEN_FILES 128
+#define MAX_REGISTER_DEVICES  128
 
 #define MAX_PROC_COUNT 64
 #define MAX_PROC_NAME  16
@@ -167,10 +168,22 @@ typedef enum {
 } Device_Major;
 
 typedef struct File File;
-typedef struct Device_Operation Device_Operation;
+
+typedef struct Device_Ops {
+    int (*read)(File*, void*, uint16_t);
+    int (*write)(File*, void*, uint16_t);
+    int (*close)(File*);
+} Device_Ops;
 
 void vfs_init(void);
 File* file_get_by_global_index(uint8_t index);
+bool file_open_global(uint8_t index,
+                        VFile_Type type,
+                        Device_Major major,
+                        uint8_t  readable,
+                        uint8_t  writable,
+                        uint32_t offset);
+bool register_device(Device_Major major, Device_Ops* devops);
 
 int sys_read(void);
 int sys_write(void);
@@ -178,6 +191,7 @@ int sys_close(void);
 int sys_open(void);
 
 // consol.c
+void console_init(void);
 int console_read(File* file, void* dst, uint16_t n);
 int console_write(File* file, void* src, uint16_t n);
 int console_close(File* file);
