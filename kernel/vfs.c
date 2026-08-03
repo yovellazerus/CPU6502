@@ -69,7 +69,7 @@ int sys_read(void){
     int bytes_read;
     uint8_t buffer_frame;
     uint8_t old_frame;
-    char* read_buffer = (char*)WINDOW2;
+    char* read_buffer;
     uint16_t ax = proc_get_ax(current_process);
     const uint8_t* page_table = proc_get_page_table(current_process);
 
@@ -104,8 +104,8 @@ int sys_read(void){
     }
 
     // map the new frame to WINDOW2
-    old_frame = MMIO8(MMU_PAGE_TABLE + 2);
-    MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
+    read_buffer = mmu_map_window(2, buffer_frame, &old_frame);
+    if (!read_buffer) return -1;
 
     // dispatch useing the devsw (fill the dynamic buffer with the read data)
     bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
@@ -119,7 +119,7 @@ int sys_read(void){
     }
 
     // remap and free the physical frame
-    MMIO8(MMU_PAGE_TABLE + 2) = old_frame; 
+    mmu_unmap_window(2, old_frame);
     kfree(buffer_frame);
 
     return bytes_read;
@@ -131,7 +131,7 @@ int sys_write(void){
     int bytes_written;
     uint8_t buffer_frame;
     uint8_t old_frame;
-    char* write_buffer = (char*)WINDOW2;
+    char* write_buffer;
     uint16_t ax = proc_get_ax(current_process);
     const uint8_t* page_table = proc_get_page_table(current_process);
 
@@ -166,8 +166,8 @@ int sys_write(void){
     }
 
     // map the new frame to WINDOW2
-    old_frame = MMIO8(MMU_PAGE_TABLE + 2);
-    MMIO8(MMU_PAGE_TABLE + 2) = buffer_frame;
+    write_buffer = mmu_map_window(2, buffer_frame, &old_frame);
+    if (!write_buffer) return -1;
 
     
     // copy the data form the user's buffer to the dynamic buffer
@@ -182,7 +182,7 @@ int sys_write(void){
     file->offset += bytes_written;
 
     // remap and free the physical frame
-    MMIO8(MMU_PAGE_TABLE + 2) = old_frame; 
+    mmu_unmap_window(2, old_frame);
     kfree(buffer_frame);
 
     return bytes_written;

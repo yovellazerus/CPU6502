@@ -86,7 +86,7 @@ extern void get_cpu_state(Context* ctx);
 extern uint8_t init_code[];
 
 // kalloc.c
-void memory_init(void);
+void kalloc_init(void);
 uint8_t kalloc(void);
 void kfree(uint8_t frame);
 
@@ -145,6 +145,12 @@ void kernel_debugger(void);
 void print_cpu_state(Context* ctx);
 void print_process_state(Proc* p);
 uint16_t gets(char *buf, int max);
+
+// mmu.c
+void  mmu_init(void);
+void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame);
+void  mmu_unmap_window(uint8_t window, uint8_t old_frame);
+void  mmu_interrupt(void);
 
 // uart.c
 typedef struct Ring_Buffer Ring_Buffer;

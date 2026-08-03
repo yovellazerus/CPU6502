@@ -4,14 +4,10 @@
 static uint8_t free_frames[256];
 static uint8_t free_top = 0;
 
-void memory_init(void){
+void kalloc_init(void){
     uint16_t i;
     free_top = 0;
-    // construct the kernel global page table
-    for(i = 0; i < PAGE_TABLE_SIZE; i++){
-        kernel_page_table[i] = MMIO8(MMU_PAGE_TABLE + i);
-    }
-    // push all the rest of the physical RAM frames to the free pool 
+    // push all the physical RAM frames to the free pool (not including the kernel frames) 
     for (i = 255; i >= PAGE_TABLE_SIZE; i--){
         free_frames[free_top] = (uint8_t)i;
         free_top++;
@@ -21,6 +17,7 @@ void memory_init(void){
 uint8_t kalloc(void) {
     uint8_t frame;
     uint8_t old_frame;
+    void*   buffer;
 
     if (free_top == 0) {
         return FRAME_UNUSED;
@@ -29,17 +26,21 @@ uint8_t kalloc(void) {
     frame = free_frames[free_top];
 
     // clear the memory for use
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-    MMIO8(MMU_PAGE_TABLE + 1) = frame;
-    memset((void*)WINDOW1, 0, 4096);
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+    buffer = mmu_map_window(1, frame, &old_frame);
+    if(!buffer){
+        kfree(frame);
+        return FRAME_UNUSED;
+    } 
+    memset(buffer, 0, 4096);
+    mmu_unmap_window(1, old_frame);
 
     return frame;
 }
 
 void kfree(uint8_t frame) {
     uint8_t old_frame;
-    
+    void*   buffer;
+
     // guarding from freeing empty slots, and freeing static kernel frames
     if(frame == FRAME_UNUSED || frame < PAGE_TABLE_SIZE){
         return;
@@ -49,8 +50,10 @@ void kfree(uint8_t frame) {
     free_top++;
 
     // fill the freed frame with junk
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-    MMIO8(MMU_PAGE_TABLE + 1) = frame;
-    memset((void*)WINDOW1, 'F', 4096);
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
+    buffer = mmu_map_window(1, frame, &old_frame);
+    if(!buffer){
+        return;
+    } 
+    memset(buffer, 'F', 4096);
+    mmu_unmap_window(1, old_frame);
 }

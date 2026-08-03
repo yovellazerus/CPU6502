@@ -131,8 +131,7 @@ uint8_t device_interrupt(void){
 
     // MMU
     if(which_device & PLIC_PIN_MMU){
-        // interrupt acknowledge
-        MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_MMU;
+        mmu_interrupt();
     }
 
     // UART

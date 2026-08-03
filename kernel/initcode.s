@@ -82,7 +82,20 @@ delay_x:
     clc
     adc #1
 
-    jmp child_loop
+    bne child_loop
+
+    lda #$0a
+    jsr putchar
+
+    lda #$42
+    sta $fe2f
+
+    ldy #'E'
+    lda #0
+    brk
+    nop
+
+
 
 ;; ------------------------------------------------------------------
 ;; data

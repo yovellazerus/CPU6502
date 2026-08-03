@@ -165,35 +165,33 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     uint16_t i;
     uint8_t* src = (uint8_t*)kernel_src;
     
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-
     while (n > 0) {
         
         segment = user_dest >> 12;
         offset = user_dest & 0x0FFF;
         
         physical_frame = page_table[segment];
-        if (physical_frame == FRAME_UNUSED) {
-            MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
-            return -1; // segfault
+        if (physical_frame == FRAME_UNUSED){
+            return -1;
         }
         
-        MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
+        dst_window = mmu_map_window(1, physical_frame, &old_frame);
+        if (!dst_window) return -1;
         
         bytes_in_frame = 4096 - offset;
         chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
 
-        dst_window = (uint8_t*)WINDOW1 + offset;
+        dst_window += offset;
         
-        for (i = 0; i < chunk; i++) {
+        for (i = 0; i < chunk; i++){
             dst_window[i] = *src++;
         }
+
+        mmu_unmap_window(1, old_frame);
         
         n -= chunk;
         user_dest += chunk;
     }
-
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
 
     return 0; // success
 }
@@ -209,35 +207,33 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     uint16_t i;
     uint8_t* dst = (uint8_t*)kernel_dest;
     
-    old_frame = MMIO8(MMU_PAGE_TABLE + 1);
-
     while (n > 0) {
         
         segment = user_src >> 12;
         offset = user_src & 0x0FFF;
         
         physical_frame = page_table[segment];
-        if (physical_frame == FRAME_UNUSED) {
-            MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
-            return -1; // segfault
+        if (physical_frame == FRAME_UNUSED){
+            return -1;
         }
         
-        MMIO8(MMU_PAGE_TABLE + 1) = physical_frame;
+        src_window = mmu_map_window(1, physical_frame, &old_frame);
+        if (!src_window) return -1;
         
         bytes_in_frame = 4096 - offset;
         chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
 
-        src_window = (uint8_t*)WINDOW1 + offset;
+        src_window += offset;
         
-        for (i = 0; i < chunk; i++) {
+        for (i = 0; i < chunk; i++){
             *dst++ = src_window[i];
         }
         
+        mmu_unmap_window(1, old_frame);
+
         n -= chunk;
         user_src += chunk;
     }
-
-    MMIO8(MMU_PAGE_TABLE + 1) = old_frame;
 
     return 0; // success
 }
@@ -567,6 +563,8 @@ int sys_fork(void){
     uint8_t child_frame;
     uint8_t old_window1;
     uint8_t old_window2;
+    void* parent_buffer;
+    void* child_buffer;
 
     child = palloc();
     if(!child){
@@ -575,20 +573,16 @@ int sys_fork(void){
     }
 
     // equal primitives
-    child->channel = current_process->channel;
-    child->gid     = current_process->gid;
-    child->exit_code   = current_process->exit_code;
-    child->killed  = current_process->killed;
-    child->priority = current_process->priority;
-    child->ticks   = current_process->ticks;
-    child->top     = current_process->top;
-    child->uid     = current_process->uid;
-    child->ticks   = current_process->ticks;
-    child->state   = current_process->state;
-
-    // for restoration later
-    old_window1 = MMIO8(MMU_PAGE_TABLE + 1);
-    old_window2 = MMIO8(MMU_PAGE_TABLE + 2);
+    child->channel   = current_process->channel;
+    child->gid       = current_process->gid;
+    child->exit_code = current_process->exit_code;
+    child->killed    = current_process->killed;
+    child->priority  = current_process->priority;
+    child->ticks     = current_process->ticks;
+    child->top       = current_process->top;
+    child->uid       = current_process->uid;
+    child->ticks     = current_process->ticks;
+    child->state     = current_process->state;
 
     // clone the memory space
     for (segment = 0; segment < PAGE_TABLE_SIZE; segment++) {
@@ -608,9 +602,6 @@ int sys_fork(void){
                     segment--;
                 }
                 while(segment > 0);
-                // restore the kernel's memory space
-                MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
-                MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
                 pfree(child);
                 LOG();
                 return -1;
@@ -619,22 +610,21 @@ int sys_fork(void){
             child->page_table[segment] = child_frame;
 
             // map the parent's and child frame's to the copy window's
-            MMIO8(MMU_PAGE_TABLE + 1) = parent_frame;
-            MMIO8(MMU_PAGE_TABLE + 2) = child_frame;
+            parent_buffer =  mmu_map_window(1, parent_frame, &old_window1);
+            child_buffer  =  mmu_map_window(2, child_frame, &old_window2);
 
             // copy the frame
-            memcpy((void*)WINDOW2, (void*)WINDOW1, 4096);
+            memcpy(child_buffer, parent_buffer, 4096);
         }
     }
 
     // copy the kernel stack
-    MMIO8(MMU_PAGE_TABLE + 1) = current_process->kernel_stack_frame;
-    MMIO8(MMU_PAGE_TABLE + 2) = child->kernel_stack_frame;
-    memcpy((void*)WINDOW2, (void*)WINDOW1, 4096);
+    parent_buffer =  mmu_map_window(1, current_process->kernel_stack_frame, &old_window1);
+    child_buffer  =  mmu_map_window(2, child->kernel_stack_frame, &old_window2);
+    memcpy(child_buffer, parent_buffer, 4096);
 
-    // restore the kernel's memory space
-    MMIO8(MMU_PAGE_TABLE + 1) = old_window1;
-    MMIO8(MMU_PAGE_TABLE + 2) = old_window2;
+    mmu_unmap_window(1, old_window1);
+    mmu_unmap_window(2, old_window2);
 
     // copy the context, including the kernel hardware stack pointer
     memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
