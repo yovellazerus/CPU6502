@@ -101,7 +101,7 @@ void pfree(Proc* p){
     p->state = PROC_STATE_UNUSED;
 }
 
-const Context* proc_get_ctx(const Proc* p){
+Context* proc_get_ctx(Proc* p){
     return &p->ctx;
 }
 
@@ -121,7 +121,15 @@ void proc_set_ax(Proc* p, uint16_t ax){
     p->ctx.x = (uint8_t)((ax & 0xff00) >> 8);
 }
 
-const uint8_t* proc_get_page_table(const Proc* p){
+void proc_set_kernel_stack(Proc* p, uint8_t kernel_stack_frame){
+    p->kernel_stack_frame = kernel_stack_frame;
+}
+
+uint8_t proc_get_kernel_stack_frame(const Proc* p){
+    return p->kernel_stack_frame;
+}
+
+uint8_t* proc_get_page_table(const Proc* p){
     return p->page_table;
 }
 
@@ -131,6 +139,10 @@ uint8_t proc_get_ticks(const Proc* p){
 
 uint16_t proc_get_top(const Proc* p){
     return p->top;
+}
+
+uint16_t proc_get_killed(const Proc* p){
+    return p->killed;
 }
 
 File* proc_get_file(const Proc* p, int fd){
@@ -236,83 +248,6 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     }
 
     return 0; // success
-}
-
-void kernel_prologue(void){
-
-    if(interrupt_depth != 0){
-        panic("kernel_prologue");
-    }
-
-    if(current_process->killed != 0 && current_process != init_process){
-        LOG();
-        current_process->ctx.a = SIGKILL;
-        sys_exit();
-    }
-
-    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
-    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer (KSP) of the process,
-    // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
-    memcpy(&current_process->ctx, life_raft, sizeof(Context));
-
-    memcpy(current_process->page_table, life_raft + 8, sizeof(current_process->page_table));
-
-    current_process->kernel_stack_frame = kernel_page_table[0];
-
-    // NOTE: not enabling interrupts here yet!
-}
-
-void kernel_epilogue(void){
-
-    if(interrupt_depth != 0){
-        panic("kernel_epilogue");
-    }
-
-    __asm__("sei");
-
-    if(current_process->killed != 0 && current_process != init_process){
-        LOG();
-        current_process->ctx.a = SIGKILL;
-        sys_exit();
-    }
-    
-    // save the process's CPU context and page table INTO the Trap Segment "Life Raft"
-    // NOTE: not installing the kernel stack frame, it is just saving it to the trampoline!
-    // so it can be loaded back to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
-
-    memcpy(life_raft, &current_process->ctx, sizeof(Context));
-    
-    memcpy(life_raft + 8, current_process->page_table, sizeof(current_process->page_table));
-    
-    kernel_page_table[0] = current_process->kernel_stack_frame;
-}
-
-// global counter to track how deep we are in nested critical sections
-uint8_t interrupt_depth = 0;
-
-// always disable hardware IRQ's
-void interrupts_push(void) {
-
-    __asm__("sei");
-    
-    interrupt_depth++;
-
-    if (interrupt_depth == 0) {
-        panic("interrupts_push");
-    }
-}
-
-// only re-enable hardware interrupts if we have fully exited all nested critical sections
-void interrupts_pop(void) {
-    if (interrupt_depth == 0) {
-        panic("interrupts_pop");
-    }
-
-    interrupt_depth--;
-    
-    if (interrupt_depth == 0) {
-        __asm__("cli");
-    }
 }
 
 // will yield the cpu

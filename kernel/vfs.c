@@ -71,7 +71,7 @@ int sys_read(void){
     uint8_t old_frame;
     char* read_buffer;
     uint16_t ax = proc_get_ax(current_process);
-    const uint8_t* page_table = proc_get_page_table(current_process);
+    uint8_t* page_table = proc_get_page_table(current_process);
 
     // populate the system call argument struct
     if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){
@@ -133,7 +133,7 @@ int sys_write(void){
     uint8_t old_frame;
     char* write_buffer;
     uint16_t ax = proc_get_ax(current_process);
-    const uint8_t* page_table = proc_get_page_table(current_process);
+    uint8_t* page_table = proc_get_page_table(current_process);
 
     // populate the system call argument struct
     if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){

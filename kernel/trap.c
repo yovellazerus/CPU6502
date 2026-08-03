@@ -141,3 +141,80 @@ uint8_t device_interrupt(void){
 
     return which_device;
 }
+
+// global counter to track how deep we are in nested critical sections
+static uint8_t interrupt_depth = 0;
+
+// always disable hardware IRQ's
+void interrupts_push(void) {
+
+    __asm__("sei");
+    
+    interrupt_depth++;
+
+    if (interrupt_depth == 0) {
+        panic("interrupts_push");
+    }
+}
+
+// only re-enable hardware interrupts if we have fully exited all nested critical sections
+void interrupts_pop(void) {
+    if (interrupt_depth == 0) {
+        panic("interrupts_pop");
+    }
+
+    interrupt_depth--;
+    
+    if (interrupt_depth == 0) {
+        __asm__("cli");
+    }
+}
+
+void kernel_prologue(void){
+
+    if(interrupt_depth != 0){
+        panic("kernel_prologue");
+    }
+
+    if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
+        LOG();
+        proc_get_ctx(current_process)->a = SIGKILL;
+        sys_exit();
+    }
+
+    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
+    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer (KSP) of the process,
+    // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
+    memcpy(proc_get_ctx(current_process), life_raft, sizeof(Context));
+
+    memcpy(proc_get_page_table(current_process), life_raft + 8, PAGE_TABLE_SIZE);
+
+    proc_set_kernel_stack(current_process, kernel_page_table[0]);
+
+    // NOTE: not enabling interrupts here yet!
+}
+
+void kernel_epilogue(void){
+
+    __asm__("sei");
+
+    if(interrupt_depth != 0){
+        panic("kernel_epilogue");
+    }
+
+    if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
+        LOG();
+        proc_get_ctx(current_process)->a = SIGKILL;
+        sys_exit();
+    }
+    
+    // save the process's CPU context and page table INTO the Trap Segment "Life Raft"
+    // NOTE: not installing the kernel stack frame, it is just saving it to the trampoline!
+    // so it can be loaded back to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
+
+    memcpy(life_raft, proc_get_ctx(current_process), sizeof(Context));
+    
+    memcpy(life_raft + 8, proc_get_page_table(current_process), PAGE_TABLE_SIZE);
+    
+    kernel_page_table[0] = proc_get_kernel_stack_frame(current_process);
+}

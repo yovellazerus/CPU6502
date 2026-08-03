@@ -139,6 +139,10 @@ void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
 uint8_t device_interrupt(void);
+void interrupts_push(void);
+void interrupts_pop(void);
+void kernel_prologue(void);
+void kernel_epilogue(void);
 
 // debugger.c
 void kernel_debugger(void);
@@ -181,15 +185,15 @@ typedef struct Device_Ops {
     int (*close)(File*);
 } Device_Ops;
 
-void vfs_init(void);
+void  vfs_init(void);
 File* file_get_by_global_index(uint8_t index);
-bool file_open_global(uint8_t index,
+bool  file_open_global(uint8_t index,
                         VFile_Type type,
                         Device_Major major,
                         uint8_t  readable,
                         uint8_t  writable,
                         uint32_t offset);
-bool register_device(Device_Major major, Device_Ops* devops);
+bool  register_device(Device_Major major, Device_Ops* devops);
 
 int sys_read(void);
 int sys_write(void);
@@ -198,9 +202,9 @@ int sys_open(void);
 
 // consol.c
 void console_init(void);
-int console_read(File* file, void* dst, uint16_t n);
-int console_write(File* file, void* src, uint16_t n);
-int console_close(File* file);
+int  console_read(File* file, void* dst, uint16_t n);
+int  console_write(File* file, void* src, uint16_t n);
+int  console_close(File* file);
 
 // printk.c
 void panic(const char *fmt, ...);
@@ -215,14 +219,14 @@ void timer_resume(void);
 void timer_interrupt(void);
 
 // string.c
-char*   strcpy(char *s, const char *t);
-int     strcmp(const char *p, const char *q);
+char*    strcpy(char *s, const char *t);
+int      strcmp(const char *p, const char *q);
 uint16_t strlen(const char *s);
-char*   strchr(const char* s, char c);
-int     atoi(const char *s);
-void*   memmove(void *vdst, const void *vsrc, int n);
-int     memcmp(const void *s1, const void *s2, uint16_t n);
-void*   memcpy(void *dst, const void *src, uint16_t n);
+char*    strchr(const char* s, char c);
+int      atoi(const char *s);
+void*    memmove(void *vdst, const void *vsrc, int n);
+int      memcmp(const void *s1, const void *s2, uint16_t n);
+void*    memcpy(void *dst, const void *src, uint16_t n);
 
 // proc.c
 typedef enum Proc_State{
@@ -235,7 +239,6 @@ typedef enum Proc_State{
 } Proc_State;
 
 extern Proc* current_process;
-extern uint8_t interrupt_depth;
 
 int sys_fork(void);
 int sys_exit(void);
@@ -243,29 +246,28 @@ int sys_wait(void);
 int sys_kill(void);
 int sys_sbrk(void);
 
-void interrupts_push(void);
-void interrupts_pop(void);
 void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);
 void run_init_process(void);
-void kernel_prologue(void);
-void kernel_epilogue(void);
-int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
-int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
-void proc_init(void);
-Proc* palloc(void);
-void pfree(Proc* p);
-const Context* proc_get_ctx(const Proc* p);
-uint8_t proc_get_ticks(const Proc* p);
+int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
+int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
+void    proc_init(void);
+Proc*   palloc(void);
+void    pfree(Proc* p);
+Context*    proc_get_ctx(Proc* p);
+uint8_t     proc_get_ticks(const Proc* p);
 const char* proc_get_name(const Proc* p);
-uint16_t proc_get_pid(const Proc* p);
-uint8_t proc_ticks_dec(Proc* p);
-uint16_t proc_get_ax(const Proc* p);
-void proc_set_ax(Proc* p, uint16_t ax);
-uint16_t proc_get_top(const Proc* p);
-File* proc_get_file(const Proc* p, int fd);
-void proc_set_state(Proc* p, Proc_State state);
-const uint8_t* proc_get_page_table(const Proc* p);
+uint16_t    proc_get_pid(const Proc* p);
+uint8_t     proc_ticks_dec(Proc* p);
+uint16_t    proc_get_ax(const Proc* p);
+void        proc_set_ax(Proc* p, uint16_t ax);
+void        proc_set_kernel_stack(Proc* p, uint8_t kernel_stack_frame);
+uint8_t     proc_get_kernel_stack_frame(const Proc* p);
+uint16_t    proc_get_top(const Proc* p);
+uint16_t    proc_get_killed(const Proc* p);
+File*       proc_get_file(const Proc* p, int fd);
+void        proc_set_state(Proc* p, Proc_State state);
+uint8_t*    proc_get_page_table(const Proc* p);
 
 #endif // COMMAN_H

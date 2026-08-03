@@ -1,17 +1,12 @@
 
 #include "comman.h"
 
-void hardware_init(void){
+void main(void) {
 
+    // hardware initialization
     mmu_init();
     timer_init();
     uart_init();
-    // ...
-}
-
-void main(void) {
-
-    hardware_init();
 
     printk("kernel: version %d.%d.%d is booting...\n", 1, 0, 0);
 
