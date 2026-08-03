@@ -92,10 +92,10 @@ void kfree(uint8_t frame);
 
 // syscall.c
 typedef union SyscallArg{
+
     struct {
-        uint16_t size;
-        void* buffer;
-    } print;
+        uint32_t ticks;
+    } sleep;
 
     struct {
         int fd;
@@ -127,7 +127,8 @@ void syscall_init(void);
 #define SYS_EXIT    'E'
 #define SYS_WAIT    'W'
 #define SYS_KILL    'K'
-#define SYS_SBRK    'S'
+#define SYS_SBRK    'B'
+#define SYS_SLEEP   'S'
 
 #define SYS_OPEN     'o'
 #define SYS_CLOSE    'c'
@@ -213,6 +214,7 @@ void vprintk(const char *fmt, va_list ap);
 
 // timer.c
 extern volatile uint32_t systicks;
+extern volatile uint32_t next_wakeup_call;
 void timer_init(void);
 void timer_pause(void);
 void timer_resume(void);
@@ -245,6 +247,7 @@ int sys_exit(void);
 int sys_wait(void);
 int sys_kill(void);
 int sys_sbrk(void);
+int sys_sleep(void);
 
 void sleep(void* channel);
 void wakeup(void* channel);
@@ -252,9 +255,9 @@ void scheduler(void);
 void run_init_process(void);
 int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
 int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
-void    proc_init(void);
-Proc*   palloc(void);
-void    pfree(Proc* p);
+void  proc_init(void);
+Proc* palloc(void);
+void  pfree(Proc* p);
 Context*    proc_get_ctx(Proc* p);
 uint8_t     proc_get_ticks(const Proc* p);
 const char* proc_get_name(const Proc* p);

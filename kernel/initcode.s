@@ -56,18 +56,16 @@ read_loop:
 child_code:
     lda #0
 child_loop:
+    pha
+    ;; sleep
+    ldy #'S'
+    lda #<sleep_arg
+    ldx #>sleep_arg
+    brk
+    nop
+    pla
 
-    ;; delay
-    ldy #$ff
-delay_y:
-    ldx #$ff
-delay_x:
-    dex
-    bne delay_x
-    dey
-    bne delay_y
-
-    ;; new line
+    ; new line
     pha
     lda #$0a
     jsr putchar
@@ -81,32 +79,29 @@ delay_x:
     ;; increment the counter
     clc
     adc #1
-
     bne child_loop
 
     lda #$0a
     jsr putchar
-
-    lda #$42
-    sta $fe2f
 
     ldy #'E'
     lda #0
     brk
     nop
 
-
-
 ;; ------------------------------------------------------------------
 ;; data
 ;; ------------------------------------------------------------------
+
+sleep_arg:
+    .word $0010
+    .word $0000
 
 prompt_str: .byte "Enter text: "
 prompt_len = * - prompt_str
 
 prefix_str: .byte "You typed: "
 prefix_len = * - prefix_str
-
 
 write_prompt_arg:
     .word 1             

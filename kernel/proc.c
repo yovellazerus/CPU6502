@@ -315,6 +315,48 @@ void scheduler(void) {
     }
 }
 
+int sys_sleep(void){
+    SyscallArg syscall_arg;
+    uint32_t ticks;
+    uint32_t total;
+    uint16_t ax = proc_get_ax(current_process);
+
+    // populate the system call argument struct
+    if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), proc_get_page_table(current_process)) < 0){
+        LOG();
+        return -1;
+    }
+
+    ticks = syscall_arg.sleep.ticks;
+    interrupts_push();
+    total = ticks + systicks;
+    // check for overflow, if a the sum of two unsigned integers is SMALLER than one of the them, an overflow occurred
+    if (total < systicks) {
+        total = 0xFFFFFFFF; // cap it to the maximum possible wait time
+    }
+    interrupts_pop();
+
+    while(true){
+        
+        interrupts_push();
+        if(systicks >= total){
+            interrupts_pop();
+            break;
+        }
+        // updated the timer next_wakeup_call variable that signal the timer to call wakeup() 
+        if(total < next_wakeup_call){
+            next_wakeup_call = total;
+        }
+        interrupts_pop();
+
+        // time hasn't run out yet
+        sleep((void*)&systicks); 
+    }
+
+    return 0;
+
+}
+
 int sys_sbrk(void) {
 
     uint8_t old_segment;
