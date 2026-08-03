@@ -235,6 +235,7 @@ typedef enum Proc_State{
 } Proc_State;
 
 extern Proc* current_process;
+extern uint8_t interrupt_depth;
 
 int sys_fork(void);
 int sys_exit(void);

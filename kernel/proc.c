@@ -239,6 +239,11 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
 }
 
 void kernel_prologue(void){
+
+    if(interrupt_depth != 0){
+        panic("kernel_prologue");
+    }
+
     if(current_process->killed != 0 && current_process != init_process){
         LOG();
         current_process->ctx.a = SIGKILL;
@@ -258,6 +263,10 @@ void kernel_prologue(void){
 }
 
 void kernel_epilogue(void){
+
+    if(interrupt_depth != 0){
+        panic("kernel_epilogue");
+    }
 
     __asm__("sei");
 
@@ -279,7 +288,7 @@ void kernel_epilogue(void){
 }
 
 // global counter to track how deep we are in nested critical sections
-static uint8_t interrupt_depth = 0;
+uint8_t interrupt_depth = 0;
 
 // always disable hardware IRQ's
 void interrupts_push(void) {
