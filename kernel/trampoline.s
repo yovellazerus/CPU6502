@@ -353,13 +353,13 @@ _context_switch:
     
     ;; save the kernel low memory to the old process
     ldy #24
-    lda _kernel_page_table + 0
+    lda MMU_PAGE_TABLE + 0
     sta (ptr2), y
     iny
-    lda _kernel_page_table + 1
+    lda MMU_PAGE_TABLE + 1
     sta (ptr2), y
     iny
-    lda _kernel_page_table + 2
+    lda MMU_PAGE_TABLE + 2
     sta (ptr2), y
 
     ;; switch hardware KSP
@@ -374,16 +374,13 @@ _context_switch:
     ;; load the new process low kernel memory
     ldy #24
     lda (ptr1), y
-    sta MMU_PAGE_TABLE + 0
-    sta _kernel_page_table + 0   
+    sta MMU_PAGE_TABLE + 0   
     iny
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 1 
-    sta _kernel_page_table + 1   
     iny
     lda (ptr1), y
-    sta MMU_PAGE_TABLE + 2       
-    sta _kernel_page_table + 2   
+    sta MMU_PAGE_TABLE + 2          
     
     rts
 
@@ -406,13 +403,13 @@ _first_context_switch:
     
     ;; save the kernel low memory to the old process
     ldy #24
-    lda _kernel_page_table + 0
+    lda MMU_PAGE_TABLE + 0
     sta (ptr2), y
     iny
-    lda _kernel_page_table + 1
+    lda MMU_PAGE_TABLE + 1
     sta (ptr2), y
     iny
-    lda _kernel_page_table + 2
+    lda MMU_PAGE_TABLE + 2
     sta (ptr2), y
 
     ;; switch hardware KSP
@@ -427,16 +424,13 @@ _first_context_switch:
     ;; load the new process low kernel memory
     ldy #24
     lda (ptr1), y
-    sta MMU_PAGE_TABLE + 0
-    sta _kernel_page_table + 0   
+    sta MMU_PAGE_TABLE + 0  
     iny
     lda (ptr1), y
-    sta MMU_PAGE_TABLE + 1 
-    sta _kernel_page_table + 1   
+    sta MMU_PAGE_TABLE + 1   
     iny
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 2       
-    sta _kernel_page_table + 2   
     
     
     ;; jump directly to user space, 

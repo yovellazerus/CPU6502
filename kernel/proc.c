@@ -295,9 +295,6 @@ void scheduler(void) {
                 p->ticks = QUANTUM; 
 
                 if(old == NULL){
-                    kernel_page_table[0] = p->kernel_low_memory[0];
-                    kernel_page_table[1] = p->kernel_low_memory[1];
-                    kernel_page_table[2] = p->kernel_low_memory[2];
                     //  "init" first run, so no previous process to save
                     kernel_epilogue();
                     return_from_trap();

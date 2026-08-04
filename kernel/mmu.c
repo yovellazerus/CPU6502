@@ -24,10 +24,10 @@ void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
     if (window != 1 && window != 2) panic("mmu_map_window"); 
     interrupts_push();
 
-    *out_old_frame = kernel_page_table[window];
+    *out_old_frame = proc_get_kernel_low_memory(current_process)[window];
     
     MMIO8(MMU_PAGE_TABLE + window) = frame;
-    kernel_page_table[window] = frame;
+    proc_get_kernel_low_memory(current_process)[window] = frame;
 
     if(current_process != NULL) {
         proc_get_kernel_low_memory(current_process)[window] = frame;
@@ -42,7 +42,7 @@ void mmu_unmap_window(uint8_t window, uint8_t old_frame){
     interrupts_push();
 
     MMIO8(MMU_PAGE_TABLE + window) = old_frame;
-    kernel_page_table[window] = old_frame;
+    proc_get_kernel_low_memory(current_process)[window] = old_frame;
 
     if(current_process != NULL) {
         proc_get_kernel_low_memory(current_process)[window] = old_frame;
