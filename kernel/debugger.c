@@ -67,6 +67,10 @@ void print_process_state(Proc* p) {
             if(i % 4 == 0) printk("\n\t");
             printk("0x%x ", proc_get_page_table(p)[i]);
         }
+        printk("\n\tKernel Mem:\n\t");
+        for (i = 0; i < 3; i++) {
+            printk("0x%x ", proc_get_kernel_low_memory(p)[i]);
+        }
     } else {
         printk("\n    (null)\n");
     }

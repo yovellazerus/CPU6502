@@ -102,7 +102,6 @@ int sys_read(void){
 
     // map the new frame to WINDOW2
     read_buffer = mmu_map_window(2, buffer_frame, &old_frame);
-    if (!read_buffer) return -1;
 
     // dispatch useing the devsw (fill the dynamic buffer with the read data)
     bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
@@ -162,9 +161,7 @@ int sys_write(void){
 
     // map the new frame to WINDOW2
     write_buffer = mmu_map_window(2, buffer_frame, &old_frame);
-    if (!write_buffer) return -1;
 
-    
     // copy the data form the user's buffer to the dynamic buffer
     if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, current_process) < 0){
         LOG();

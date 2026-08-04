@@ -341,21 +341,28 @@ _make_kernel_stack:
 ;;
 .global _context_switch
 _context_switch:
-    ;; "new" in AX
+
+    ;; new in AX
     sta ptr1+0
     stx ptr1+1
-    
-    ;; "old" on software stack
+
+    ;; old on software stack
     jsr popax
     sta ptr2+0
     stx ptr2+1
-
-    ;; save the old kernel stack frame
-    ldy #24
-    lda MMU_PAGE_TABLE + 0
-    sta (ptr2), y
     
-    ;; save sp to old KSP and load the new KSP (offset 7 in Proc)
+    ;; save the kernel low memory to the old process
+    ldy #24
+    lda _kernel_page_table + 0
+    sta (ptr2), y
+    iny
+    lda _kernel_page_table + 1
+    sta (ptr2), y
+    iny
+    lda _kernel_page_table + 2
+    sta (ptr2), y
+
+    ;; switch hardware KSP
     ldy #7
     tsx
     txa
@@ -364,12 +371,20 @@ _context_switch:
     tax              
     txs
 
-    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
+    ;; load the new process low kernel memory
     ldy #24
     lda (ptr1), y
-    sta MMU_PAGE_TABLE + 0        
+    sta MMU_PAGE_TABLE + 0
+    sta _kernel_page_table + 0   
+    iny
+    lda (ptr1), y
+    sta MMU_PAGE_TABLE + 1 
+    sta _kernel_page_table + 1   
+    iny
+    lda (ptr1), y
+    sta MMU_PAGE_TABLE + 2       
+    sta _kernel_page_table + 2   
     
-    ; return on the NEW process stack! essentially, this is the context switch
     rts
 
 ;; preformed the context switch form process "old", kernel stack to process "new" kernel stack,
@@ -380,21 +395,27 @@ _context_switch:
 .global _first_context_switch
 _first_context_switch:
 
-    ;; "new" in AX
+    ;; new in AX
     sta ptr1+0
     stx ptr1+1
 
-    ;; "old" on software stack
+    ;; old on software stack
     jsr popax
     sta ptr2+0
     stx ptr2+1
-
-    ;; save the old kernel stack frame
-    ldy #24
-    lda MMU_PAGE_TABLE + 0
-    sta (ptr2), y
     
-    ;; save sp to old KSP and load the new KSP (offset 7 in Proc)
+    ;; save the kernel low memory to the old process
+    ldy #24
+    lda _kernel_page_table + 0
+    sta (ptr2), y
+    iny
+    lda _kernel_page_table + 1
+    sta (ptr2), y
+    iny
+    lda _kernel_page_table + 2
+    sta (ptr2), y
+
+    ;; switch hardware KSP
     ldy #7
     tsx
     txa
@@ -402,11 +423,21 @@ _first_context_switch:
     lda (ptr1), y
     tax              
     txs
-    
-    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc)  
+
+    ;; load the new process low kernel memory
     ldy #24
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 0
+    sta _kernel_page_table + 0   
+    iny
+    lda (ptr1), y
+    sta MMU_PAGE_TABLE + 1 
+    sta _kernel_page_table + 1   
+    iny
+    lda (ptr1), y
+    sta MMU_PAGE_TABLE + 2       
+    sta _kernel_page_table + 2   
+    
     
     ;; jump directly to user space, 
     ;; because there is nowhere for the new process to return to in the kernel (no function called it). 

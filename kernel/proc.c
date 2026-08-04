@@ -6,7 +6,7 @@ struct Proc {
     // CPU and memory context
     Context ctx; 
     uint8_t page_table[PAGE_TABLE_SIZE];
-    uint8_t kernel_stack_frame;
+    uint8_t kernel_low_memory[3];
     uint16_t top;
      
     // scheduler
@@ -75,13 +75,14 @@ Proc* palloc(void){
     }
 
     // give the process a fresh empty kernel stack
-    stack_frame = p->kernel_stack_frame = kalloc();
-    if(p->kernel_stack_frame == FRAME_UNUSED){
-        return NULL;
-    }
+    stack_frame = p->kernel_low_memory[0] = kalloc();
+    if(p->kernel_low_memory[0] == FRAME_UNUSED) return NULL;
 
-    // initialize the software kernel stack by writing to it's c_sp zero page register   
-    make_kernel_stack(stack_frame);    
+    make_kernel_stack(stack_frame);   
+    
+    // initialize default windows for the new process
+    p->kernel_low_memory[1] = 1; 
+    p->kernel_low_memory[2] = 2;   
 
     p->state = PROC_STATE_NEW;
     p->pid = pid_alloc(); 
@@ -96,7 +97,7 @@ Proc* palloc(void){
 
 void pfree(Proc* p){
     if(!p) panic("pfree");
-    kfree(p->kernel_stack_frame);
+    kfree(p->kernel_low_memory[0]);
     memset(p, 0, sizeof(*p));
     p->state = PROC_STATE_UNUSED;
 }
@@ -121,12 +122,8 @@ void proc_set_ax(Proc* p, uint16_t ax){
     p->ctx.x = (uint8_t)((ax & 0xff00) >> 8);
 }
 
-void proc_set_kernel_stack(Proc* p, uint8_t kernel_stack_frame){
-    p->kernel_stack_frame = kernel_stack_frame;
-}
-
-uint8_t proc_get_kernel_stack_frame(const Proc* p){
-    return p->kernel_stack_frame;
+uint8_t* proc_get_kernel_low_memory(Proc* p){
+    return (uint8_t*)p->kernel_low_memory;
 }
 
 uint8_t* proc_get_page_table(const Proc* p){
@@ -193,7 +190,6 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){
         }
         
         dst_window = mmu_map_window(1, physical_frame, &old_frame);
-        if (!dst_window) return -1;
         
         bytes_in_frame = 4096 - offset;
         chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
@@ -205,7 +201,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){
         }
 
         mmu_unmap_window(1, old_frame);
-        
+
         n -= chunk;
         user_dest += chunk;
     }
@@ -238,9 +234,8 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p)
         if (physical_frame == FRAME_UNUSED){
             return -1;
         }
-        
+
         src_window = mmu_map_window(1, physical_frame, &old_frame);
-        if (!src_window) return -1;
         
         bytes_in_frame = 4096 - offset;
         chunk = (n < bytes_in_frame) ? n : bytes_in_frame;
@@ -287,10 +282,11 @@ void scheduler(void) {
     while(true){
         for(i = 0; i < MAX_PROC_COUNT; i++){
             p = &proc_table[round_robin_index++];
+
             if(round_robin_index >= MAX_PROC_COUNT){
                 round_robin_index = 0;
             }
-            
+
             if(p->state == PROC_STATE_READY || p->state == PROC_STATE_NEW){
 
                 is_new = (p->state == PROC_STATE_NEW);
@@ -299,17 +295,20 @@ void scheduler(void) {
                 p->ticks = QUANTUM; 
 
                 if(old == NULL){
+                    kernel_page_table[0] = p->kernel_low_memory[0];
+                    kernel_page_table[1] = p->kernel_low_memory[1];
+                    kernel_page_table[2] = p->kernel_low_memory[2];
                     //  "init" first run, so no previous process to save
                     kernel_epilogue();
                     return_from_trap();
-
                 } 
+
                 else if(is_new){
                     // p is a new process created by sys_fork()
                     first_context_switch(old, p);
                     return; 
-
                 } 
+
                 else{
                     context_switch(old, p);
                     return;
@@ -612,12 +611,15 @@ int sys_fork(void){
 
             // copy the frame
             memcpy(child_buffer, parent_buffer, 4096);
+
+            mmu_unmap_window(1, old_window1);
+            mmu_unmap_window(2, old_window2);
         }
     }
 
     // copy the kernel stack
-    parent_buffer =  mmu_map_window(1, current_process->kernel_stack_frame, &old_window1);
-    child_buffer  =  mmu_map_window(2, child->kernel_stack_frame, &old_window2);
+    parent_buffer =  mmu_map_window(1, current_process->kernel_low_memory[0], &old_window1);
+    child_buffer  =  mmu_map_window(2, child->kernel_low_memory[0], &old_window2);
     memcpy(child_buffer, parent_buffer, 4096);
 
     mmu_unmap_window(1, old_window1);
