@@ -189,7 +189,7 @@ void kernel_prologue(void){
 
     memcpy(proc_get_page_table(current_process), life_raft + 8, PAGE_TABLE_SIZE);
 
-    //memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
+    memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
 
     // NOTE: not enabling interrupts here yet!
 }
@@ -216,5 +216,5 @@ void kernel_epilogue(void){
     
     memcpy(life_raft + 8, proc_get_page_table(current_process), PAGE_TABLE_SIZE);
     
-    //memcpy(kernel_page_table, proc_get_kernel_low_memory(current_process), 3);
+    memcpy(kernel_page_table, proc_get_kernel_low_memory(current_process), 3);
 }
