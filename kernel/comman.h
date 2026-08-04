@@ -122,6 +122,7 @@ typedef union SyscallArg{
 typedef int (*Syscall)(void);
 extern Syscall syscalls_table[256];
 void syscall_init(void);
+bool syscall_populate_argument(SyscallArg* arg);
 
 #define SYS_FORK    'F'
 #define SYS_EXIT    'E'
@@ -253,8 +254,8 @@ void sleep(void* channel);
 void wakeup(void* channel);
 void scheduler(void);
 void run_init_process(void);
-int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table);
-int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table);
+int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p);
+int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
 void  proc_init(void);
 Proc* palloc(void);
 void  pfree(Proc* p);

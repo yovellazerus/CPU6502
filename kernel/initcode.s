@@ -15,6 +15,18 @@ _start:
     cmp #0
     beq child_code
 
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
+
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
+
 init_loop:
 
     ;; print the prompt

@@ -70,11 +70,8 @@ int sys_read(void){
     uint8_t buffer_frame;
     uint8_t old_frame;
     char* read_buffer;
-    uint16_t ax = proc_get_ax(current_process);
-    uint8_t* page_table = proc_get_page_table(current_process);
 
-    // populate the system call argument struct
-    if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){
+    if(!syscall_populate_argument(&syscall_argument)){
         LOG();
         return -1;
     }
@@ -111,10 +108,11 @@ int sys_read(void){
     bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
     
     // copy the data from the dynamic buffer to the user's buffer
-    if(copy_to_user(read_buffer, (uint16_t)syscall_argument.read.buffer, bytes_read, (uint8_t*)page_table) < 0){
+    if(copy_to_user(read_buffer, (uint16_t)syscall_argument.read.buffer, bytes_read, current_process) < 0){
         LOG();
         bytes_read = -1;
-    } else {
+    } 
+    else{
         file->offset += bytes_read;
     }
 
@@ -132,11 +130,8 @@ int sys_write(void){
     uint8_t buffer_frame;
     uint8_t old_frame;
     char* write_buffer;
-    uint16_t ax = proc_get_ax(current_process);
-    uint8_t* page_table = proc_get_page_table(current_process);
 
-    // populate the system call argument struct
-    if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_argument, ax, sizeof(syscall_argument), page_table) < 0){
+    if(!syscall_populate_argument(&syscall_argument)){
         LOG();
         return -1;
     }
@@ -171,7 +166,7 @@ int sys_write(void){
 
     
     // copy the data form the user's buffer to the dynamic buffer
-    if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, page_table) < 0){
+    if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, current_process) < 0){
         LOG();
         return -1;
     }

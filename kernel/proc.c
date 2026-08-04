@@ -166,7 +166,7 @@ void proc_set_state(Proc* p, Proc_State state){
     p->state = state;
 }
 
-int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* page_table){
+int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){
     uint16_t offset;
     uint8_t segment;
     uint8_t physical_frame;
@@ -176,8 +176,13 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     uint8_t old_frame;
     uint16_t i;
     uint8_t* src = (uint8_t*)kernel_src;
+    uint8_t* page_table = p->page_table;
+
+    if(user_dest >= p->top){
+        return -1;
+    }
     
-    while (n > 0) {
+    while(n > 0){
         
         segment = user_dest >> 12;
         offset = user_dest & 0x0FFF;
@@ -208,7 +213,7 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, uint8_t* p
     return 0; // success
 }
 
-int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const uint8_t* page_table){
+int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p){
     uint16_t offset;
     uint8_t segment;
     uint8_t physical_frame;
@@ -218,8 +223,13 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, const ui
     uint8_t old_frame;
     uint16_t i;
     uint8_t* dst = (uint8_t*)kernel_dest;
+    uint8_t* page_table = p->page_table;
+
+    if(user_src >= p->top){
+        return -1;
+    }
     
-    while (n > 0) {
+    while(n > 0){
         
         segment = user_src >> 12;
         offset = user_src & 0x0FFF;
@@ -274,31 +284,33 @@ void scheduler(void) {
     bool is_new;
     Proc* old = current_process;
 
-    while (1) {
-        for (i = 0; i < MAX_PROC_COUNT; i++) {
+    while(true){
+        for(i = 0; i < MAX_PROC_COUNT; i++){
             p = &proc_table[round_robin_index++];
-            if (round_robin_index >= MAX_PROC_COUNT) {
+            if(round_robin_index >= MAX_PROC_COUNT){
                 round_robin_index = 0;
             }
             
-            if (p->state == PROC_STATE_READY || p->state == PROC_STATE_NEW) {
+            if(p->state == PROC_STATE_READY || p->state == PROC_STATE_NEW){
 
                 is_new = (p->state == PROC_STATE_NEW);
                 p->state = PROC_STATE_RUNING;
                 current_process = p;
                 p->ticks = QUANTUM; 
 
-                if (old == NULL) {
+                if(old == NULL){
                     //  "init" first run, so no previous process to save
                     kernel_epilogue();
                     return_from_trap();
 
-                } else if (is_new) {
+                } 
+                else if(is_new){
                     // p is a new process created by sys_fork()
                     first_context_switch(old, p);
                     return; 
 
-                } else {
+                } 
+                else{
                     context_switch(old, p);
                     return;
                 }
@@ -321,8 +333,7 @@ int sys_sleep(void){
     uint32_t total;
     uint16_t ax = proc_get_ax(current_process);
 
-    // populate the system call argument struct
-    if(ax >= proc_get_top(current_process) || copy_from_user(&syscall_arg, ax, sizeof(syscall_arg), proc_get_page_table(current_process)) < 0){
+    if(!syscall_populate_argument(&syscall_arg)){
         LOG();
         return -1;
     }
@@ -474,7 +485,7 @@ int sys_wait(void){
                 if(proc_table[i].state == PROC_STATE_ZOMBIE){
                     if(user_exit_code != 0){
                         if(copy_to_user(&proc_table[i].exit_code, user_exit_code, 
-                                        sizeof(proc_table[i].exit_code), current_process->page_table) < 0)
+                                        sizeof(proc_table[i].exit_code), current_process) < 0)
                         {
                             current_process->ctx.a = SEGFAULT;
                             sys_exit(); 
@@ -656,7 +667,7 @@ void run_init_process(void){
     // inject the code to bootstrap the "/init" process
     init_process->ctx.pc = (uint16_t)init_code;
     init_process->top = (uint16_t)init_code + (uint16_t)_INITCODE_SIZE__;
-    if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process->page_table) < 0){
+    if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process) < 0){
         panic("copy_to_user in run_init_process");
     }
 

@@ -439,20 +439,22 @@ _context_switch:
     jsr popax
     sta ptr2+0
     stx ptr2+1
+
+    ;; save the old kernel stack frame
+    ldy #24
+    lda MMU_PAGE_TABLE + 0
+    sta (ptr2), y
     
-    ;; save current hardware stack pointer to old->ksp (Offset 7 in Proc)
+    ;; save sp to old KSP and load the new KSP (offset 7 in Proc)
     ldy #7
     tsx
     txa
     sta (ptr2), y
-    
-    ;; read the new process kernel hardware stack form new->ksp (Offset 7) to A and move it to the CPU's SP
     lda (ptr1), y
     tax              
     txs
 
     ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
-    ;; and install it in to segment 0 of the MMU
     ldy #24
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 0        
@@ -476,18 +478,22 @@ _first_context_switch:
     jsr popax
     sta ptr2+0
     stx ptr2+1
+
+    ;; save the old kernel stack frame
+    ldy #24
+    lda MMU_PAGE_TABLE + 0
+    sta (ptr2), y
     
-    ;; save sp to old->ksp (offset 7 in Proc)
+    ;; save sp to old KSP and load the new KSP (offset 7 in Proc)
     ldy #7
     tsx
     txa
     sta (ptr2), y
-    ;; set a fresh hardware stack pointer for the new process
-    ldx #$ff
+    lda (ptr1), y
+    tax              
     txs
     
-    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc) 
-    ;; and install it in to segment 0 of the MMU 
+    ;; load the new process kernel stack frame from new->kernel_stack_frame (Offset 24 in Proc)  
     ldy #24
     lda (ptr1), y
     sta MMU_PAGE_TABLE + 0
