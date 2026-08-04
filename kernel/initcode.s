@@ -8,24 +8,37 @@ _init_code:
 
 _start:
 
-    ;; fork the child
+    ;; fork the children
+    
     ldy #'F'
     brk
     nop
     cmp #0
     beq child_code
 
-    ; ldy #'F'
-    ; brk
-    ; nop
-    ; cmp #0
-    ; beq child_code
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
 
-    ; ldy #'F'
-    ; brk
-    ; nop
-    ; cmp #0
-    ; beq child_code
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
+
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
+
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
 
 init_loop:
 

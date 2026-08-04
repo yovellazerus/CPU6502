@@ -308,7 +308,7 @@ _get_cpu_state:
 ;;
 .global _make_kernel_stack
 _make_kernel_stack:
-    ;; save the old frame of segment 1 to tmp1, and map WINDOW1 to the given frame
+    ;; save the OLD frame of segment 1 to tmp1, and map WINDOW1 to the given frame
     ldx MMU_PAGE_TABLE + 1  
     stx tmp1
     sta MMU_PAGE_TABLE + 1  
@@ -322,45 +322,55 @@ _make_kernel_stack:
     ;; use of the zp address of c_sp as the Y index 
     ldy #<c_sp 
 
-    ;; store the value of __STACK_START__ to the offset of c_sp in the new stack frame
+    ;; store the value of __STACK_START__ to the offset of c_sp in the NEW stack frame
     lda #<__STACK_START__
     sta (ptr1), y          
     iny
     lda #>__STACK_START__
     sta (ptr1), y           
 
-    ;; restore the old frame of WINDOW1
+    ;; restore the OLD frame of WINDOW1
     ldx tmp1
     stx MMU_PAGE_TABLE + 1  
     rts
 
-;; preformed the context switch form process "old" kernel stack, to process "new" kernel stack.
+;; preformed the context switch form process "OLD" kernel stack, to process "NEW" kernel stack.
 ;; 
-;;
-;; void context_switch(Proc* old, Proc* new);
+;; void context_switch(Proc* OLD, Proc* NEW);
 ;;
 .global _context_switch
 _context_switch:
 
-    ;; new in AX
+    ;; NEW in AX
     sta ptr1+0
     stx ptr1+1
 
-    ;; old on software stack
+    ;; OLD on software stack
     jsr popax
     sta ptr2+0
     stx ptr2+1
     
-    ;; save the kernel low memory to the old process
+    ;; save the kernel low memory to the OLD process
     ldy #24
-    lda MMU_PAGE_TABLE + 0
+    lda _kernel_page_table + 0
     sta (ptr2), y
     iny
-    lda MMU_PAGE_TABLE + 1
+    lda _kernel_page_table + 1
     sta (ptr2), y
     iny
-    lda MMU_PAGE_TABLE + 2
+    lda _kernel_page_table + 2
     sta (ptr2), y
+
+    ;; saving the NEW low kernel memory to a tmp_frame_buffer memory location in the trampoline frame
+    ldy #24
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 0
+    iny
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 1
+    iny
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 2
 
     ;; switch hardware KSP
     ldy #7
@@ -371,46 +381,60 @@ _context_switch:
     tax              
     txs
 
-    ;; load the new process low kernel memory
-    ldy #24
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 0   
-    iny
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 1 
-    iny
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 2          
+    ;; now we load them from the tmp_frame_buffer and map them safely (no ZP destruction...)
+    lda tmp_frame_buffer + 2
+    sta MMU_PAGE_TABLE + 2
+    sta _kernel_page_table + 2
+
+    lda tmp_frame_buffer + 1
+    sta MMU_PAGE_TABLE + 1
+    sta _kernel_page_table + 1
+
+    lda tmp_frame_buffer + 0       ;; swap the ZP last!
+    sta MMU_PAGE_TABLE + 0       
+    sta _kernel_page_table + 0   
     
     rts
 
-;; preformed the context switch form process "old", kernel stack to process "new" kernel stack,
-;; when "new" is a new process just created bye sys_fork() and it is it's first quantum to run.
+
+;; preformed the context switch form process "OLD", kernel stack to process "NEW" kernel stack,
+;; when "NEW" is a NEW process just created bye sys_fork() and it is it's first quantum to run.
 ;;
-;; void first_context_switch(Proc* old, Proc* new);
+;; void first_context_switch(Proc* OLD, Proc* NEW);
 ;;
 .global _first_context_switch
 _first_context_switch:
 
-    ;; new in AX
+    ;; NEW in AX
     sta ptr1+0
     stx ptr1+1
 
-    ;; old on software stack
+    ;; OLD on software stack
     jsr popax
     sta ptr2+0
     stx ptr2+1
     
-    ;; save the kernel low memory to the old process
+    ;; save the kernel low memory to the OLD process
     ldy #24
-    lda MMU_PAGE_TABLE + 0
+    lda _kernel_page_table + 0
     sta (ptr2), y
     iny
-    lda MMU_PAGE_TABLE + 1
+    lda _kernel_page_table + 1
     sta (ptr2), y
     iny
-    lda MMU_PAGE_TABLE + 2
+    lda _kernel_page_table + 2
     sta (ptr2), y
+
+    ;; saving the NEW low kernel memory to a tmp_frame_buffer memory location in the trampoline frame
+    ldy #24
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 0
+    iny
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 1
+    iny
+    lda (ptr1), y       
+    sta tmp_frame_buffer + 2
 
     ;; switch hardware KSP
     ldy #7
@@ -421,20 +445,21 @@ _first_context_switch:
     tax              
     txs
 
-    ;; load the new process low kernel memory
-    ldy #24
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 0  
-    iny
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 1   
-    iny
-    lda (ptr1), y
-    sta MMU_PAGE_TABLE + 2       
-    
+    ;; now we load them from the tmp_frame_buffer and map them safely (no ZP destruction...)-
+    lda tmp_frame_buffer + 2
+    sta MMU_PAGE_TABLE + 2
+    sta _kernel_page_table + 2
+
+    lda tmp_frame_buffer + 1
+    sta MMU_PAGE_TABLE + 1
+    sta _kernel_page_table + 1
+
+    lda tmp_frame_buffer + 0       ;; swap the ZP last!
+    sta MMU_PAGE_TABLE + 0       
+    sta _kernel_page_table + 0   
     
     ;; jump directly to user space, 
-    ;; because there is nowhere for the new process to return to in the kernel (no function called it). 
+    ;; because there is nowhere for the NEW process to return to in the kernel (no function called it). 
     jsr _kernel_epilogue
     jmp _return_from_trap
 
@@ -447,3 +472,5 @@ user_page_table:
 .global _kernel_page_table
 _kernel_page_table: 
     .res 16
+tmp_frame_buffer:
+    .res 3

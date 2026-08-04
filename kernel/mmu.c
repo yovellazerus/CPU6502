@@ -24,11 +24,14 @@ void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
     if (window != 1 && window != 2) panic("mmu_map_window"); 
     interrupts_push();
 
-    *out_old_frame = proc_get_kernel_low_memory(current_process)[window];
+    // pull the old frame from the shadow table
+    *out_old_frame = kernel_page_table[window];
     
+    // update hardware and shadow table
     MMIO8(MMU_PAGE_TABLE + window) = frame;
-    proc_get_kernel_low_memory(current_process)[window] = frame;
+    kernel_page_table[window] = frame;
 
+    // update the active process's tracking
     if(current_process != NULL) {
         proc_get_kernel_low_memory(current_process)[window] = frame;
     }
@@ -41,9 +44,11 @@ void mmu_unmap_window(uint8_t window, uint8_t old_frame){
     if (window != 1 && window != 2) panic("mmu_unmap_window");
     interrupts_push();
 
+    // restore hardware and shadow table
     MMIO8(MMU_PAGE_TABLE + window) = old_frame;
-    proc_get_kernel_low_memory(current_process)[window] = old_frame;
+    kernel_page_table[window] = old_frame;
 
+    // restore the active process's tracking
     if(current_process != NULL) {
         proc_get_kernel_low_memory(current_process)[window] = old_frame;
     }

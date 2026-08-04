@@ -280,6 +280,7 @@ void scheduler(void) {
     Proc* old = current_process;
 
     while(true){
+
         for(i = 0; i < MAX_PROC_COUNT; i++){
             p = &proc_table[round_robin_index++];
 
@@ -474,6 +475,7 @@ int sys_wait(void){
     uint16_t user_exit_code = proc_get_ax(current_process);
 
     while(true){
+
         for(i = 0; i < ARRAY_SIZE(proc_table); i++){
             if(proc_table[i].parent == current_process){
                 has_children = true;
