@@ -236,6 +236,7 @@ void*    memcpy(void *dst, const void *src, uint16_t n);
 // proc.c
 typedef enum Proc_State{
     PROC_STATE_UNUSED = 0,
+    PROC_STATE_BUILDING,
     PROC_STATE_NEW,
     PROC_STATE_READY,
     PROC_STATE_RUNING,

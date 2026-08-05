@@ -84,7 +84,7 @@ Proc* palloc(void){
     p->kernel_low_memory[1] = 1; 
     p->kernel_low_memory[2] = 2;   
 
-    p->state = PROC_STATE_NEW;
+    p->state = PROC_STATE_BUILDING;
     p->pid = pid_alloc(); 
     p->ctx.sp = 0xff;
     p->ctx.ksp = 0xff;
@@ -574,6 +574,7 @@ int sys_exit(void){
     return -1;
 }
 
+#define FORK_CHUNK_SIZE 1024
 int sys_fork(void){
     Proc* child;
     uint8_t segment;
@@ -581,6 +582,7 @@ int sys_fork(void){
     uint8_t child_frame;
     uint8_t old_window1;
     uint8_t old_window2;
+    uint16_t offset;
     void* parent_buffer;
     void* child_buffer;
 
@@ -600,6 +602,19 @@ int sys_fork(void){
     child->top       = current_process->top;
     child->uid       = current_process->uid;
     child->ticks     = current_process->ticks;
+
+    // copy the context, including the kernel hardware stack pointer
+    memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
+
+    // TODO: this should be deeper... using reference count
+    memcpy(child->open_files, current_process->open_files, sizeof(child->open_files));
+    child->cwd_inode = current_process->cwd_inode;
+
+    // copy the name
+    memcpy(child->name, current_process->name, MAX_PROC_NAME);
+
+    // construct the process tree
+    child->parent  = current_process;
 
     // clone the memory space
     for (segment = 0; segment < PAGE_TABLE_SIZE; segment++) {
@@ -630,8 +645,17 @@ int sys_fork(void){
             parent_buffer =  mmu_map_window(1, parent_frame, &old_window1);
             child_buffer  =  mmu_map_window(2, child_frame, &old_window2);
 
-            // copy the frame
-            memcpy(child_buffer, parent_buffer, 4096);
+            // copy the frame one chunk at a time for system responsiveness
+            for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
+
+                memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
+                       
+                // voluntary yielding the CPU for system responsiveness 
+                INTER_OFF();
+                current_process->state = PROC_STATE_READY;
+                scheduler();
+                INTER_ON();
+            }
 
             mmu_unmap_window(1, old_window1);
             mmu_unmap_window(2, old_window2);
@@ -641,23 +665,20 @@ int sys_fork(void){
     // copy the kernel stack
     parent_buffer =  mmu_map_window(1, current_process->kernel_low_memory[0], &old_window1);
     child_buffer  =  mmu_map_window(2, child->kernel_low_memory[0], &old_window2);
-    memcpy(child_buffer, parent_buffer, 4096);
+
+    // copy the frame one chunk at a time for system responsiveness
+    for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
+        memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
+               
+        // voluntary yielding the CPU for system responsiveness 
+        INTER_OFF();
+        current_process->state = PROC_STATE_READY;
+        scheduler();
+        INTER_ON();
+    }
 
     mmu_unmap_window(1, old_window1);
     mmu_unmap_window(2, old_window2);
-
-    // copy the context, including the kernel hardware stack pointer
-    memcpy(&child->ctx, &current_process->ctx, sizeof(Context));
-
-    // TODO: this should be deeper... using reference count
-    memcpy(child->open_files, current_process->open_files, sizeof(child->open_files));
-    child->cwd_inode = current_process->cwd_inode;
-
-    // copy the name
-    memcpy(child->name, current_process->name, MAX_PROC_NAME);
-
-    // construct the process tree
-    child->parent  = current_process;
 
     // PROC_STATE_NEW to indicate to the scheduler() that it is its first run
     child->state = PROC_STATE_NEW;
@@ -696,4 +717,6 @@ void run_init_process(void){
 
     // name
     memcpy(init_process->name, name, strlen(name));
+
+    init_process->state = PROC_STATE_NEW;
 }
