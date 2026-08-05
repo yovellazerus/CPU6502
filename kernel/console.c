@@ -35,16 +35,20 @@ int console_read(File* file, void* dst, uint16_t n){
 
     // leave 1 byte for the '\n'
     while(bytes_read < n - 1){
+
+        // modifies a the uart ring buffer that is accessible to interrupts therefore, must be locked
+        INTER_OFF();
         c = uart_getc();
-        
         if(c == -1){
             // ring buffer is empty
             sleep(&ring_buffer);
+            INTER_ON();
             // very importent! if 2 processes will wakeup at the same time,
             // the first will read the character, and the second will get -1 form uart_getc()
             // and will go back to sleep
             continue;
         }
+        INTER_ON();
 
         // BACKSPACE or DEL
         if(c == '\b' || c == 0x7f){

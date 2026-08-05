@@ -255,7 +255,9 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p)
     return 0; // success
 }
 
-// will yield the cpu
+// WARNING: must be called with interrupts OFF
+// the caller must disable interrupts BEFORE checking their sleep condition 
+// to prevent "Lost Wakeup" race conditions
 void sleep(void* channel){
     current_process->channel = channel;
     current_process->state = PROC_STATE_SLEEPING;
@@ -263,6 +265,9 @@ void sleep(void* channel){
     current_process->channel = NULL;
 }
 
+// WARNING: must be called with interrupts OFF
+// modifies the global proc_table, relies on the caller (or the hardware 
+// interrupt vector) to hold the lock
 void wakeup(void* channel){
     uint8_t i;
     for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
@@ -272,6 +277,11 @@ void wakeup(void* channel){
     }
 }
 
+// WARNING: must be called with interrupts OFF
+// protects the proc_table scan from hardware interrupts that might call wakeup()
+// ensures _context_switch pushes I=1 (interrupts disabled) to the stack, 
+// guaranteeing the process safely wakes back up with interrupts still OFF
+// yields the CPU to the next READY process.
 void scheduler(void) {
     static uint8_t round_robin_index = 0;
     Proc* p;
@@ -318,9 +328,9 @@ void scheduler(void) {
         // no process is READY to run,
         // so we must enable interrupt's to avoid deadlock 
         // a "WAI" instruction would have been nice...
-        __asm__("cli"); 
-        for(i = 0; i < CYCLES; i++) __asm__("nop");
-        __asm__("sei"); 
+        INTER_ON(); 
+        for(i = 0; i < CYCLES; i++) { /* wait */ }
+        INTER_OFF();
     }
 }
 
@@ -340,30 +350,29 @@ int sys_sleep(void){
     }
 
     ticks = syscall_arg.sleep.ticks;
-    interrupts_push();
+
+    // modifies a the systicks and the next_wakeup_call that are accessible to interrupts therefore, must be locked
+    INTER_OFF();
     total = ticks + systicks;
     // check for overflow, if a the sum of two unsigned integers is SMALLER than one of the them, an overflow occurred
     if (total < systicks) {
         total = 0xFFFFFFFF; // cap it to the maximum possible wait time
     }
-    interrupts_pop();
 
     while(true){
         
-        interrupts_push();
         if(systicks >= total){
-            interrupts_pop();
             break;
         }
         // updated the timer next_wakeup_call variable that signal the timer to call wakeup() 
         if(total < next_wakeup_call){
             next_wakeup_call = total;
         }
-        interrupts_pop();
-
+        
         // time hasn't run out yet
         sleep((void*)&systicks); 
     }
+    INTER_ON();
 
     return 0;
 
@@ -448,6 +457,8 @@ int sys_kill(void){
     // cannot kill "init" and pid 0 is invalid
     if(pid <= 1) return -1;
 
+    // interrupt can modify the proc state, so must be locked
+    INTER_OFF();
     for(i = 0; i < ARRAY_SIZE(proc_table); i++){
     
         if(proc_table[i].state != PROC_STATE_UNUSED && 
@@ -463,10 +474,11 @@ int sys_kill(void){
             if(proc_table[i].state == PROC_STATE_SLEEPING){
                 proc_table[i].state = PROC_STATE_READY;
             }
-            
+            INTER_ON();
             return 0; // success
         }
     }
+    INTER_ON();
     
     // there is no such active process
     return -1;
@@ -478,6 +490,8 @@ int sys_wait(void){
     bool has_children = false;
     uint16_t user_exit_code = proc_get_ax(current_process);
 
+    // interrupt can modify the proc state, so must be locked
+    INTER_OFF();
     while(true){
 
         for(i = 0; i < ARRAY_SIZE(proc_table); i++){
@@ -495,6 +509,7 @@ int sys_wait(void){
                     }
                     res = proc_table[i].pid;
                     pfree(&proc_table[i]);
+                    INTER_ON();
                     return res; 
                 }
             }
@@ -502,6 +517,7 @@ int sys_wait(void){
 
         // no children
         if(!has_children){
+            INTER_ON();
             return -1;
         }
 
@@ -529,6 +545,9 @@ int sys_exit(void){
             current_process->page_table[segment] = FRAME_UNUSED;
         }
     }
+
+    // interrupt can modify the proc state, so must be locked, no need to release this process is done
+    INTER_OFF();
 
     wakeup(current_process->parent);
 
@@ -581,7 +600,6 @@ int sys_fork(void){
     child->top       = current_process->top;
     child->uid       = current_process->uid;
     child->ticks     = current_process->ticks;
-    child->state     = current_process->state;
 
     // clone the memory space
     for (segment = 0; segment < PAGE_TABLE_SIZE; segment++) {

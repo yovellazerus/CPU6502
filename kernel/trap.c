@@ -12,7 +12,7 @@ void kernel_brk(void){
     kernel_prologue();
 
     // syscalls take a long time so we enable interrupts here
-    __asm__("cli");
+    INTER_ON();
 
     // get the syscall and call it
     sys_number = proc_get_ctx(current_process)->y;
@@ -87,7 +87,7 @@ void kernel_irq(void){
     which_device = device_interrupt();
 
     // bottom half of the interrupt handler, so we alow interrupts from here
-    __asm__("cli");
+    INTER_ON();
 
     // MMU
     if(which_device & PLIC_PIN_MMU){
@@ -104,8 +104,10 @@ void kernel_irq(void){
         otherwise, it will by pass to the scheduler() and yield the CPU.
         */
         if(proc_ticks_dec(current_process) == 0){
+            INTER_OFF();
             proc_set_state(current_process, PROC_STATE_READY);
             scheduler();
+            INTER_ON();
         }
         // process has quantum remaining, so we will return to it
     }
@@ -148,7 +150,7 @@ static uint8_t interrupt_depth = 0;
 // always disable hardware IRQ's
 void interrupts_push(void) {
 
-    __asm__("sei");
+    INTER_OFF();
     
     interrupt_depth++;
 
@@ -166,7 +168,7 @@ void interrupts_pop(void) {
     interrupt_depth--;
     
     if (interrupt_depth == 0) {
-        __asm__("cli");
+        INTER_ON();
     }
 }
 
@@ -196,7 +198,7 @@ void kernel_prologue(void){
 
 void kernel_epilogue(void){
 
-    __asm__("sei");
+    INTER_OFF();
 
     if(interrupt_depth != 0){
         panic("kernel_epilogue");

@@ -19,10 +19,7 @@ uint8_t kalloc(void) {
     uint8_t old_frame;
     void*   buffer;
 
-    interrupts_push();
-
     if(free_top == 0) {
-        interrupts_pop();
         return FRAME_UNUSED;
     }
     free_top--;
@@ -33,8 +30,6 @@ uint8_t kalloc(void) {
     memset(buffer, 0, 4096);
     mmu_unmap_window(1, old_frame);
 
-    interrupts_pop();
-
     return frame;
 }
 
@@ -42,11 +37,8 @@ void kfree(uint8_t frame) {
     uint8_t old_frame;
     void*   buffer;
 
-    interrupts_push();
-
     // guarding from freeing empty slots, and freeing static kernel frames
     if(frame == FRAME_UNUSED || frame < PAGE_TABLE_SIZE){
-        interrupts_pop();
         return;
     }
 
@@ -57,6 +49,4 @@ void kfree(uint8_t frame) {
     buffer = mmu_map_window(1, frame, &old_frame);
     memset(buffer, 'F', 4096);
     mmu_unmap_window(1, old_frame);
-
-    interrupts_pop();
 }

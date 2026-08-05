@@ -22,7 +22,6 @@ void mmu_init(void) {
 
 void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
     if (window != 1 && window != 2) panic("mmu_map_window"); 
-    interrupts_push();
 
     // pull the old frame from the shadow table
     *out_old_frame = kernel_page_table[window];
@@ -36,13 +35,11 @@ void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
         proc_get_kernel_low_memory(current_process)[window] = frame;
     }
 
-    interrupts_pop();
     return (window == 1) ? (void*)WINDOW1 : (void*)WINDOW2;
 }
 
 void mmu_unmap_window(uint8_t window, uint8_t old_frame){
     if (window != 1 && window != 2) panic("mmu_unmap_window");
-    interrupts_push();
 
     // restore hardware and shadow table
     MMIO8(MMU_PAGE_TABLE + window) = old_frame;
@@ -52,8 +49,6 @@ void mmu_unmap_window(uint8_t window, uint8_t old_frame){
     if(current_process != NULL) {
         proc_get_kernel_low_memory(current_process)[window] = old_frame;
     }
-
-    interrupts_pop();
 }
 
 void mmu_interrupt(void) {

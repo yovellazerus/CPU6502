@@ -42,7 +42,8 @@
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 #define BRK __asm__("brk"); __asm__("nop")
-
+#define INTER_ON()  __asm__("cli")
+#define INTER_OFF() __asm__("sei")
 #define LOG(msg) printk("\t[" __FILE__ ":%d] " msg " \n", __LINE__)
 
 #define MMIO8(register)  *(volatile uint8_t*)(register)
