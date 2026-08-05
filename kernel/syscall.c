@@ -20,6 +20,7 @@ void syscall_init(void){
     syscalls_table[SYS_KILL]   = sys_kill;
     syscalls_table[SYS_SBRK]   = sys_sbrk;
     syscalls_table[SYS_SLEEP]  = sys_sleep;
+    syscalls_table[SYS_GETPID] = sys_getpid;
     syscalls_table[SYS_CLOSE]  = sys_close;
     syscalls_table[SYS_OPEN]   = sys_open;
     syscalls_table[SYS_WRITE]  = sys_write;

@@ -1,44 +1,9 @@
-
 .include "..\cc65-snapshot-win64\asminc\zeropage.inc"
 
 .segment "INITCODE"
 .org $0200
 .global _init_code
 _init_code:
-
-_start:
-
-    ;; fork the children
-    
-    ldy #'F'
-    brk
-    nop
-    cmp #0
-    beq child_code
-
-    ldy #'F'
-    brk
-    nop
-    cmp #0
-    beq child_code
-
-    ldy #'F'
-    brk
-    nop
-    cmp #0
-    beq child_code
-
-    ldy #'F'
-    brk
-    nop
-    cmp #0
-    beq child_code
-
-    ldy #'F'
-    brk
-    nop
-    cmp #0
-    beq child_code
 
 init_loop:
 
@@ -57,11 +22,42 @@ read_loop:
     brk
     nop
 
-    ;; save the number of bytes read
     sta write_echo_arg + 4
     stx write_echo_arg + 5
 
-    ; print the prefix ("You typed: ")
+    ;; check for 'f'
+    lda user_buffer + 0
+    cmp #'f'
+    beq @fork
+
+    ;; check if character is < '0'
+    cmp #'0'
+    bcc @echo
+
+    ;; check if character is >= ':'
+    cmp #$3a
+    bcs @echo
+
+@kill_process:
+    sec
+    sbc #'0'
+    ldx #0
+    ldy #'K'
+    brk
+    nop
+
+    jmp init_loop
+
+@fork:
+    ldy #'F'
+    brk
+    nop
+    cmp #0
+    beq child_code
+    jmp init_loop
+
+@echo:
+    ; print the prefix ("Echo: ")
     lda #<write_prefix_arg
     ldx #>write_prefix_arg
     ldy #'w'     
@@ -79,54 +75,56 @@ read_loop:
     jmp init_loop
 
 child_code:
-    lda #0
-child_loop:
-    pha
-    ;; sleep
-    ldy #'S'
+    
+    lda #$0a
+    jsr putchar
+
+    ;; write "PID: "
+    lda #<pid_arg
+    ldx #>pid_arg
+    ldy #'w'           
+    brk
+    nop
+
+    ;; getpid()
+    ldy #'G'
+    brk
+    nop
+
+    jsr print_hex4
+    lda #$0a
+    jsr putchar
+
+    ;; sleep(sleep_arg)
     lda #<sleep_arg
     ldx #>sleep_arg
+    ldy #'S'
     brk
     nop
-    pla
 
-    ; new line
-    pha
-    lda #$0a
-    jsr putchar
-    pla
-
-    ;; print the counter
-    pha
-    jsr print_hex8
-    pla
-
-    ;; increment the counter
-    clc
-    adc #1
-    bne child_loop
-
-    lda #$0a
-    jsr putchar
-
-    ldy #'E'
-    lda #0
-    brk
-    nop
+    jmp child_code
 
 ;; ------------------------------------------------------------------
 ;; data
 ;; ------------------------------------------------------------------
 
 sleep_arg:
-    .word $0010
+    .word $0001
     .word $0000
 
-prompt_str: .byte "Enter text: "
+prompt_str: .byte "Enter: "
 prompt_len = * - prompt_str
 
-prefix_str: .byte "You typed: "
+prefix_str: .byte "Echo: "
 prefix_len = * - prefix_str
+
+pid_str: .byte "PID: "
+pid_len = * - pid_str
+
+pid_arg:
+    .word 1
+    .word pid_str
+    .word pid_len
 
 write_prompt_arg:
     .word 1             

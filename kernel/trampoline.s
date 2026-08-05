@@ -361,17 +361,6 @@ _context_switch:
     lda _kernel_page_table + 2
     sta (ptr2), y
 
-    ;; saving the NEW low kernel memory to a tmp_frame_buffer memory location in the trampoline frame
-    ldy #24
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 0
-    iny
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 1
-    iny
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 2
-
     ;; switch hardware KSP
     ldy #7
     tsx
@@ -381,19 +370,21 @@ _context_switch:
     tax              
     txs
 
-    ;; now we load them from the tmp_frame_buffer and map them safely (no ZP destruction...)
-    lda tmp_frame_buffer + 2
+    ;; load the kernel low memory from the NEW process safely (no ZP destruction...)
+
+    ldy #26
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 2
     sta _kernel_page_table + 2
-
-    lda tmp_frame_buffer + 1
+    dey
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 1
     sta _kernel_page_table + 1
-
-    lda tmp_frame_buffer + 0       ;; swap the ZP last!
+    dey
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 0       
-    sta _kernel_page_table + 0   
-    
+    sta _kernel_page_table + 0  ;; swap the ZP last!
+
     rts
 
 
@@ -425,17 +416,6 @@ _first_context_switch:
     lda _kernel_page_table + 2
     sta (ptr2), y
 
-    ;; saving the NEW low kernel memory to a tmp_frame_buffer memory location in the trampoline frame
-    ldy #24
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 0
-    iny
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 1
-    iny
-    lda (ptr1), y       
-    sta tmp_frame_buffer + 2
-
     ;; switch hardware KSP
     ldy #7
     tsx
@@ -445,18 +425,19 @@ _first_context_switch:
     tax              
     txs
 
-    ;; now we load them from the tmp_frame_buffer and map them safely (no ZP destruction...)-
-    lda tmp_frame_buffer + 2
+    ;; load the kernel low memory from the NEW process safely (no ZP destruction...)
+    ldy #26
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 2
     sta _kernel_page_table + 2
-
-    lda tmp_frame_buffer + 1
+    dey
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 1
     sta _kernel_page_table + 1
-
-    lda tmp_frame_buffer + 0       ;; swap the ZP last!
+    dey
+    lda (ptr1), y       
     sta MMU_PAGE_TABLE + 0       
-    sta _kernel_page_table + 0   
+    sta _kernel_page_table + 0  ;; swap the ZP last!   
     
     ;; jump directly to user space, 
     ;; because there is nowhere for the NEW process to return to in the kernel (no function called it). 
@@ -472,5 +453,3 @@ user_page_table:
 .global _kernel_page_table
 _kernel_page_table: 
     .res 16
-tmp_frame_buffer:
-    .res 3

@@ -324,6 +324,10 @@ void scheduler(void) {
     }
 }
 
+int sys_getpid(void){
+    return current_process->pid;
+}
+
 int sys_sleep(void){
     SyscallArg syscall_arg;
     uint32_t ticks;

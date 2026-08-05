@@ -130,6 +130,7 @@ bool syscall_populate_argument(SyscallArg* arg);
 #define SYS_KILL    'K'
 #define SYS_SBRK    'B'
 #define SYS_SLEEP   'S'
+#define SYS_GETPID  'G'
 
 #define SYS_OPEN     'o'
 #define SYS_CLOSE    'c'
@@ -249,6 +250,7 @@ int sys_wait(void);
 int sys_kill(void);
 int sys_sbrk(void);
 int sys_sleep(void);
+int sys_getpid(void);
 
 void sleep(void* channel);
 void wakeup(void* channel);
