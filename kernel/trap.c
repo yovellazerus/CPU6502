@@ -78,7 +78,7 @@ void kernel_irq(void){
     uint8_t which_device;
 
     if(!current_process){
-        panic("is this possible?");
+        panic("kernel_irq");
     }
 
     kernel_prologue();
@@ -86,7 +86,7 @@ void kernel_irq(void){
     // top half of the interrupt handler, we run it with interrupts disable
     which_device = device_interrupt();
 
-    // bottom half of the interrupt handler, so we alow nested interrupts from here
+    // bottom half of the interrupt handler, so we alow interrupts from here
     __asm__("cli");
 
     // MMU

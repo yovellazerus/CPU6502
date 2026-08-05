@@ -113,10 +113,10 @@ void printk(const char *fmt, ...)
 
 void panic(const char *fmt, ...){
     va_list ap;
+    __asm__("sei");
     va_start(ap, fmt);
     printk("PANIC: ");
     vprintk(fmt, ap);
     va_end(ap);
-    __asm__("sei");
     while (true) { /* halt */ }
 }

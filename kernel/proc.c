@@ -655,13 +655,13 @@ void run_init_process(void){
 
     init_process = palloc();
     if(!init_process){
-        panic("palloc in run_init_process");
+        panic("palloc");
     }
 
     // give the init process 1 frame to use
     init_process->page_table[0] = kalloc();
     if(init_process->page_table[0] == FRAME_UNUSED){
-        panic("kalloc in run_init_process");
+        panic("kalloc");
     }
 
     // manually open the 3 first file descriptors to the console
@@ -673,7 +673,7 @@ void run_init_process(void){
     init_process->ctx.pc = (uint16_t)init_code;
     init_process->top = (uint16_t)init_code + (uint16_t)_INITCODE_SIZE__;
     if(copy_to_user((void*)_INITCODE_LOAD__, (uint16_t)init_code, (uint16_t)_INITCODE_SIZE__, init_process) < 0){
-        panic("copy_to_user in run_init_process");
+        panic("copy_to_user");
     }
 
     // name

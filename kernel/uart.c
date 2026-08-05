@@ -19,6 +19,9 @@ void uart_rx_interrupt(void){
 
     uint8_t data;
 
+    // interrupt acknowledge
+    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_UART_RX;
+
     // for the sake of safety and for future development,
     // we interrogate the hardware to make sure there is real input in the UART RX register
     if (MMIO8(UART_STAT) & UART_STATUS_RX_READY) {
@@ -32,9 +35,6 @@ void uart_rx_interrupt(void){
         }
     }
     // else, ring buffer is full, trop the input
-
-    // interrupt acknowledge
-    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_UART_RX;
 }
 
 // for printk, not using interrupts or yielding the CPU

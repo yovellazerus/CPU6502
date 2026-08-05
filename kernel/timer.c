@@ -19,6 +19,10 @@ void timer_pause(void){
 }
 
 void timer_interrupt(void){
+
+    // interrupt acknowledge
+    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_TIMER;
+
     // increment global system timer
     if(++systicks == 0) panic("systicks");
 
@@ -29,8 +33,5 @@ void timer_interrupt(void){
         // maximum value, so the timer ignores it by default
         next_wakeup_call = 0xFFFFFFFF;
     }
-
-    // interrupt acknowledge
-    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_TIMER;
 }
 

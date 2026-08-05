@@ -341,6 +341,9 @@ _make_kernel_stack:
 .global _context_switch
 _context_switch:
 
+    ;; push the P register
+    php
+
     ;; NEW in AX
     sta ptr1+0
     stx ptr1+1
@@ -385,6 +388,9 @@ _context_switch:
     sta MMU_PAGE_TABLE + 0       
     sta _kernel_page_table + 0  ;; swap the ZP last!
 
+    ;; restore the P register
+    plp 
+
     rts
 
 
@@ -395,6 +401,9 @@ _context_switch:
 ;;
 .global _first_context_switch
 _first_context_switch:
+
+    ;; push the P register
+    php
 
     ;; NEW in AX
     sta ptr1+0
@@ -437,7 +446,10 @@ _first_context_switch:
     dey
     lda (ptr1), y       
     sta MMU_PAGE_TABLE + 0       
-    sta _kernel_page_table + 0  ;; swap the ZP last!   
+    sta _kernel_page_table + 0  ;; swap the ZP last! 
+
+    ;; restore the P register
+    plp 
     
     ;; jump directly to user space, 
     ;; because there is nowhere for the NEW process to return to in the kernel (no function called it). 
