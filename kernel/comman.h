@@ -72,7 +72,8 @@ extern uint8_t _INITCODE_RUN__[];
 extern uint8_t _INITCODE_SIZE__[];
 
 // trampoline.s
-extern uint8_t life_raft[];
+extern uint8_t user_context[];
+extern uint8_t user_page_table[PAGE_TABLE_SIZE];
 extern uint8_t kernel_page_table[PAGE_TABLE_SIZE];
 extern void return_from_trap(void);
 extern void irq_handler(void);

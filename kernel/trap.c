@@ -184,12 +184,12 @@ void kernel_prologue(void){
         sys_exit();
     }
 
-    // load the process's CPU context and page table FROM the Trap Segment "Life Raft"
-    // NOTE: the kernel_stack_frame and the kernel hardware stack pointer (KSP) of the process,
+    // load the process's CPU context and page table FROM the trap frame "Life Raft"
+    // NOTE: the kernel stack frame and the kernel hardware stack pointer (KSP) of the process,
     // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
-    memcpy(proc_get_ctx(current_process), life_raft, sizeof(Context));
+    memcpy(proc_get_ctx(current_process), user_context, sizeof(Context));
 
-    memcpy(proc_get_page_table(current_process), life_raft + 8, PAGE_TABLE_SIZE);
+    memcpy(proc_get_page_table(current_process), user_page_table, PAGE_TABLE_SIZE);
 
     memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
 
@@ -210,13 +210,13 @@ void kernel_epilogue(void){
         sys_exit();
     }
     
-    // save the process's CPU context and page table INTO the Trap Segment "Life Raft"
+    // save the process's CPU context and page table INTO the trap frame "Life Raft"
     // NOTE: not installing the kernel stack frame, it is just saving it to the trampoline!
     // so it can be loaded back to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
 
-    memcpy(life_raft, proc_get_ctx(current_process), sizeof(Context));
+    memcpy(user_context, proc_get_ctx(current_process), sizeof(Context));
     
-    memcpy(life_raft + 8, proc_get_page_table(current_process), PAGE_TABLE_SIZE);
+    memcpy(user_page_table, proc_get_page_table(current_process), PAGE_TABLE_SIZE);
     
     memcpy(kernel_page_table, proc_get_kernel_low_memory(current_process), 3);
 }

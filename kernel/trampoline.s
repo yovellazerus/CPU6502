@@ -29,20 +29,20 @@ _irq_handler:
     cld
 
     ;; save user CPU registers to the life raft
-    sta user_context + 6    ;; A
-    sty user_context + 5    ;; Y
-    stx user_context + 4    ;; X
+    sta _user_context + 6    ;; A
+    sty _user_context + 5    ;; Y
+    stx _user_context + 4    ;; X
     pla
-    sta user_context + 1    ;; P 
+    sta _user_context + 1    ;; P 
     pla
-    sta user_context + 2    ;; PCL
+    sta _user_context + 2    ;; PCL
     pla
-    sta user_context + 3    ;; PCH 
+    sta _user_context + 3    ;; PCH 
     tsx
-    stx user_context + 0    ;; SP
+    stx _user_context + 0    ;; SP
 
     ;; switch to the process kernel hardware stack (aka KSP)
-    ldx user_context + 7
+    ldx _user_context + 7
     txs
 
     ;; switch the memory map to kernel space
@@ -56,7 +56,7 @@ _irq_handler:
 
     ;; save the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
-    sta user_page_table, x
+    sta _user_page_table, x
 
     ;; save the kernel last segment to prev register to be used by "RTI" in KERNEL space!
     lda _kernel_page_table, x
@@ -69,7 +69,7 @@ _irq_handler:
     sta VECTORS+5
     
     ;; jmp to C functions in the kernel
-    lda user_context + 1   ;; load P
+    lda _user_context + 1   ;; load P
     and #%00010000         ;; check the "B" flag
     beq @irq
     jsr _kernel_brk
@@ -86,20 +86,20 @@ _nmi_handler:
     cld
 
     ;; save user CPU registers to the life raft
-    sta user_context + 6    ;; A   
-    sty user_context + 5    ;; Y
-    stx user_context + 4    ;; X
+    sta _user_context + 6    ;; A   
+    sty _user_context + 5    ;; Y
+    stx _user_context + 4    ;; X
     pla
-    sta user_context + 1    ;; P
+    sta _user_context + 1    ;; P
     pla
-    sta user_context + 2    ;; PCL
+    sta _user_context + 2    ;; PCL
     pla
-    sta user_context + 3    ;; PCH
+    sta _user_context + 3    ;; PCH
     tsx
-    stx user_context + 0    ;; SP
+    stx _user_context + 0    ;; SP
 
     ;; switch to the user kernel hardware stack (aka KSP)
-    ldx user_context + 7
+    ldx _user_context + 7
     txs
 
     ;; switch the memory map to kernel space
@@ -113,7 +113,7 @@ _nmi_handler:
 
     ;; save the user last segment from the MMU prev register to the "life raft"
     lda MMU_PREV_REGISTER
-    sta user_page_table, x
+    sta _user_page_table, x
 
     ;; save the kernel last segment to prev register to be used by "RTI" in KERNEL space!
     lda _kernel_page_table, x
@@ -154,30 +154,30 @@ _return_from_trap:
     ;; restore user memory space form life raft
     ldx #$00          
 @mmu_loop:
-    lda user_page_table, x     
+    lda _user_page_table, x     
     sta MMU_PAGE_TABLE, x      
     inx
     cpx #$0F          ;; have we done all the segments except the last one?
     bne @mmu_loop
-    lda user_page_table, x   ;; the user last segment
+    lda _user_page_table, x   ;; the user last segment
     sta MMU_PREV_REGISTER    ;; will be installed in the last MMU segment by "RTI"
 
     ;; save the process kernel hardware stack to the "life raft"
     tsx
-    stx user_context + 7
+    stx _user_context + 7
 
     ;; restore CPU registers form life raft
-    ldx user_context + 0         ;; SP
+    ldx _user_context + 0         ;; SP
     txs               
-    lda user_context + 3         ;; PCH
+    lda _user_context + 3         ;; PCH
     pha
-    lda user_context + 2         ;; PCL
+    lda _user_context + 2         ;; PCL
     pha
-    lda user_context + 1         ;; P
+    lda _user_context + 1         ;; P
     pha
-    ldx user_context + 4         ;; X
-    ldy user_context + 5         ;; Y
-    lda user_context + 6         ;; A
+    ldx _user_context + 4         ;; X
+    ldy _user_context + 5         ;; Y
+    lda _user_context + 6         ;; A
 
     ;; restore the last user segment from MMU prev register
     rti  
@@ -456,11 +456,12 @@ _first_context_switch:
     jsr _kernel_epilogue
     jmp _return_from_trap
 
-.global _life_raft
-_life_raft:
-user_context:
+;; global "Life Raft" for saving and restoring user context and memory map
+.global _user_context
+_user_context:
     .res 8 
-user_page_table:
+.global _user_page_table
+_user_page_table:
     .res 16
 .global _kernel_page_table
 _kernel_page_table: 
