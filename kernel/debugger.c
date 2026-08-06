@@ -10,11 +10,11 @@ void kernel_debugger(void) {
     char input[32];
     Context ctx;
     get_cpu_state(&ctx);
-    printk("\n********** kernel break point ***********\n\n");
+    printk("\nKERNEL BREAK POINT:\n\n");
     print_cpu_state(&ctx);
     print_process_state(current_process);
 
-    printk("\nType 'h' for available debugger commands.\n");
+    printk("\nType 'h' for help\n");
 
     while (true) {
         printk("> ");
@@ -30,10 +30,10 @@ void kernel_debugger(void) {
 
         if (strcmp(input, "h") == 0) {
             printk( "Available Commands:\n"
-                    "  r - Display CPU registers & flags\n"
-                    "  p - Display current process details\n"
-                    "  c - Continue execution (skips the BRK instruction)\n"
-                    "  k - Force a kernel panic and crash log\n"
+                    "  r - Registers\n"
+                    "  p - Process\n"
+                    "  c - Continue\n"
+                    "  k - Kernel panic\n"
                 );
         }
         else if (strcmp(input, "r") == 0) {
@@ -43,25 +43,25 @@ void kernel_debugger(void) {
             print_process_state(current_process);
         }
         else if (strcmp(input, "c") == 0) {
-            printk("Continuing execution...\n");
+            printk("continuing...\n");
             break; 
         }
         else if (strcmp(input, "k") == 0) {
-            panic("manual kernel panic requested via debugger");
+            panic("manual panic");
         }
         else if (strlen(input) > 0) {
-            printk("Unknown command '%s'. Type 'h' for a list of commands.\n", input);
+            printk("Unknown command '%s'.\n", input);
         }
     }
 }
 
 void print_process_state(Proc* p) {
     uint8_t i;
-    printk(" Process Control Block:\n\n");
+    printk(" Process:\n\n");
     if (p != NULL) {
-        printk( "   Name : \"%s\"\n" 
-                "   PID  : %d\n" 
-                "   Page Table: ",
+        printk( "\tName : \"%s\"\n" 
+                "\tPID  : %d\n" 
+                "\tPage Table: ",
             proc_get_name(p), proc_get_pid(p));
         for (i = 0; i < PAGE_TABLE_SIZE; i++) {
             if(i % 4 == 0) printk("\n\t");
@@ -72,13 +72,13 @@ void print_process_state(Proc* p) {
             printk("0x%x ", proc_get_kernel_low_memory(p)[i]);
         }
     } else {
-        printk("\n    (null)\n");
+        printk("\n\t(null)\n");
     }
     printk("\n");
 }
 
 void print_cpu_state(Context* ctx) {
-    printk( " CPU state and registers:\n\n"
+    printk( " CPU registers:\n\n"
             "   PC = %p     SP = 0x01%x\n"
             "   A = 0x%x,  X = 0x%x,  Y = 0x%x\n"
             "   P = 0x%x [ %c %c - %c %c %c %c %c ]\n", 
