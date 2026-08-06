@@ -33,7 +33,7 @@ void kernel_debugger(void) {
                     "  r - Registers\n"
                     "  p - Process\n"
                     "  c - Continue\n"
-                    "  k - Kernel panic\n"
+                    "  h - Help\n"
                 );
         }
         else if (strcmp(input, "r") == 0) {
@@ -45,9 +45,6 @@ void kernel_debugger(void) {
         else if (strcmp(input, "c") == 0) {
             printk("continuing...\n");
             break; 
-        }
-        else if (strcmp(input, "k") == 0) {
-            panic("manual panic");
         }
         else if (strlen(input) > 0) {
             printk("Unknown command '%s'.\n", input);

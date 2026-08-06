@@ -18,6 +18,7 @@ void main(void) {
     printk("kernel: starting init process...\n");
     run_init_process();
 
-    // no return
     scheduler();
+
+    panic("main");
 }

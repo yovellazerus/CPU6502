@@ -271,7 +271,6 @@ uint16_t    proc_get_pid(const Proc* p);
 uint8_t     proc_ticks_dec(Proc* p);
 uint16_t    proc_get_ax(const Proc* p);
 void        proc_set_ax(Proc* p, uint16_t ax);
-void        proc_set_kernel_stack(Proc* p, uint8_t kernel_stack_frame);
 uint8_t*    proc_get_kernel_low_memory(Proc* p);
 uint16_t    proc_get_top(const Proc* p);
 uint16_t    proc_get_killed(const Proc* p);
