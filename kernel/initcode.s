@@ -5,6 +5,13 @@
 .global _init_code
 _init_code:
 
+    ;; sbrk(0x3000) allocate 3 frames on the heap
+    ldy #'B'
+    lda #$00
+    ldx #$30
+    brk
+    nop 
+
 init_loop:
 
     ;; print the prompt
@@ -12,7 +19,7 @@ init_loop:
     ldx #>write_prompt_arg
     ldy #'w'            
     brk
-    nop                 
+    nop  
 
 read_loop:
     ;; read from stdin
