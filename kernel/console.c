@@ -33,8 +33,7 @@ int console_read(File* file, void* dst, uint16_t n){
     int bytes_read = 0;
     (void)file;
 
-    // leave 1 byte for the '\n'
-    while(bytes_read < n - 1){
+    while(bytes_read < n){
 
         // modifies a the uart ring buffer that is accessible to interrupts therefore, must be locked
         INTER_OFF();

@@ -64,120 +64,138 @@ Unified system call interface for devices and regular files:
 */
 
 int sys_read(void){
-    SyscallArg syscall_argument;
+    SyscallArg arg;
     File* file;
+    uint16_t user_ptr;
+    int chunk_size;
     int bytes_read;
-    uint8_t buffer_frame;
-    uint8_t old_frame;
-    char* read_buffer;
+    uint8_t chunk_buffer[128]; // C stack allocted buffer
+    int total_bytes_read = 0;
 
-    if(!syscall_populate_argument(&syscall_argument)){
+    if(!syscall_populate_argument(&arg)){
         LOG();
         return -1;
     }
-
-    // validate fd and permissions
-    if(syscall_argument.read.fd < 0 || syscall_argument.read.fd >= MAX_FILES_PER_PROC){
+    // validate fd
+    if(arg.read.fd < 0 || arg.read.fd >= MAX_FILES_PER_PROC){
         LOG();
         return -1;
     }
-    
-    file = proc_get_file(current_process, syscall_argument.read.fd);
+    // validate permissions
+    file = proc_get_file(current_process, arg.read.fd);
     if(!file || !file->readable){
         LOG();
         return -1;
     }
 
-    // limit size to the maximum size of a single frame
-    if(syscall_argument.read.size > 4096){
-        syscall_argument.read.size = 4096; 
+    /*
+    loop for all the size requseted by the user, 
+    and devid it to chunks (sizeof the buffer) 
+    and dispatch them to the specific driver. 
+    */
+    user_ptr = (uint16_t)arg.read.buffer;
+    while(arg.read.size > 0){
+        // calculate chunk size
+        chunk_size = (arg.read.size < sizeof(chunk_buffer)) ? arg.read.size : sizeof(chunk_buffer);
+
+        // dispatch to driver using the devsw (fill the stack buffer)
+        bytes_read = devsw_table[file->major].read(file, chunk_buffer, chunk_size);
+        
+        // handle read errors or EOF
+        if(bytes_read < 0){
+            if(total_bytes_read == 0) return -1;
+            break;
+        }
+        if(bytes_read == 0){
+            break; // EOF reached
+        }
+        
+        // copy the data from the stack buffer TO the user's buffer
+        if(copy_to_user(chunk_buffer, user_ptr, bytes_read, current_process) < 0){
+            LOG();
+            if(total_bytes_read == 0) return -1;
+            break;
+        } 
+
+        // update variables
+        total_bytes_read += bytes_read;
+        file->offset     += bytes_read;
+        user_ptr         += bytes_read;
+        arg.read.size    -= bytes_read;
+
+        // if the driver returned fewer bytes than requested, stop looping
+        if(bytes_read < chunk_size){
+            break; 
+        }
     }
 
-    // allocate a physical frame for the buffer
-    buffer_frame = kalloc();
-    if(buffer_frame == FRAME_UNUSED){
-        LOG();
-        return -1;
-    }
-
-    // map the new frame to WINDOW2
-    read_buffer = mmu_map_window(2, buffer_frame, &old_frame);
-
-    // dispatch useing the devsw (fill the dynamic buffer with the read data)
-    bytes_read = devsw_table[file->major].read(file, read_buffer, syscall_argument.read.size);
-    
-    // copy the data from the dynamic buffer to the user's buffer
-    if(copy_to_user(read_buffer, (uint16_t)syscall_argument.read.buffer, bytes_read, current_process) < 0){
-        LOG();
-        bytes_read = -1;
-    } 
-    else{
-        file->offset += bytes_read;
-    }
-
-    // remap and free the physical frame
-    mmu_unmap_window(2, old_frame);
-    kfree(buffer_frame);
-
-    return bytes_read;
+    return total_bytes_read;
 }
 
 int sys_write(void){
-    SyscallArg syscall_argument;
+    SyscallArg arg;
     File* file;
+    int chunk_size;
+    uint16_t user_ptr;
     int bytes_written;
-    uint8_t buffer_frame;
-    uint8_t old_frame;
-    char* write_buffer;
+    uint8_t chunk_buffer[128]; // C stack allocated buffer
+    int total_bytes_written = 0;
 
-    if(!syscall_populate_argument(&syscall_argument)){
+    if(!syscall_populate_argument(&arg)){
         LOG();
         return -1;
     }
-
-    // validate fd and permissions
-    if(syscall_argument.write.fd < 0 || syscall_argument.write.fd >= MAX_FILES_PER_PROC){
+    // validate fd
+    if(arg.write.fd < 0 || arg.write.fd >= MAX_FILES_PER_PROC){
         LOG();
         return -1;
     }
-    
-    file = proc_get_file(current_process, syscall_argument.write.fd);
+    // validate permissions
+    file = proc_get_file(current_process, arg.write.fd);
     if(!file || !file->writable){
         LOG();
         return -1;
     }
 
-    // limit size to the maximum size of a single frame
-    if(syscall_argument.write.size > 4096){
-        syscall_argument.write.size = 4096; 
+    /*
+    loop for all the size requseted by the user, 
+    and devid it to chunks (sizeof the buffer) 
+    and dispatch them to the specific driver. 
+    */
+    user_ptr = (uint16_t)arg.write.buffer;
+    while(arg.write.size > 0){
+        // calculate chunk size
+        chunk_size = (arg.write.size < sizeof(chunk_buffer)) ? arg.write.size : sizeof(chunk_buffer);
+
+        // copy the data FROM the user's buffer to the stack buffer
+        if(copy_from_user(chunk_buffer, user_ptr, chunk_size, current_process) < 0){
+            LOG();
+            if(total_bytes_written == 0) return -1;
+            break;
+        }
+
+        // dispatch to driver using the devsw (write the data from the stack buffer)
+        bytes_written = devsw_table[file->major].write(file, chunk_buffer, chunk_size);
+        
+        // handle write errors
+        if(bytes_written < 0){
+            if(total_bytes_written == 0) return -1;
+            break;
+        }
+
+        // update variables
+        total_bytes_written += bytes_written;
+        file->offset        += bytes_written;
+        user_ptr            += bytes_written;
+        arg.write.size      -= bytes_written;
+
+        // if the driver couldn't write the full chunk, stop looping
+        if(bytes_written < chunk_size){
+            break; 
+        }
     }
 
-    // allocate a physical frame for the buffer
-    buffer_frame = kalloc();
-    if(buffer_frame == FRAME_UNUSED){
-        LOG();
-        return -1;
-    }
-
-    // map the new frame to WINDOW2
-    write_buffer = mmu_map_window(2, buffer_frame, &old_frame);
-
-    // copy the data form the user's buffer to the dynamic buffer
-    if(copy_from_user(write_buffer, (uint16_t)syscall_argument.write.buffer, syscall_argument.write.size, current_process) < 0){
-        LOG();
-        return -1;
-    }
-
-    // dispatch useing the devsw (write the data form the dynamic buffer)
-    bytes_written = devsw_table[file->major].write(file, write_buffer, syscall_argument.write.size);
-    
-    file->offset += bytes_written;
-
-    // remap and free the physical frame
-    mmu_unmap_window(2, old_frame);
-    kfree(buffer_frame);
-
-    return bytes_written;
+    return total_bytes_written;
 }
 
 int sys_close(void){
