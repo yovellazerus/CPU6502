@@ -15,7 +15,7 @@ void kernel_brk(void){
     INTER_ON();
 
     // get the syscall and call it
-    sys_number = proc_get_ctx(current_process)->y;
+    sys_number = proc_get_y(current_process);
     syscall = syscalls_table[sys_number];
     if(!syscall){
         LOG();
@@ -180,16 +180,20 @@ void kernel_prologue(void){
 
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
-        proc_get_ctx(current_process)->a = SIGKILL;
+        proc_set_a(current_process, SIGKILL);
         sys_exit();
     }
 
     // load the process's CPU context and page table FROM the trap frame "Life Raft"
     // NOTE: the kernel stack frame and the kernel hardware stack pointer (KSP) of the process,
     // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
-    memcpy(proc_get_ctx(current_process), user_context, sizeof(Context));
+    // memcpy(proc_get_ctx(current_process), user_context, sizeof(Context));
 
-    memcpy(proc_get_page_table(current_process), user_page_table, PAGE_TABLE_SIZE);
+    // memcpy(proc_get_page_table(current_process), user_page_table, PAGE_TABLE_SIZE);
+
+    proc_set_ctx(current_process, (Context*)user_context);
+    
+    proc_set_page_table(current_process, user_page_table);
 
     memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
 
@@ -206,7 +210,7 @@ void kernel_epilogue(void){
 
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
-        proc_get_ctx(current_process)->a = SIGKILL;
+        proc_set_a(current_process, SIGKILL);
         sys_exit();
     }
     
@@ -214,9 +218,9 @@ void kernel_epilogue(void){
     // NOTE: not installing the kernel stack frame, it is just saving it to the trampoline!
     // so it can be loaded back to the CPU and to the MMU in the _nmi_handler() and _irq_handler()
 
-    memcpy(user_context, proc_get_ctx(current_process), sizeof(Context));
+    proc_get_ctx(current_process, (Context*)user_context);
     
-    memcpy(user_page_table, proc_get_page_table(current_process), PAGE_TABLE_SIZE);
-    
+    proc_get_page_table(current_process, user_page_table);
+
     memcpy(kernel_page_table, proc_get_kernel_low_memory(current_process), 3);
 }

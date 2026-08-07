@@ -30,7 +30,7 @@
 #define MAX_GLOBAL_OPEN_FILES 128
 #define MAX_REGISTER_DEVICES  128
 
-#define MAX_PROC_COUNT 64
+#define MAX_PROC_COUNT 512
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
 
@@ -51,6 +51,7 @@
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
 typedef struct Proc Proc;
+typedef struct PCB PCB;
 
 // order is importent for trampoline!
 typedef struct Context {
@@ -264,18 +265,39 @@ int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
 void  proc_init(void);
 Proc* palloc(void);
 void  pfree(Proc* p);
-Context*    proc_get_ctx(Proc* p);
-uint8_t     proc_get_ticks(const Proc* p);
-const char* proc_get_name(const Proc* p);
-uint16_t    proc_get_pid(const Proc* p);
-uint8_t     proc_ticks_dec(Proc* p);
-uint16_t    proc_get_ax(const Proc* p);
-void        proc_set_ax(Proc* p, uint16_t ax);
-uint8_t*    proc_get_kernel_low_memory(Proc* p);
-uint16_t    proc_get_top(const Proc* p);
-uint16_t    proc_get_killed(const Proc* p);
-File*       proc_get_file(const Proc* p, int fd);
-void        proc_set_state(Proc* p, Proc_State state);
-uint8_t*    proc_get_page_table(const Proc* p);
+
+// CPU Context
+uint16_t proc_get_ax(const Proc* p);
+uint8_t  proc_get_y(const Proc* p);
+void     proc_set_ax(Proc* p, uint16_t ax);
+void     proc_set_a(Proc* p, uint8_t a);
+void     proc_get_ctx(const Proc* p, Context* ctx);
+void     proc_set_ctx(Proc* p, Context* ctx);
+
+// memory management
+uint8_t* proc_get_kernel_low_memory(Proc* p);
+void     proc_get_page_table(const Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]);
+void     proc_set_page_table(Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]);
+uint16_t proc_get_top(const Proc* p);
+void     proc_set_top(Proc* p, uint16_t top);
+
+// process Hierarchy and Identity
+uint16_t proc_get_pid(const Proc* p);
+uint8_t  proc_get_uid(const Proc* p);
+void     proc_get_name(const Proc* p, char name[MAX_PROC_NAME]);
+Proc*    proc_get_parent(const Proc* p);
+void     proc_set_parent(Proc* p, Proc* parent);
+
+// scheduling and Lifecycle
+void     proc_set_state(Proc* p, Proc_State state);
+uint8_t  proc_get_ticks(const Proc* p);
+void     proc_set_ticks(Proc* p, uint8_t ticks);
+uint8_t  proc_ticks_dec(Proc* p);
+uint16_t proc_get_killed(const Proc* p);
+void     proc_set_killed(Proc* p, uint16_t killed);
+uint8_t  proc_get_exit_code(const Proc* p);
+
+// file System
+File*    proc_get_file(const Proc* p, int fd);
 
 #endif // COMMAN_H

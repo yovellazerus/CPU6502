@@ -125,8 +125,6 @@ _nmi_handler:
     lda #>_kernel_vector
     sta VECTORS+5
 
-    ;; NOTE: not enabling IRQ's in here!
-
     ;; jmp to C function in the kernel
     jsr _kernel_nmi
     jmp _return_from_trap
@@ -334,7 +332,7 @@ _make_kernel_stack:
     stx MMU_PAGE_TABLE + 1  
     rts
 
-;; preformed the context switch form process "OLD" kernel stack, to process "NEW" kernel stack.
+;; preformed the context switch form process "OLD", kernel stack to process "NEW" kernel stack.
 ;; 
 ;; void context_switch(Proc* OLD, Proc* NEW);
 ;;
@@ -353,8 +351,8 @@ _context_switch:
     sta ptr2+0
     stx ptr2+1
     
-    ;; save the kernel low memory to the OLD process
-    ldy #24
+    ;; save the kernel low memory to the OLD process (offsets 1, 2, 3)
+    ldy #1
     lda _kernel_page_table + 0
     sta (ptr2), y
     iny
@@ -364,8 +362,8 @@ _context_switch:
     lda _kernel_page_table + 2
     sta (ptr2), y
 
-    ;; switch hardware KSP
-    ldy #7
+    ;; switch hardware KSP (offset 0)
+    ldy #0
     tsx
     txa
     sta (ptr2), y
@@ -373,9 +371,8 @@ _context_switch:
     tax              
     txs
 
-    ;; load the kernel low memory from the NEW process safely (no ZP destruction...)
-
-    ldy #26
+    ;; load the kernel low memory from the NEW process safely (offsets 3, 2, 1)
+    ldy #3
     lda (ptr1), y       
     sta MMU_PAGE_TABLE + 2
     sta _kernel_page_table + 2
@@ -414,8 +411,8 @@ _first_context_switch:
     sta ptr2+0
     stx ptr2+1
     
-    ;; save the kernel low memory to the OLD process
-    ldy #24
+    ;; save the kernel low memory to the OLD process (offsets 1, 2, 3)
+    ldy #1
     lda _kernel_page_table + 0
     sta (ptr2), y
     iny
@@ -425,8 +422,8 @@ _first_context_switch:
     lda _kernel_page_table + 2
     sta (ptr2), y
 
-    ;; switch hardware KSP
-    ldy #7
+    ;; switch hardware KSP (offset 0)
+    ldy #0
     tsx
     txa
     sta (ptr2), y
@@ -434,8 +431,8 @@ _first_context_switch:
     tax              
     txs
 
-    ;; load the kernel low memory from the NEW process safely (no ZP destruction...)
-    ldy #26
+    ;; load the kernel low memory from the NEW process safely (offsets 3, 2, 1)
+    ldy #3
     lda (ptr1), y       
     sta MMU_PAGE_TABLE + 2
     sta _kernel_page_table + 2

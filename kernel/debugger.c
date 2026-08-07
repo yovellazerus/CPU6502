@@ -54,15 +54,19 @@ void kernel_debugger(void) {
 
 void print_process_state(Proc* p) {
     uint8_t i;
+    uint8_t page_table[PAGE_TABLE_SIZE];
+    char name[MAX_PROC_NAME];
+    proc_get_name(p, name);
+    proc_get_page_table(p, page_table);
     printk(" Process:\n\n");
     if (p != NULL) {
         printk( "\tName : \"%s\"\n" 
                 "\tPID  : %d\n" 
                 "\tPage Table: ",
-            proc_get_name(p), proc_get_pid(p));
+            name, proc_get_pid(p));
         for (i = 0; i < PAGE_TABLE_SIZE; i++) {
             if(i % 4 == 0) printk("\n\t");
-            printk("0x%x ", proc_get_page_table(p)[i]);
+            printk("0x%x ", page_table[i]);
         }
         printk("\n\tKernel Mem:\n\t");
         for (i = 0; i < 3; i++) {
