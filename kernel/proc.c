@@ -66,7 +66,7 @@ void proc_init(void){
 
 /*
 create a new Proc struct and a cached PCB struct in its kernel stack frame with an empty page table, 
-new pid, SP set to $ff and a state of PROC_STATE_NEW,
+new pid, SP set to $ff and a state of PROC_STATE_BUILDING,
 */
 Proc* palloc(void){
     Proc* p = 0;

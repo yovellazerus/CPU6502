@@ -58,10 +58,11 @@ typedef struct MMU
 {
     Machine* m;
     uint8_t  page_table[MMU_PAGE_TABLE_SIZE];
-    uint8_t  prev;
+    uint8_t  prev;      // user tarp frame (last segment) to restore in RTI
     uint8_t  watchdog;  // the invalid opcode or the rti/plp/sei from user space opcode
     uint8_t  cause;     // the cause for the NMI (exception/hardfault)
     uint16_t va;        // the virtual address that caused the violation
+    uint8_t  opcode;    // latches for the opcode on the buss
     uint8_t  in_user;
     uint8_t  pending_nmi;
 
@@ -135,6 +136,7 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
 
         // memory access violation, only V flage is simulated as MMU_FRAME_INVALID for now...
         // not NMI in here to allow the instruction to finish befor the hardfault
+        mmu->va = va;       // from the address bus
         mmu->pending_nmi = true;
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
@@ -164,45 +166,45 @@ static bool valid_opcode_table[256] = {
     /*f*/ 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0  
 };
 
-void MMU_vbp(MMU* mmu){
+void MMU_pre_exec(MMU* mmu) {
     Machine* m = mmu->m;
-    // if the last memory segment is NOT mapped to the MMIO/trap frame we are in user space
+    
+    // fetch the opcode (simulating the CPU SYNC pin)
+    uint8_t opcode = m->read(m->cpu->pc, m);
+    mmu->opcode = opcode;
+    
+    // evaluate user space status
     mmu->in_user = mmu->page_table[MMU_LAST_SEGMENT] != MMU_LAST_SEGMENT;
-    // The hardware IRQ trigger line
-    // "I" flage check for not swapping the segment if interrupts are diabled (in real hardware using VPB pin)
-    if(m->plic->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)){
+
+    // hardware IRQ & BRK intercept (VPB Simulation)
+    if (m->plic->pending_irq && !(m->cpu->p & MCS6502_STATUS_I)) {
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT;
         PLIC_lower(m->plic);
         MCS6502IRQ(m->cpu); 
-    }
-    // check for BRK opcode (in real hardware using VPB pin)
-    if(m->read(m->cpu->pc, m) == 0x00){
+    } 
+    else if (opcode == 0x00) { // BRK
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
     }
-}
 
-void MMU_watchdog(MMU* mmu, uint8_t opcode){
-    Machine* m = mmu->m;
-    if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || !valid_opcode_table[opcode]) && 
-        mmu->in_user == true)
-    {
-        // trigger an NMI (exception) and invalid opcode or seu/plp/rti form user in the "watchdog" register
-        mmu->va = m->cpu->pc;   // from the address bus
-        mmu->watchdog = opcode; // form the data bus, using SYNC pin
-        if(!valid_opcode_table[opcode]) 
+    // privilege & invalid opcode "watchdog"
+    if (mmu->in_user && (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || !valid_opcode_table[opcode])) {
+        mmu->watchdog = opcode; 
+        
+        if (!valid_opcode_table[opcode]) 
             mmu->cause = MMU_CAUSE_INVALID_OPCODE; 
         else 
             mmu->cause = MMU_CAUSE_PRIVILEGE;
+            
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         MCS6502NMI(m->cpu);
     }
-    if(mmu->pending_nmi){
-        // trigger an NMI (exception) on memory access violation
-        mmu->va = m->cpu->pc;       // from the address bus
-        mmu->cause = MMU_CAUSE_V;   // memory access violation, only valid flage for now...
+    
+    // memory access violation watchdog
+    if (mmu->pending_nmi) {
+        mmu->cause = MMU_CAUSE_V;   
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         mmu->pending_nmi = false;
@@ -210,8 +212,9 @@ void MMU_watchdog(MMU* mmu, uint8_t opcode){
     }
 }
 
-void MMU_rti(MMU* mmu, uint8_t opcode){
-    if(opcode == 0x40 && !mmu->in_user){
+void MMU_post_exec(MMU* mmu) {
+    // restore the previous segment if we just completed an RTI from kernel space
+    if (mmu->opcode == 0x40 && !mmu->in_user) {
         mmu->page_table[MMU_LAST_SEGMENT] = mmu->prev;
     }
 }
@@ -700,27 +703,20 @@ bool CPU_step(CPU* cpu){
 
     for(int i = 0; i < CPU_PER_STEP; i++){
 
-        // feach opcode to be executed (using SYNC pin in hardware)
-        uint8_t opcode = m->read(cpu->pc, m);
+        // MMU inspects the upcoming instruction (using SYNC pin) or interrupt panding (using VPB pin) and prepares context traps
+        MMU_pre_exec(m->mmu);
 
-        // If "BRK" is executed or IRQ is panding, save the user last segment to MMU register,
-        // and load the trap frame to the last MMU page table segment. (using VPB pin in hardware)
-        MMU_vbp(m->mmu);
-
-        // Hardware "watchdog" 
-        // for detecting user space "SEI"/"PLP"/"RTI" or invalid opcode.
-        MMU_watchdog(m->mmu, opcode);
-
-        // execute the instruction (or the interrupt sequence)
+        // CPU executes the instruction (or interrupt sequence)
         MCS6502ExecResult result = MCS6502ExecNext(m->cpu);
 
-        // must swap the trap frame post feach, so "RTI" can be executed
-        MMU_rti(m->mmu, opcode);
+        // MMU cleans up (RTI context restoration)
+        MMU_post_exec(m->mmu);
 
         // debug
         if (result == MCS6502ExecResultInvalidOperation)
         {
-            fprintf(stderr, COLOR_RED "\nCPU: \ninvalid opcode: 0x%.2x\nPC = 0x%.4x\n" COLOR_GREEN, m->read(cpu->pc, m), cpu->pc);
+            fprintf(stderr, COLOR_RED "\nCPU: \ninvalid opcode: 0x%.2x\nPC = 0x%.4x\n" COLOR_GREEN, 
+                    m->mmu->opcode, cpu->pc);
             return false;
         }
         else if (result == MCS6502ExecResultHalting)

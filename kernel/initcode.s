@@ -195,7 +195,7 @@ child_code:
     brk
     nop
 
-    ;; sta $8000
+    ;;sta $fe2f
 
     ;; getpid()
     ldy #'G'
@@ -241,7 +241,7 @@ pid_len = * - pid_str
 start_str: .byte "init: starting shell...", $0a, 0
 start_len = * - start_str
 
-prefix_log_str: .byte "child: ", 0
+prefix_log_str: .byte "init: ", 0
 prefix_log_len = * - prefix_log_str
 
 postfix_log_str: .byte "exited with code: ", 0

@@ -1,8 +1,18 @@
 
 #include "comman.h"
 
-/* 
-the kernel syscall entry.
+/*
+Kernel BRK handler: The central system call dispatcher for xv6502.
+Acts as the primary gateway between isolated user space and the kernel.
+
+Triggered by the software interrupt (BRK) instruction. It expects the 
+system call number to be passed in the Y register. Hardware interrupts 
+are explicitly re-enabled during execution to ensure long-running 
+syscalls (like disk I/O) do not stall the system.
+
+Syscalls returns:
+    A 16-bit status code or value to the user process via the A (low) 
+    and X (high) registers.
 */
 void kernel_brk(void){
     uint8_t sys_number;
@@ -35,20 +45,21 @@ void kernel_brk(void){
 }
 
 /*
-Kernel NMI handler, the system's exception/hardfault errors simulation for errors,
-like: memory excess violation, executing privilege level instructions in user space ("RTI"/"PLP"/"SEI")
-that can modify the "I" flag and for preventing invalid opcodes execution.
-the MMU is the only source for NMI in this system. 
+Kernel NMI handler: simulates system exceptions and hard faults in xv6502.
+Handles memory access violations, illegal user-space privilege instructions, 
+and invalid opcodes. The MMU is the sole source of NMIs in this architecture.
 */
 void kernel_nmi(void){
 
     uint8_t cause;
     uint8_t watchdog;
     uint16_t bad_va;
-
+    Context* ctx;
     const char* mnemonic;
 
     kernel_prologue();
+
+    ctx = (Context*)user_context;
 
     cause    = MMIO8(MMU_CAUSE_REGISTER);
     watchdog = MMIO8(MMU_WATCHDOG_REGISTER);
@@ -58,7 +69,7 @@ void kernel_nmi(void){
     MMIO8(MMU_CAUSE_REGISTER) = 0;
 
     if(cause & MMU_CAUSE_V){
-        printk("\n\t[%d] terminated due to a memory excess violation in PC=%p\n", proc_get_pid(current_process), bad_va);
+        printk("\n\t[%d] terminated due to memory excess violation <%p> in pc=%p\n", proc_get_pid(current_process), bad_va, ctx->pc);
     }
     else if(cause & MMU_CAUSE_X){
         panic("X");
@@ -86,11 +97,11 @@ void kernel_nmi(void){
             default:
                 panic("privilege");
         }
-        printk("\n\t[%d] terminated due to a privilege level violation: \"%s\" in PC=%p\n", proc_get_pid(current_process), mnemonic, bad_va);
+        printk("\n\t[%d] terminated due to a privilege level violation \"%s\" in PC=%p\n", proc_get_pid(current_process), mnemonic, ctx->pc);
     }
 
     else if(cause & MMU_CAUSE_INVALID_OPCODE){
-        printk("\n\t[%d] terminated due to an invalid opcode: 0x%x in PC=%p\n", proc_get_pid(current_process), watchdog, bad_va);
+        printk("\n\t[%d] terminated due to an invalid opcode <0x%x> in PC=%p\n", proc_get_pid(current_process), watchdog, ctx->pc);
     }
 
     else{
@@ -103,9 +114,14 @@ void kernel_nmi(void){
 }
 
 /*
-this function handles hardware interrupts from system devices,
-it differs from device_interrupt() in that it is called from user space, 
-whereas device_interrupt() can also be called from an IRQ in kernel space.
+Kernel IRQ handler: The primary hardware interrupt entry point from user space.
+Implements a modern split top-half/bottom-half interrupt architecture.
+
+The top-half executes with hardware interrupts disabled to swiftly service 
+critical devices via the PLIC. The bottom-half safely re-enables interrupts 
+and manages higher-level system tasks, such as evaluating the current 
+process's time quantum and yielding the CPU to the preemptive scheduler 
+if the time slice has been exhausted.
 */
 void kernel_irq(void){
     uint8_t which_device;
@@ -144,10 +160,18 @@ void kernel_irq(void){
     // and the trampoline will jump to: return_from_trap and resume the user processs
 }
 
-// This function is doing the work of a device interrupt request handler,
-// returns the bitfield from the PLIC indicate which device caused the interrupt,
-// for handleing the interrupt in the kernel_irq() function, for IRQ's for, user space.
-// NOTE: can be called form user space or kernel code! 
+/*
+Device Interrupt Dispatcher: Interrogates the PLIC to route hardware IRQs.
+Acts as the fast, top-half interrupt handler that interacts directly with 
+hardware drivers (e.g., ticking the system clock or buffering UART bytes).
+
+Crucially, this function is designed to be re-entrant and safe to call 
+from both user-space traps and nested kernel-space interrupts. 
+
+Returns:
+    A bitfield indicating which specific devices triggered an interrupt, 
+    allowing the caller to perform deferred bottom-half processing.
+*/
 uint8_t device_interrupt(void){
 
     uint8_t which_device = MMIO8(PLIC_INTERRUPT_LINES);
