@@ -57,10 +57,13 @@ typedef struct Disk
 typedef struct MMU 
 {
     Machine* m;
-    uint8_t page_table[MMU_PAGE_TABLE_SIZE];
-    uint8_t prev;
-    uint8_t watchdog;
-    uint8_t in_user;
+    uint8_t  page_table[MMU_PAGE_TABLE_SIZE];
+    uint8_t  prev;
+    uint8_t  watchdog;  // the invalid opcode or the rti/plp/sei from user space opcode
+    uint8_t  cause;     // the cause for the NMI (exception/hardfault)
+    uint16_t va;        // the virtual address that caused the violation
+    uint8_t  in_user;
+    uint8_t  pending_nmi;
 
 } MMU;
 
@@ -115,6 +118,7 @@ void PLIC_lower(PLIC* plic){
     plic->m->plic->pending_irq = false;
 }
 
+// TODO: proper flags, pte_t: V, X, W, R, FFFFFFFFFFF
 static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     uint8_t segment = va >> 12;          
     uint16_t offset = va & 0x0FFF;       
@@ -129,8 +133,9 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
         // for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
         // fprintf(stderr, "\n\n" COLOR_GREEN);
 
-        // raise the hardware IRQ line
-        PLIC_raise(mmu->m->plic, PLIC_PIN_MMU);
+        // memory access violation, only V flage is simulated as MMU_FRAME_INVALID for now...
+        // not NMI in here to allow the instruction to finish befor the hardfault
+        mmu->pending_nmi = true;
         
         return -1;  // max uint32_t to be unmapped and so retrun 0xff for reading and ignored for writing
 
@@ -183,10 +188,25 @@ void MMU_watchdog(MMU* mmu, uint8_t opcode){
     if( (opcode == 0x78 || opcode == 0x28 || opcode == 0x40 || !valid_opcode_table[opcode]) && 
         mmu->in_user == true)
     {
-        mmu->watchdog = opcode;
+        // trigger an NMI (exception) and invalid opcode or seu/plp/rti form user in the "watchdog" register
+        mmu->va = m->cpu->pc;   // from the address bus
+        mmu->watchdog = opcode; // form the data bus, using SYNC pin
+        if(!valid_opcode_table[opcode]) 
+            mmu->cause = MMU_CAUSE_INVALID_OPCODE; 
+        else 
+            mmu->cause = MMU_CAUSE_PRIVILEGE;
         mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
         mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
         MCS6502NMI(m->cpu);
+    }
+    if(mmu->pending_nmi){
+        // trigger an NMI (exception) on memory access violation
+        mmu->va = m->cpu->pc;       // from the address bus
+        mmu->cause = MMU_CAUSE_V;   // memory access violation, only valid flage for now...
+        mmu->prev = mmu->page_table[MMU_LAST_SEGMENT];
+        mmu->page_table[MMU_LAST_SEGMENT] = MMU_LAST_SEGMENT; 
+        mmu->pending_nmi = false;
+        MCS6502NMI(mmu->m->cpu);
     }
 }
 
@@ -220,6 +240,9 @@ uint8_t Machine_read(uint16_t addr, void* ctx) {
         return m->mmu->page_table[physical_addr - MMU_PAGE_TABLE];
     if(physical_addr == MMU_PREV_REGISTER) return m->mmu->prev;
     if(physical_addr == MMU_WATCHDOG_REGISTER) return m->mmu->watchdog;
+    if(physical_addr == MMU_CAUSE_REGISTER) return m->mmu->cause;
+    if(physical_addr == MMU_VA_REGISTER_LOW)  return (uint8_t)(m->mmu->va & 0x00ff);
+    if(physical_addr == MMU_VA_REGISTER_HIGH) return (uint8_t)(m->mmu->va >> 8);
 
     // ---------------- ROM ----------------
     if (physical_addr == ROM_ENABLE) return m->rom->rom_enable;
@@ -318,8 +341,8 @@ void Machine_write(uint16_t addr, uint8_t byte, void* ctx) {
         m->mmu->prev = byte;
         return;
     }
-    if(physical_addr == MMU_WATCHDOG_REGISTER){
-        m->mmu->watchdog = byte;
+    if(physical_addr == MMU_CAUSE_REGISTER) {
+        m->mmu->cause = byte; // allow the kernel to clear the cause
         return;
     }
 

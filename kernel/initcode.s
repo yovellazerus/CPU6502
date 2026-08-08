@@ -180,9 +180,13 @@ read_loop:
     jmp shell_code
 
 child_code:
+
+    ;;rti
     
     lda #$0a
     jsr putchar
+
+    ;;.byte $ff
 
     ;; write "PID: "
     lda #<pid_arg
@@ -190,6 +194,8 @@ child_code:
     ldy #'w'           
     brk
     nop
+
+    ;; sta $8000
 
     ;; getpid()
     ldy #'G'

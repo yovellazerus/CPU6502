@@ -50,11 +50,3 @@ void mmu_unmap_window(uint8_t window, uint8_t old_frame){
         proc_get_kernel_low_memory(current_process)[window] = old_frame;
     }
 }
-
-void mmu_interrupt(void) {
-    
-    // interrupt acknowledge
-    MMIO8(PLIC_INTERRUPT_LINES) &= ~PLIC_PIN_MMU;
-    
-    // the process termination will be handled by kernel_irq
-}

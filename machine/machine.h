@@ -20,14 +20,17 @@
 #define MMU_PAGE_TABLE         0x0000fe20 // 16 bytes
 #define MMU_PREV_REGISTER      0x0000fe40
 #define MMU_WATCHDOG_REGISTER  0x0000fe41
+#define MMU_CAUSE_REGISTER     0x0000fe42
+#define MMU_VA_REGISTER_LOW    0x0000fe43
+#define MMU_VA_REGISTER_HIGH   0x0000fe44
        
-#define TIMER_LATCH_LOW     0x0000fe42
-#define TIMER_LATCH_HIGH    0x0000fe43
-#define TIMER_COUNTER_LOW   0x0000fe44
-#define TIMER_COUNTER_HIGH  0x0000fe45
-#define TIMER_CTRL          0x0000fe46
+#define TIMER_LATCH_LOW     0x0000fe52
+#define TIMER_LATCH_HIGH    0x0000fe53
+#define TIMER_COUNTER_LOW   0x0000fe54
+#define TIMER_COUNTER_HIGH  0x0000fe55
+#define TIMER_CTRL          0x0000fe56
 
-#define PLIC_INTERRUPT_LINES  0x0000fe50
+#define PLIC_INTERRUPT_LINES  0x0000fe60
 
 #define ROM_ENABLE   0x0000fef0
 #define ROM_BASE     0x0000ff00
@@ -78,10 +81,18 @@ typedef enum {
 
 typedef enum {
     PLIC_PIN_TIMER      = 0x01,
-    PLIC_PIN_MMU        = 0x02,
-    PLIC_PIN_UART_RX    = 0x04,
-    PLIC_PIN_UART_TX    = 0x08,
-    PLIC_PIN_DISK       = 0x10
+    PLIC_PIN_UART_RX    = 0x02,
+    PLIC_PIN_UART_TX    = 0x04,
+    PLIC_PIN_DISK       = 0x08
 } PLIC_Pin;
+
+typedef enum {
+    MMU_CAUSE_V               = 0x01,
+    MMU_CAUSE_X               = 0x02,
+    MMU_CAUSE_R               = 0x04,
+    MMU_CAUSE_W               = 0x08,
+    MMU_CAUSE_INVALID_OPCODE  = 0x10,
+    MMU_CAUSE_PRIVILEGE       = 0x20,  // rti/plp/sei in user space
+} MMU_cause;
 
 #endif // MACHINE_H

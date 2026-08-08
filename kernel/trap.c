@@ -35,36 +35,69 @@ void kernel_brk(void){
 }
 
 /*
-kernel NMI handler, it serves as a "watchdog" for security purposes.
-it's job is to terminate a user process that try to execute an invalid opcode.
-and in addition to make shore user processes cant set "I" flag on, and keep kernel space safe,
-by prohibit user code form execute "SEI"/"PLP"/"RTI" instructions.
-the "watchdog" is the only source for NMI's in this system
+Kernel NMI handler, the system's exception/hardfault errors simulation for errors,
+like: memory excess violation, executing privilege level instructions in user space ("RTI"/"PLP"/"SEI")
+that can modify the "I" flag and for preventing invalid opcodes execution.
+the MMU is the only source for NMI in this system. 
 */
 void kernel_nmi(void){
 
-    uint8_t watchdog = MMIO8(MMU_WATCHDOG_REGISTER);
+    uint8_t cause;
+    uint8_t watchdog;
+    uint16_t bad_va;
+
+    const char* mnemonic;
 
     kernel_prologue();
 
-    switch (watchdog)
-    {
-        case 0x78:
-            LOG("SEI");
-            break;
-        case 0x28:
-            LOG("PLP");
-            break;
-        case 0x40:
-            LOG("RTI");
-            break;
-        
-        default:
-            LOG();
-            // printk("\tprosess \"%s\" [%d] was terminated due to executing invalid opcode: <0x%x>\n", 
-            //     proc_get_name(current_process), proc_get_pid(current_process), watchdog);
+    cause    = MMIO8(MMU_CAUSE_REGISTER);
+    watchdog = MMIO8(MMU_WATCHDOG_REGISTER);
+    bad_va   = MMIO16(MMU_VA_REGISTER_LOW);
+
+    // acknowledge the NMI by clearing the cause register in the hardware (for nested NMIs)
+    MMIO8(MMU_CAUSE_REGISTER) = 0;
+
+    if(cause & MMU_CAUSE_V){
+        printk("\n\t[%d] terminated due to a memory excess violation in PC=%p\n", proc_get_pid(current_process), bad_va);
     }
-    proc_set_ax(current_process, WATCHDOG);
+    else if(cause & MMU_CAUSE_X){
+        panic("X");
+    }
+    else if(cause & MMU_CAUSE_W){
+        panic("W");
+    }
+    else if(cause & MMU_CAUSE_R){
+        panic("R");
+    }
+
+    else if(cause & MMU_CAUSE_PRIVILEGE){
+        switch (watchdog)
+        {
+            case 0x78:
+                mnemonic = "SEI";
+                break;
+            case 0x28:
+                mnemonic = "PLP";
+                break;
+            case 0x40:
+                mnemonic = "RTI";
+                break;
+
+            default:
+                panic("privilege");
+        }
+        printk("\n\t[%d] terminated due to a privilege level violation: \"%s\" in PC=%p\n", proc_get_pid(current_process), mnemonic, bad_va);
+    }
+
+    else if(cause & MMU_CAUSE_INVALID_OPCODE){
+        printk("\n\t[%d] terminated due to an invalid opcode: 0x%x in PC=%p\n", proc_get_pid(current_process), watchdog, bad_va);
+    }
+
+    else{
+        panic("unknown NMI");
+    }
+
+    proc_set_ax(current_process, cause);
     sys_exit();   
     // no return 
 }
@@ -88,13 +121,6 @@ void kernel_irq(void){
 
     // bottom half of the interrupt handler, so we alow interrupts from here
     INTER_ON();
-
-    // MMU
-    if(which_device & PLIC_PIN_MMU){
-        LOG();
-        proc_set_ax(current_process, SEGFAULT);
-        sys_exit();
-    }
 
     // Timer
     if(which_device & PLIC_PIN_TIMER){
@@ -129,11 +155,6 @@ uint8_t device_interrupt(void){
     // Timer
     if(which_device & PLIC_PIN_TIMER){
         timer_interrupt();
-    }
-
-    // MMU
-    if(which_device & PLIC_PIN_MMU){
-        mmu_interrupt();
     }
 
     // UART
@@ -187,9 +208,6 @@ void kernel_prologue(void){
     // load the process's CPU context and page table FROM the trap frame "Life Raft"
     // NOTE: the kernel stack frame and the kernel hardware stack pointer (KSP) of the process,
     // are installed by the _nmi_handler() and _irq_handler() assembly trampoline.s routines
-    // memcpy(proc_get_ctx(current_process), user_context, sizeof(Context));
-
-    // memcpy(proc_get_page_table(current_process), user_page_table, PAGE_TABLE_SIZE);
 
     proc_set_ctx(current_process, (Context*)user_context);
     
