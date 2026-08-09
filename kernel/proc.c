@@ -496,7 +496,7 @@ void scheduler(void) {
                     // p is a new process created by sys_fork()
                     first_context_switch(old, p);
                     return; 
-                } 
+                }
 
                 else{
                     context_switch(old, p);
@@ -793,6 +793,7 @@ int sys_fork(void){
     child_pcb->pid = child_pid;            // restore correct pid
     child_pcb->parent = current_process;   // set parent
     child_pcb->ctx.a = 0;                  // child returns 0 from fork
+    child_pcb->ctx.x = 0;
     
     // save a copy of the page table to clone user memory, then wipe child's table
     memcpy(parent_page_table, child_pcb->page_table, PAGE_TABLE_SIZE);
