@@ -34,7 +34,7 @@
 
 #define ROM_ENABLE   0x0000fef0
 #define ROM_BASE     0x0000ff00
-#define ROM_SIZE     0x0100
+#define ROM_SIZE     0x00000100
 
 // ===========================================================================================
 // contents

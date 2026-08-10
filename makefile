@@ -28,7 +28,7 @@ ROM_CFG  = $(MACH_DIR)/rom.cfg
 ROM_OBJ  = $(MACH_DIR)/rom.o
 ROM_BIN  = $(MACH_DIR)/rom.bin
 
-KERN_SRC = $(KERN_DIR)/crt0.s $(KERN_DIR)/boot.s $(KERN_DIR)/trampoline.s $(KERN_DIR)/main.c $(KERN_DIR)/printk.c $(KERN_DIR)/string.c $(KERN_DIR)/proc.c $(KERN_DIR)/trap.c $(KERN_DIR)/kalloc.c $(KERN_DIR)/timer.c $(KERN_DIR)/syscall.c $(KERN_DIR)/initcode.s $(KERN_DIR)/debugger.c $(KERN_DIR)/uart.c $(KERN_DIR)/console.c $(KERN_DIR)/vfs.c $(KERN_DIR)/mmu.c 
+KERN_SRC = $(wildcard $(KERN_DIR)/*.s) $(wildcard $(KERN_DIR)/*.c)
 KERN_CFG = $(KERN_DIR)/kernel.cfg
 KERN_BIN = $(KERN_DIR)/kernel.bin
 

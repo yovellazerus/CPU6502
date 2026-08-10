@@ -69,7 +69,7 @@ void kernel_nmi(void){
     MMIO8(MMU_CAUSE_REGISTER) = 0;
 
     if(cause & MMU_CAUSE_V){
-        printk("\n\t[%d] terminated due to memory excess violation <%p> in pc=%p\n", proc_get_pid(current_process), bad_va, ctx->pc);
+        LOG("proc %d terminated due to memory excess violation <%p> in pc=%p", proc_get_pid(current_process), bad_va, ctx->pc);
     }
     else if(cause & MMU_CAUSE_X){
         panic("X");
@@ -97,11 +97,11 @@ void kernel_nmi(void){
             default:
                 panic("privilege");
         }
-        printk("\n\t[%d] terminated due to a privilege level violation \"%s\" in PC=%p\n", proc_get_pid(current_process), mnemonic, ctx->pc);
+        LOG("proc %d terminated due to a privilege level violation \"%s\" in PC=%p", proc_get_pid(current_process), mnemonic, ctx->pc);
     }
 
     else if(cause & MMU_CAUSE_INVALID_OPCODE){
-        printk("\n\t[%d] terminated due to an invalid opcode <0x%x> in PC=%p\n", proc_get_pid(current_process), watchdog, ctx->pc);
+        LOG("pid %d terminated due to an invalid opcode <0x%x> in PC=%p", proc_get_pid(current_process), watchdog, ctx->pc);
     }
 
     else{

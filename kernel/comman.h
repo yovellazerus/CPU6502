@@ -44,7 +44,10 @@
 #define BRK __asm__("brk"); __asm__("nop")
 #define INTER_ON()  __asm__("cli")
 #define INTER_OFF() __asm__("sei")
-#define LOG(msg) printk("\t[" __FILE__ ":%d] " msg " \n", __LINE__)
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define LOG(...) printk("\t[" __FILE__ ":" TOSTRING(__LINE__) "] " __VA_ARGS__); uart_putc_sync('\n');
 
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)
