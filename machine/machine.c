@@ -126,13 +126,6 @@ static uint32_t MMU_translate(MMU* mmu, uint16_t va) {
     uint8_t frame = mmu->page_table[segment];
 
     if(frame == MMU_FRAME_INVALID){
-        
-        // debug
-        // fprintf(stderr, COLOR_RED "\nMMU:\n");
-        // fprintf(stderr, "PC = 0x%.4x\n", mmu->m->cpu->pc);
-        // fprintf(stderr, "unmap virtual address: 0x%.4x\n", va);
-        // for(int i = 0; i < 16; i++) printf("0x%.2x  ", mmu->page_table[i]);
-        // fprintf(stderr, "\n\n" COLOR_GREEN);
 
         // memory access violation, only V flage is simulated as MMU_FRAME_INVALID for now...
         // not NMI in here to allow the instruction to finish befor the hardfault
@@ -632,6 +625,10 @@ bool Disk_step(Disk* disk){
             else{
                 m->disk->status = DISK_STATUS_ERROR;
             }
+
+            // raise the hardware IRQ line
+            PLIC_raise(m->plic, PLIC_PIN_DISK);
+
         }
     }
     return true;

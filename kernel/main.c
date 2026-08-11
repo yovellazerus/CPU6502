@@ -7,11 +7,13 @@ void main(void) {
     mmu_init();
     timer_init();
     uart_init();
+    disk_init();
 
     printk("kernel: version %d.%d.%d is booting...\n", 1, 0, 0);
 
     kalloc_init();
     proc_init();
+    buffer_init();
     syscall_init();
     vfs_init();
 

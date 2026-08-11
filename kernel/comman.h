@@ -34,6 +34,8 @@
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
 
+#define CACHE_SIZE 16
+
 #define SIGKILL      (-1)
 #define SEGFAULT     (-2)
 #define BADSYSCALL   (-3)
@@ -159,10 +161,35 @@ void print_cpu_state(Context* ctx);
 void print_process_state(Proc* p);
 uint16_t gets(char *buf, int max);
 
+// buffer.c
+typedef struct Block_Buffer {
+    uint8_t flags;
+    uint8_t drive;
+    uint8_t refcount;
+    uint16_t block_number;
+    struct Block_Buffer* next;
+    struct Block_Buffer* prev;
+    uint8_t frame;
+} Block_Buffer;
+
+void buffer_init(void);
+Block_Buffer* buffer_read(uint8_t drive, uint16_t block_number);
+void buffer_write(Block_Buffer* b);
+void buffer_release(Block_Buffer* b);
+void buffer_pin(Block_Buffer* b);
+void buffer_unpin(Block_Buffer* b);
+
+// disk.c
+void disk_init(void);
+void disk_interrupt(void);
+void disk_block_read(Block_Buffer* b);
+void disk_block_write(Block_Buffer* b);
+
 // mmu.c
+typedef uint8_t frame_t;
 void  mmu_init(void);
-void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame);
-void  mmu_unmap_window(uint8_t window, uint8_t old_frame);
+void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
+void  mmu_unmap_window(uint8_t window, frame_t old_frame);
 
 // uart.c
 typedef struct Ring_Buffer Ring_Buffer;

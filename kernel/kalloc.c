@@ -1,8 +1,8 @@
 
 #include "comman.h"
 
-static uint8_t free_frames[256];
-static uint8_t free_top = 0;
+static frame_t free_frames[256];
+static uint16_t free_top = 0;
 
 void kalloc_init(void){
     uint16_t i;
@@ -14,9 +14,9 @@ void kalloc_init(void){
     }
 }
 
-uint8_t kalloc(void) {
-    uint8_t frame;
-    uint8_t old_frame;
+frame_t kalloc(void) {
+    frame_t frame;
+    frame_t old_frame;
     void*   buffer;
 
     if(free_top == 0) {
@@ -33,8 +33,8 @@ uint8_t kalloc(void) {
     return frame;
 }
 
-void kfree(uint8_t frame) {
-    uint8_t old_frame;
+void kfree(frame_t frame) {
+    frame_t old_frame;
     void*   buffer;
 
     // guarding from freeing empty slots, and freeing static kernel frames

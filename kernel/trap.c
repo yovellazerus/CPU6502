@@ -69,7 +69,7 @@ void kernel_nmi(void){
     MMIO8(MMU_CAUSE_REGISTER) = 0;
 
     if(cause & MMU_CAUSE_V){
-        LOG("proc %d terminated due to memory excess violation <%p> in pc=%p", proc_get_pid(current_process), bad_va, ctx->pc);
+        LOG("(%d, %p, %p)", proc_get_pid(current_process), bad_va, ctx->pc);
     }
     else if(cause & MMU_CAUSE_X){
         panic("X");
@@ -97,11 +97,11 @@ void kernel_nmi(void){
             default:
                 panic("privilege");
         }
-        LOG("proc %d terminated due to a privilege level violation \"%s\" in PC=%p", proc_get_pid(current_process), mnemonic, ctx->pc);
+        LOG("(%d, \"%s\", %p)", proc_get_pid(current_process), mnemonic, ctx->pc);
     }
 
     else if(cause & MMU_CAUSE_INVALID_OPCODE){
-        LOG("pid %d terminated due to an invalid opcode <0x%x> in PC=%p", proc_get_pid(current_process), watchdog, ctx->pc);
+        LOG("(%d, 0x%x, %p)", proc_get_pid(current_process), watchdog, ctx->pc);
     }
 
     else{
@@ -184,6 +184,11 @@ uint8_t device_interrupt(void){
     // UART
     if(which_device & PLIC_PIN_UART_RX){
         uart_rx_interrupt();
+    }
+
+    // Disk
+    if(which_device & PLIC_PIN_DISK){
+        disk_interrupt();
     }
 
     return which_device;

@@ -9,7 +9,7 @@
 // WARNING: order is importent for trampoline.s
 struct Proc {
     uint8_t ksp;                    // for trampoline context switch functions 
-    uint8_t kernel_low_memory[3];   // for the MMU map/unmap functions, and for trampoline and tracing
+    frame_t kernel_low_memory[3];   // for the MMU map/unmap functions, and for trampoline and tracing
     Proc_State state;               // for fast scheduler and process syscalls actions
     void* channel;                  // in here so interrupts will not map dynamic windows
 };
@@ -18,7 +18,7 @@ struct Proc {
 struct PCB {
 
     // CPU and memory context
-    uint8_t page_table[PAGE_TABLE_SIZE];
+    frame_t page_table[PAGE_TABLE_SIZE];
     Context ctx;
     uint16_t top;
      
@@ -71,8 +71,8 @@ new pid, SP set to $ff and a state of PROC_STATE_BUILDING,
 Proc* palloc(void){
     Proc* p = 0;
     uint16_t i;
-    uint8_t stack_frame;
-    uint8_t old_frame;
+    frame_t stack_frame;
+    frame_t old_frame;
     PCB* pcb;
 
     for (i = 0; i < MAX_PROC_COUNT; i++) {
@@ -124,7 +124,7 @@ uint16_t proc_get_ax(const Proc* p){
     uint8_t a;
     uint8_t x;
     uint16_t ax;
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -146,7 +146,7 @@ uint8_t proc_get_y(const Proc* p){
 }
 
 void proc_set_ax(Proc* p, uint16_t ax){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -156,7 +156,7 @@ void proc_set_ax(Proc* p, uint16_t ax){
 }
 
 void proc_set_a(Proc* p, uint8_t a){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -169,7 +169,7 @@ uint8_t* proc_get_kernel_low_memory(Proc* p){
 }
 
 void proc_get_ctx(const Proc* p, Context* ctx){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     *ctx = pcb->ctx;
@@ -177,7 +177,7 @@ void proc_get_ctx(const Proc* p, Context* ctx){
 }
 
 void proc_set_ctx(Proc* p, Context* ctx){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     pcb->ctx = *ctx;
@@ -185,7 +185,7 @@ void proc_set_ctx(Proc* p, Context* ctx){
 }
 
 Proc* proc_get_parent(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     Proc* parent;
     pcb = MAP_PCB(p, old_frame);
@@ -195,7 +195,7 @@ Proc* proc_get_parent(const Proc* p){
 }
 
 void proc_set_parent(Proc* p, Proc* parent){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     pcb->parent = parent;
@@ -203,7 +203,7 @@ void proc_set_parent(Proc* p, Proc* parent){
 }
 
 uint8_t proc_get_exit_code(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint8_t exit_code;
     pcb = MAP_PCB(p, old_frame);
@@ -212,8 +212,8 @@ uint8_t proc_get_exit_code(const Proc* p){
     return exit_code;
 }
 
-void proc_get_page_table(const Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]){
-    uint8_t old_frame;
+void proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]){
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -221,8 +221,8 @@ void proc_get_page_table(const Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]){
     UNMAP_PCB(old_frame);
 }
 
-void proc_set_page_table(Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]){
-    uint8_t old_frame;
+void proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]){
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -231,7 +231,7 @@ void proc_set_page_table(Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]){
 }
 
 uint8_t proc_get_ticks(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint8_t ticks;
     pcb = MAP_PCB(p, old_frame);
@@ -241,7 +241,7 @@ uint8_t proc_get_ticks(const Proc* p){
 }
 
 void proc_set_ticks(Proc* p, uint8_t ticks){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     pcb->ticks = ticks;
@@ -249,7 +249,7 @@ void proc_set_ticks(Proc* p, uint8_t ticks){
 }
 
 uint16_t proc_get_top(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint16_t top;
     pcb = MAP_PCB(p, old_frame);
@@ -259,7 +259,7 @@ uint16_t proc_get_top(const Proc* p){
 }
 
 void proc_set_top(Proc* p, uint16_t top){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     pcb->top = top;
@@ -267,7 +267,7 @@ void proc_set_top(Proc* p, uint16_t top){
 }
 
 void proc_set_killed(Proc* p, uint16_t killed){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     pcb = MAP_PCB(p, old_frame);
     pcb->killed = killed;
@@ -275,7 +275,7 @@ void proc_set_killed(Proc* p, uint16_t killed){
 }
 
 uint16_t proc_get_killed(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint16_t killed;
     pcb = MAP_PCB(p, old_frame);
@@ -285,7 +285,7 @@ uint16_t proc_get_killed(const Proc* p){
 }
 
 uint8_t proc_get_uid(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint8_t uid;
     pcb = MAP_PCB(p, old_frame);
@@ -295,7 +295,7 @@ uint8_t proc_get_uid(const Proc* p){
 }
 
 File* proc_get_file(const Proc* p, int fd){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     File* file;
 
@@ -308,7 +308,7 @@ File* proc_get_file(const Proc* p, int fd){
 }
 
 void proc_get_name(const Proc* p, char name[MAX_PROC_NAME]){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
 
     pcb = MAP_PCB(p, old_frame);
@@ -317,7 +317,7 @@ void proc_get_name(const Proc* p, char name[MAX_PROC_NAME]){
 }
 
 uint16_t proc_get_pid(const Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint16_t pid;
     pcb = MAP_PCB(p, old_frame);
@@ -327,7 +327,7 @@ uint16_t proc_get_pid(const Proc* p){
 }
 
 uint8_t proc_ticks_dec(Proc* p){
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     uint16_t ticks;
     pcb = MAP_PCB(p, old_frame);
@@ -343,14 +343,14 @@ void proc_set_state(Proc* p, Proc_State state){
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){
     uint16_t offset;
     uint8_t segment;
-    uint8_t physical_frame;
+    frame_t physical_frame;
     uint16_t bytes_in_frame;
     uint16_t chunk;
     uint8_t* dst_window;
-    uint8_t old_frame;
+    frame_t old_frame;
     uint16_t i;
     uint8_t* src = (uint8_t*)kernel_src;
-    uint8_t page_table[PAGE_TABLE_SIZE];
+    frame_t page_table[PAGE_TABLE_SIZE];
 
     if(user_dest >= proc_get_top(p)){
         return -1;
@@ -391,14 +391,14 @@ int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){
 int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p){
     uint16_t offset;
     uint8_t segment;
-    uint8_t physical_frame;
+    frame_t physical_frame;
     uint16_t bytes_in_frame;
     uint16_t chunk;
     uint8_t* src_window;
-    uint8_t old_frame;
+    frame_t old_frame;
     uint16_t i;
     uint8_t* dst = (uint8_t*)kernel_dest;
-    uint8_t page_table[PAGE_TABLE_SIZE];
+    frame_t page_table[PAGE_TABLE_SIZE];
 
     if(user_src >= proc_get_top(p)){
         return -1;
@@ -526,7 +526,6 @@ int sys_sleep(void){
     uint16_t ax = proc_get_ax(current_process);
 
     if(!syscall_populate_argument(&syscall_arg)){
-        LOG();
         return -1;
     }
 
@@ -564,9 +563,9 @@ int sys_sbrk(void) {
     uint8_t old_segment;
     uint8_t new_segment;
     uint8_t segment;
-    uint8_t frame;
+    frame_t frame;
     uint16_t new_top;
-    uint8_t page_table[PAGE_TABLE_SIZE];
+    frame_t page_table[PAGE_TABLE_SIZE];
 
     // can be negative
     int16_t increment = (int16_t)proc_get_ax(current_process);
@@ -713,7 +712,7 @@ int sys_wait(void){
 int sys_exit(void){
     uint8_t segment;
     uint16_t i;
-    uint8_t old_frame;
+    frame_t old_frame;
     PCB* pcb;
     Proc* my_parent;
 
@@ -751,6 +750,7 @@ int sys_exit(void){
         }
     }
 
+    // will yield the cpu forever...
     scheduler();
     panic("zombie exit");
     return -1;
@@ -761,13 +761,13 @@ int sys_fork(void){
     Proc* child;
     PCB* child_pcb;
     uint8_t segment;
-    uint8_t parent_frame;
-    uint8_t child_frame;
+    frame_t parent_frame;
+    frame_t child_frame;
     uint8_t old_window1, old_window2;
     uint16_t offset;
     void *parent_buffer, *child_buffer;
     uint16_t child_pid;
-    uint8_t parent_page_table[PAGE_TABLE_SIZE];
+    frame_t parent_page_table[PAGE_TABLE_SIZE];
 
     child = palloc();
     if(!child) return -1;
@@ -845,7 +845,7 @@ int sys_fork(void){
 void run_init_process(void){
 
     PCB* init_pcb;
-    uint8_t old_frame;
+    frame_t old_frame;
 
     const char* name = "init";
 

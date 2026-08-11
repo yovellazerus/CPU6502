@@ -29,7 +29,7 @@ void kernel_debugger(void) {
         *strchr(input, '\r') = 0;
 
         if (strcmp(input, "h") == 0) {
-            printk( "Available Commands:\n"
+            printk( "Commands:\n"
                     "  r - Registers\n"
                     "  p - Process\n"
                     "  c - Continue\n"
@@ -60,10 +60,9 @@ void print_process_state(Proc* p) {
     proc_get_page_table(p, page_table);
     printk(" Process:\n\n");
     if (p != NULL) {
-        printk( "\tName : \"%s\"\n" 
-                "\tPID  : %d\n" 
+        printk( "\tPID  : %d\n" 
                 "\tPage Table: ",
-            name, proc_get_pid(p));
+            proc_get_pid(p));
         for (i = 0; i < PAGE_TABLE_SIZE; i++) {
             if(i % 4 == 0) printk("\n\t");
             printk("0x%x ", page_table[i]);
@@ -79,7 +78,7 @@ void print_process_state(Proc* p) {
 }
 
 void print_cpu_state(Context* ctx) {
-    printk( " CPU registers:\n\n"
+    printk( " CPU:\n\n"
             "   PC = %p     SP = 0x01%x\n"
             "   A = 0x%x,  X = 0x%x,  Y = 0x%x\n"
             "   P = 0x%x [ %c %c - %c %c %c %c %c ]\n", 

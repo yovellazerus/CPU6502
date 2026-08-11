@@ -20,7 +20,7 @@ void mmu_init(void) {
     }
 }
 
-void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
+void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame){
     if (window != 1 && window != 2) panic("mmu_map_window"); 
 
     // pull the old frame from the shadow table
@@ -38,7 +38,7 @@ void* mmu_map_window(uint8_t window, uint8_t frame, uint8_t* out_old_frame){
     return (window == 1) ? (void*)WINDOW1 : (void*)WINDOW2;
 }
 
-void mmu_unmap_window(uint8_t window, uint8_t old_frame){
+void mmu_unmap_window(uint8_t window, frame_t old_frame){
     if (window != 1 && window != 2) panic("mmu_unmap_window");
 
     // restore hardware and shadow table

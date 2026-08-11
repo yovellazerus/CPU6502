@@ -73,18 +73,15 @@ int sys_read(void){
     int total_bytes_read = 0;
 
     if(!syscall_populate_argument(&arg)){
-        LOG();
         return -1;
     }
     // validate fd
     if(arg.read.fd < 0 || arg.read.fd >= MAX_FILES_PER_PROC){
-        LOG();
         return -1;
     }
     // validate permissions
     file = proc_get_file(current_process, arg.read.fd);
     if(!file || !file->readable){
-        LOG();
         return -1;
     }
 
@@ -112,7 +109,6 @@ int sys_read(void){
         
         // copy the data from the stack buffer TO the user's buffer
         if(copy_to_user(chunk_buffer, user_ptr, bytes_read, current_process) < 0){
-            LOG();
             if(total_bytes_read == 0) return -1;
             break;
         } 
@@ -142,18 +138,15 @@ int sys_write(void){
     int total_bytes_written = 0;
 
     if(!syscall_populate_argument(&arg)){
-        LOG();
         return -1;
     }
     // validate fd
     if(arg.write.fd < 0 || arg.write.fd >= MAX_FILES_PER_PROC){
-        LOG();
         return -1;
     }
     // validate permissions
     file = proc_get_file(current_process, arg.write.fd);
     if(!file || !file->writable){
-        LOG();
         return -1;
     }
 
@@ -169,7 +162,6 @@ int sys_write(void){
 
         // copy the data FROM the user's buffer to the stack buffer
         if(copy_from_user(chunk_buffer, user_ptr, chunk_size, current_process) < 0){
-            LOG();
             if(total_bytes_written == 0) return -1;
             break;
         }
