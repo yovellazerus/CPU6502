@@ -2,7 +2,7 @@
 #include "comman.h"
 
 typedef struct {
-    Block_Buffer* head; // the 'current_buffer' the disk is working on
+    Block_Buffer* head;    // the current buffer the disk is working on
     Block_Buffer* tail;
     uint8_t sector_offset; // tracks partial block reads/writes (0 to BLOCK_SIZE / DISK_SECTOR_SIZE - 1)
 } Disk;
@@ -38,7 +38,7 @@ static void disk_start_operation(void) {
     }
 }
 
-// function to enqueue the request
+// function to enqueue the request (FIFO)
 static void disk_submit(Block_Buffer* b) {
     INTER_OFF();
     
@@ -66,7 +66,7 @@ static void disk_submit(Block_Buffer* b) {
 }
 
 void disk_block_read(Block_Buffer* b) {
-    // it's a read)
+    // it's a read
     b->flags &= ~BUFFER_FLAGS_DIRTY; 
     disk_submit(b);
 }
@@ -89,7 +89,7 @@ void disk_interrupt(void) {
 
         b = disk.head;
         if(b == NULL){
-            //panic("disk_interrupt");
+            return;
         }
 
         // if we just finished a read, we must copy data from the MMIO buffer to the frame
