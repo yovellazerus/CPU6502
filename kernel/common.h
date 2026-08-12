@@ -115,7 +115,10 @@ typedef enum {
 } File_Type;
 
 typedef enum {
-    DEVICE_MAJOR_CONSOLE = 0,
+    DEVICE_MAJOR_NONE = 0,
+    DEVICE_MAJOR_CONSOLE,
+    DEVICE_MAJOR_DISK,
+    DEVICE_MAJOR_PIPE
 } Device_Major;
 
 typedef struct File_Operations {
@@ -345,18 +348,18 @@ int  console_write(File* file, void* src, uint16_t n);
 int  console_close(File* file);
 
 // printk.c
-void panic(const char *fmt, ...);
-void printk(const char *fmt, ...);
-void vprintk(const char *fmt, va_list ap);
+void panic(const char* fmt, ...);
+void printk(const char* fmt, ...);
+void vprintk(const char* fmt, va_list ap);
 
 // string.c
-char*    strcpy(char *s, const char *t);
-int      strcmp(const char *p, const char *q);
-uint16_t strlen(const char *s);
+char*    strcpy(char* s, const char* t);
+int      strcmp(const char* p, const char* q);
+uint16_t strlen(const char* s);
 char*    strchr(const char* s, char c);
-int      atoi(const char *s);
-void*    memmove(void *vdst, const void *vsrc, int n);
-int      memcmp(const void *s1, const void *s2, uint16_t n);
-void*    memcpy(void *dst, const void *src, uint16_t n);
+int      atoi(const char* s);
+void*    memmove(void* vdst, const void* vsrc, int n);
+int      memcmp(const void* s1, const void* s2, uint16_t n);
+void*    memcpy(void* dst, const void* src, uint16_t n);
 
 #endif // COMMON_H
