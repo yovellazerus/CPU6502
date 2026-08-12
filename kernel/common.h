@@ -29,7 +29,7 @@
 #define MAX_GLOBAL_OPEN_FILES 128
 #define MAX_REGISTER_DEVICES  8
 
-#define MAX_PROC_COUNT      256
+#define MAX_PROC_COUNT      512
 #define MAX_PROC_NAME       16
 #define MAX_FILES_PER_PROC  16
 
