@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 /*
 Kernel BRK handler: The central system call dispatcher for xv6502.
@@ -29,7 +29,7 @@ void kernel_brk(void){
     syscall = syscalls_table[sys_number];
     if(!syscall){
         LOG();
-        proc_set_ax(current_process, BADSYSCALL);
+        proc_set_ax(current_process, 1);
         sys_exit();
     }
     else{
@@ -230,7 +230,7 @@ void kernel_prologue(void){
 
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
-        proc_set_a(current_process, SIGKILL);
+        proc_set_a(current_process, 1);
         sys_exit();
     }
 
@@ -257,7 +257,7 @@ void kernel_epilogue(void){
 
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
-        proc_set_a(current_process, SIGKILL);
+        proc_set_a(current_process, 1);
         sys_exit();
     }
     

@@ -1,16 +1,19 @@
 
-#include "comman.h"
+#include "common.h"
 
 /*
 core UNIX file abstraction implementation
 */
 
 struct File {
-    VFile_Type type;
-    Device_Major major;
+    File_Type type;
+    uint8_t refcount;
+    Device_Major major; // FILE_TYPE_DEVICE
     uint8_t  readable;
     uint8_t  writable;
-    uint32_t offset;
+    uint32_t offset;    // FILE_TYPE_DEVICE
+    Inode* inode;       // FILE_TYPE_INODE and FILE_TYPE_DEVICE
+    Pipe*  pipe;        // FILE_TYPE_PIPE
     // ...
 };
 
@@ -23,8 +26,8 @@ File* file_get_by_global_index(uint8_t index){
     return NULL;
 }
 
-bool file_open_global(uint8_t index,
-                        VFile_Type type,
+bool file_open_global(  uint8_t index,
+                        File_Type type,
                         Device_Major major,
                         uint8_t  readable,
                         uint8_t  writable,
@@ -40,22 +43,21 @@ bool file_open_global(uint8_t index,
     return true;
 }                
 
-Device_Ops devsw_table[MAX_REGISTER_DEVICES];
+File_Operations devsw_table[MAX_REGISTER_DEVICES];
 
-bool register_device(Device_Major major, Device_Ops* devops){
+bool register_device(Device_Major major, File_Operations* devops){
     if(major >= ARRAY_SIZE(devsw_table)){
         return false;
     }
-    memcpy(&devsw_table[major], devops, sizeof(Device_Ops));
+    memcpy(&devsw_table[major], devops, sizeof(File_Operations));
     return true;
 }
 
-void vfs_init(void){
+void file_init(void){
 
     memset(global_file_table, 0, sizeof(global_file_table));
     memset(devsw_table, 0, sizeof(devsw_table));
     
-    console_init();
     // ...
 }
 

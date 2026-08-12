@@ -1,14 +1,14 @@
 
-#include "comman.h"
+#include "common.h"
 
 void console_init(void){
-    Device_Ops console_devops;
+    File_Operations console_devops;
     console_devops.close = console_close;
     console_devops.read  = console_read;
     console_devops.write = console_write;
     // manually open the very first entry in the global file table to the console
     if(!file_open_global(   0,
-                            VFILE_TYPE_DEVICE,
+                            FILE_TYPE_DEVICE,
                             DEVICE_MAJOR_CONSOLE,
                             1,
                             1,

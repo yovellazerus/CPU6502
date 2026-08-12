@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 Syscall syscalls_table[256];
 

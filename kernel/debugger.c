@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 /*
 Interactive kernel debugger,

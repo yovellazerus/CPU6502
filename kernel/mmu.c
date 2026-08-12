@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 void mmu_init(void) {
     uint16_t i;

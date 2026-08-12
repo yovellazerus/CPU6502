@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 typedef struct {
     Block_Buffer* head;    // the current buffer the disk is working on

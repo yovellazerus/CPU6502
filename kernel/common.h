@@ -1,5 +1,5 @@
-#ifndef COMMAN_H
-#define COMMAN_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -24,7 +24,6 @@
 #define FRAME_UNUSED MMU_FRAME_INVALID
 
 #define CYCLES 100 // CPU steps per Timer tick
-
 #define QUANTUM 10 // timer ticks until context switch
 
 #define MAX_GLOBAL_OPEN_FILES 128
@@ -34,15 +33,25 @@
 #define MAX_PROC_NAME  16
 #define MAX_FILES_PER_PROC 8
 
-#define CACHE_SIZE 16
-#define BLOCK_SIZE 4096
+#define CACHE_SIZE              16
+#define BLOCK_SIZE              4096
+#define DIRECTLY_BLOCK_COUNT    15
+#define INDIRECTLY_BLOCK_COUNT  (BLOCK_SIZE / sizeof(uint16_t))
+#define MAX_FILE_SIZE           (DIRECTLY_BLOCK_COUNT + INDIRECTLY_BLOCK_COUNT) // in blocks!
+#define MAX_FILE_NAME           30
+#define MAX_ACTIVE_INODES       64
+#define ROOT_INODE              1
+#define FS_MAGIC                0x10203040
 
-#define SIGKILL      (-1)
-#define SEGFAULT     (-2)
-#define BADSYSCALL   (-3)
-#define WATCHDOG     (-4)
+#define IPB (BLOCK_SIZE / sizeof(struct Dinode))    // inodes per block
+#define IBLOCK(i, sb) ((i) / IPB + sb.inode_start)  // block containing inode i
+#define BPB (BLOCK_SIZE * 8)                        // bitmap bits per block
+#define BBLOCK(b, sb) ((b) / BPB + sb.bitmap_start) // block of free map containing bit for block b
+
+#define PIPE_SIZE 512
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define BRK __asm__("brk"); __asm__("nop")
 #define INTER_ON()  __asm__("cli")
@@ -56,7 +65,86 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
+// form cc65
+extern void* memset(void *dst, int value, uint16_t size);
+
+// kernel.cfg
+extern uint8_t _INITCODE_LOAD__[];
+extern uint8_t _INITCODE_RUN__[];
+extern uint8_t _INITCODE_SIZE__[];
+
+// mmu.c
 typedef uint8_t frame_t;
+void  mmu_init(void);
+void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
+void  mmu_unmap_window(uint8_t window, frame_t old_frame);
+
+// fs.c
+typedef struct Super_Block Super_Block;
+typedef struct Dir_Entry Dir_Entry;
+void fs_init(uint8_t drive);
+
+// pipe.c
+typedef struct Pipe Pipe;
+
+// inode.c
+typedef struct Inode Inode;
+typedef struct Dinode Dinode;
+typedef struct Inode_Cache Inode_Cache;
+void inode_init(void);
+
+// file.c
+typedef enum {
+    INODE_TYPE_NONE = 0,
+    INODE_TYPE_REGULAR,
+    INODE_TYPE_DIR,
+    INODE_TYPE_DEVICE
+} Inode_Type;
+typedef struct File File;
+
+typedef enum {
+    FILE_TYPE_NONE = 0,
+    FILE_TYPE_DEVICE,
+    FILE_TYPE_INODE,
+    FILE_TYPE_PIPE
+} File_Type;
+
+typedef enum {
+    DEVICE_MAJOR_CONSOLE = 0,
+} Device_Major;
+
+typedef struct File_Operations {
+    int (*read)(File*, void*, uint16_t);
+    int (*write)(File*, void*, uint16_t);
+    int (*close)(File*);
+} File_Operations;
+
+void  file_init(void);
+File* file_get_by_global_index(uint8_t index);
+bool  file_open_global( uint8_t index,
+                        File_Type type,
+                        Device_Major major,
+                        uint8_t  readable,
+                        uint8_t  writable,
+                        uint32_t offset);
+bool  register_device(Device_Major major, File_Operations* devops);
+
+int sys_read(void);
+int sys_write(void);
+int sys_close(void);
+int sys_open(void);
+
+// proc.c
+typedef enum Proc_State{
+    PROC_STATE_UNUSED = 0,
+    PROC_STATE_BUILDING,
+    PROC_STATE_NEW,
+    PROC_STATE_READY,
+    PROC_STATE_RUNING,
+    PROC_STATE_SLEEPING,
+    PROC_STATE_ZOMBIE
+} Proc_State;
+
 typedef struct Proc Proc;
 typedef struct PCB PCB;
 
@@ -71,13 +159,50 @@ typedef struct Context {
     uint8_t ksp;
 } Context;
 
-// form cc65
-extern void* memset(void *dst, int value, uint16_t size);
+extern Proc* current_process;
 
-// kernel.cfg
-extern uint8_t _INITCODE_LOAD__[];
-extern uint8_t _INITCODE_RUN__[];
-extern uint8_t _INITCODE_SIZE__[];
+int sys_fork(void);
+int sys_exit(void);
+int sys_wait(void);
+int sys_kill(void);
+int sys_sbrk(void);
+int sys_sleep(void);
+int sys_getpid(void);
+
+void sleep(void* channel);
+void wakeup(void* channel);
+void scheduler(void);
+void run_init_process(void);
+int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p);
+int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
+void  proc_init(void);
+Proc* palloc(void);
+void  pfree(Proc* p);
+
+uint16_t proc_get_ax(const Proc* p);
+uint8_t  proc_get_y(const Proc* p);
+void     proc_set_ax(Proc* p, uint16_t ax);
+void     proc_set_a(Proc* p, uint8_t a);
+void     proc_get_ctx(const Proc* p, Context* ctx);
+void     proc_set_ctx(Proc* p, Context* ctx);
+frame_t* proc_get_kernel_low_memory(Proc* p);
+void     proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
+void     proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
+uint16_t proc_get_top(const Proc* p);
+void     proc_set_top(Proc* p, uint16_t top);
+uint16_t proc_get_pid(const Proc* p);
+uint8_t  proc_get_uid(const Proc* p);
+void     proc_get_name(const Proc* p, char name[MAX_PROC_NAME]);
+Proc*    proc_get_parent(const Proc* p);
+void     proc_set_parent(Proc* p, Proc* parent);
+void     proc_set_state(Proc* p, Proc_State state);
+uint8_t  proc_get_ticks(const Proc* p);
+void     proc_set_ticks(Proc* p, uint8_t ticks);
+uint8_t  proc_ticks_dec(Proc* p);
+uint16_t proc_get_killed(const Proc* p);
+void     proc_set_killed(Proc* p, uint16_t killed);
+uint8_t  proc_get_exit_code(const Proc* p);
+File*    proc_get_file(const Proc* p, int fd);
 
 // trampoline.s
 extern uint8_t user_context[];
@@ -164,7 +289,6 @@ void print_process_state(Proc* p);
 uint16_t gets(char *buf, int max);
 
 // buffer.c
-
 #define BUFFER_FLAGS_BUSY  0x01
 #define BUFFER_FLAGS_VALID 0x02
 #define BUFFER_FLAGS_DIRTY 0x04
@@ -193,11 +317,6 @@ void disk_interrupt(void);
 void disk_block_read(Block_Buffer* b);
 void disk_block_write(Block_Buffer* b);
 
-// mmu.c
-void  mmu_init(void);
-void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
-void  mmu_unmap_window(uint8_t window, frame_t old_frame);
-
 // uart.c
 typedef struct Ring_Buffer Ring_Buffer;
 extern Ring_Buffer ring_buffer;
@@ -208,39 +327,13 @@ void uart_putc(char c);
 int  uart_getc_sync(void);
 int  uart_getc(void);
 
-// vfs.c
-typedef enum {
-    VFILE_TYPE_DEVICE = 0,
-    VFILE_TYPE_INODE
-} VFile_Type;
-
-typedef enum {
-    DEVICE_MAJOR_CONSOLE = 0,
-    DEVICE_MAJOR_DISK,
-} Device_Major;
-
-typedef struct File File;
-
-typedef struct Device_Ops {
-    int (*read)(File*, void*, uint16_t);
-    int (*write)(File*, void*, uint16_t);
-    int (*close)(File*);
-} Device_Ops;
-
-void  vfs_init(void);
-File* file_get_by_global_index(uint8_t index);
-bool  file_open_global(uint8_t index,
-                        VFile_Type type,
-                        Device_Major major,
-                        uint8_t  readable,
-                        uint8_t  writable,
-                        uint32_t offset);
-bool  register_device(Device_Major major, Device_Ops* devops);
-
-int sys_read(void);
-int sys_write(void);
-int sys_close(void);
-int sys_open(void);
+// timer.c
+extern volatile uint32_t systicks;
+extern volatile uint32_t next_wakeup_call;
+void timer_init(void);
+void timer_pause(void);
+void timer_resume(void);
+void timer_interrupt(void);
 
 // consol.c
 void console_init(void);
@@ -253,14 +346,6 @@ void panic(const char *fmt, ...);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
 
-// timer.c
-extern volatile uint32_t systicks;
-extern volatile uint32_t next_wakeup_call;
-void timer_init(void);
-void timer_pause(void);
-void timer_resume(void);
-void timer_interrupt(void);
-
 // string.c
 char*    strcpy(char *s, const char *t);
 int      strcmp(const char *p, const char *q);
@@ -271,69 +356,4 @@ void*    memmove(void *vdst, const void *vsrc, int n);
 int      memcmp(const void *s1, const void *s2, uint16_t n);
 void*    memcpy(void *dst, const void *src, uint16_t n);
 
-// proc.c
-typedef enum Proc_State{
-    PROC_STATE_UNUSED = 0,
-    PROC_STATE_BUILDING,
-    PROC_STATE_NEW,
-    PROC_STATE_READY,
-    PROC_STATE_RUNING,
-    PROC_STATE_SLEEPING,
-    PROC_STATE_ZOMBIE
-} Proc_State;
-
-extern Proc* current_process;
-
-int sys_fork(void);
-int sys_exit(void);
-int sys_wait(void);
-int sys_kill(void);
-int sys_sbrk(void);
-int sys_sleep(void);
-int sys_getpid(void);
-
-void sleep(void* channel);
-void wakeup(void* channel);
-void scheduler(void);
-void run_init_process(void);
-int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p);
-int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
-void  proc_init(void);
-Proc* palloc(void);
-void  pfree(Proc* p);
-
-// CPU Context
-uint16_t proc_get_ax(const Proc* p);
-uint8_t  proc_get_y(const Proc* p);
-void     proc_set_ax(Proc* p, uint16_t ax);
-void     proc_set_a(Proc* p, uint8_t a);
-void     proc_get_ctx(const Proc* p, Context* ctx);
-void     proc_set_ctx(Proc* p, Context* ctx);
-
-// memory management
-frame_t* proc_get_kernel_low_memory(Proc* p);
-void     proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
-void     proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
-uint16_t proc_get_top(const Proc* p);
-void     proc_set_top(Proc* p, uint16_t top);
-
-// process Hierarchy and Identity
-uint16_t proc_get_pid(const Proc* p);
-uint8_t  proc_get_uid(const Proc* p);
-void     proc_get_name(const Proc* p, char name[MAX_PROC_NAME]);
-Proc*    proc_get_parent(const Proc* p);
-void     proc_set_parent(Proc* p, Proc* parent);
-
-// scheduling and Lifecycle
-void     proc_set_state(Proc* p, Proc_State state);
-uint8_t  proc_get_ticks(const Proc* p);
-void     proc_set_ticks(Proc* p, uint8_t ticks);
-uint8_t  proc_ticks_dec(Proc* p);
-uint16_t proc_get_killed(const Proc* p);
-void     proc_set_killed(Proc* p, uint16_t killed);
-uint8_t  proc_get_exit_code(const Proc* p);
-
-// file System
-File*    proc_get_file(const Proc* p, int fd);
-
-#endif // COMMAN_H
+#endif // COMMON_H

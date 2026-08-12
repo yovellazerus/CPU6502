@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 char* strcpy(char* s, const char* t){
     char* os;

@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 #define PCB_OFFSET 0x200
 #define MAP_PCB(proc, old_frame) (PCB*)((uint16_t)mmu_map_window(2, proc->kernel_low_memory[0], &old_frame) + PCB_OFFSET)
@@ -688,7 +688,7 @@ int sys_wait(void){
                     if(user_exit_code != 0){
                         uint8_t child_exit = proc_get_exit_code(&proc_table[i]);
                         if(copy_to_user(&child_exit, user_exit_code, sizeof(child_exit), current_process) < 0){
-                            proc_set_ax(current_process, SEGFAULT);
+                            proc_set_ax(current_process, 1);
                             sys_exit(); 
                         }
                     }

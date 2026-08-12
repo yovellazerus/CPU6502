@@ -1,5 +1,5 @@
 
-#include "comman.h"
+#include "common.h"
 
 void main(void) {
 
@@ -15,7 +15,8 @@ void main(void) {
     proc_init();
     buffer_init();
     syscall_init();
-    vfs_init();
+    file_init();
+    console_init();
 
     printk("kernel: starting init process...\n");
     run_init_process();
