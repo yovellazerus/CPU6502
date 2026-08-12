@@ -206,6 +206,8 @@ uint8_t  proc_get_uid(const Proc* p);
 void     proc_get_name(const Proc* p, char name[MAX_PROC_NAME]);
 Proc*    proc_get_parent(const Proc* p);
 void     proc_set_parent(Proc* p, Proc* parent);
+void*    proc_get_channel(const Proc* p);
+void     proc_set_channel(Proc* p, void* channel);
 void     proc_set_state(Proc* p, Proc_State state);
 uint8_t  proc_get_ticks(const Proc* p);
 void     proc_set_ticks(Proc* p, uint8_t ticks);

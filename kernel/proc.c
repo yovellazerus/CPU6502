@@ -11,7 +11,6 @@ struct Proc {
     uint8_t ksp;                    // for trampoline context switch functions 
     frame_t kernel_low_memory[3];   // for the MMU map/unmap functions, and for trampoline and tracing
     Proc_State state;               // for fast scheduler and process syscalls actions
-    void* channel;                  // in here so interrupts will not map dynamic windows
 };
 
 // process control block (cached to the kernel stack frame so, can be as large as needed)
@@ -33,6 +32,7 @@ struct PCB {
     // inter process communication
     Proc* parent;
     uint16_t  killed;
+    void* channel;
 
     // file system
     uint16_t cwd_inode;     
@@ -95,7 +95,6 @@ Proc* palloc(void){
     p->kernel_low_memory[2] = 2;
     p->state = PROC_STATE_BUILDING;
     p->ksp = 0xff;
-    p->channel = NULL;
 
     // initialize the cached PCB struct
     pcb = MAP_PCB(p, old_frame);
@@ -198,6 +197,25 @@ void proc_set_parent(Proc* p, Proc* parent){
     pcb->parent = parent;
     UNMAP_PCB(old_frame);
 }
+
+void* proc_get_channel(const Proc* p){
+    frame_t old_frame;
+    PCB* pcb;
+    void* channel;
+    pcb = MAP_PCB(p, old_frame);
+    channel = pcb->channel;
+    UNMAP_PCB(old_frame);
+    return channel;
+}
+
+void proc_set_channel(Proc* p, void* channel){
+    frame_t old_frame;
+    PCB* pcb;
+    pcb = MAP_PCB(p, old_frame);
+    pcb->channel = channel;
+    UNMAP_PCB(old_frame);
+}
+
 
 uint8_t proc_get_exit_code(const Proc* p){
     frame_t old_frame;
@@ -437,10 +455,10 @@ int8_t copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p)
 // the caller must disable interrupts BEFORE checking their sleep condition 
 // to prevent "Lost Wakeup" race conditions
 void sleep(void* channel){
-    current_process->channel = channel;
+    proc_set_channel(current_process, channel);
     current_process->state = PROC_STATE_SLEEPING;
     scheduler();
-    current_process->channel = NULL;
+    proc_set_channel(current_process, NULL);
 }
 
 // WARNING: must be called with interrupts OFF
@@ -448,8 +466,8 @@ void sleep(void* channel){
 // interrupt vector) to hold the lock
 void wakeup(void* channel){
     uint16_t i;
-    for (i = 0; i < ARRAY_SIZE(proc_table); i++) {
-        if (proc_table[i].state == PROC_STATE_SLEEPING && proc_table[i].channel == channel) {
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        if(proc_table[i].state == PROC_STATE_SLEEPING && proc_get_channel(&proc_table[i]) == channel){
             proc_table[i].state = PROC_STATE_READY;
         }
     }
