@@ -18,20 +18,20 @@
 #define FLAG_Z 0x02 // zero
 #define FLAG_C 0x01 // carry
 
-#define WINDOW1 0x1000
-#define WINDOW2 0x2000
+#define WINDOW1         0x1000
+#define WINDOW2         0x2000
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
-#define FRAME_UNUSED MMU_FRAME_INVALID
+#define FRAME_UNUSED    MMU_FRAME_INVALID
 
-#define CYCLES 100 // CPU steps per Timer tick
-#define QUANTUM 10 // timer ticks until context switch
+#define CYCLES  100 // CPU steps per Timer tick
+#define QUANTUM 10  // timer ticks until context switch
 
 #define MAX_GLOBAL_OPEN_FILES 128
-#define MAX_REGISTER_DEVICES  128
+#define MAX_REGISTER_DEVICES  8
 
-#define MAX_PROC_COUNT 512
-#define MAX_PROC_NAME  16
-#define MAX_FILES_PER_PROC 8
+#define MAX_PROC_COUNT      256
+#define MAX_PROC_NAME       16
+#define MAX_FILES_PER_PROC  16
 
 #define CACHE_SIZE              16
 #define BLOCK_SIZE              4096
@@ -39,7 +39,7 @@
 #define INDIRECTLY_BLOCK_COUNT  (BLOCK_SIZE / sizeof(uint16_t))
 #define MAX_FILE_SIZE           (DIRECTLY_BLOCK_COUNT + INDIRECTLY_BLOCK_COUNT) // in blocks!
 #define MAX_FILE_NAME           30
-#define MAX_ACTIVE_INODES       64
+#define MAX_ACTIVE_INODES       (4096 / sizeof(Inode)) // number of inodes that fit in one dynamic frame
 #define ROOT_INODE              1
 #define FS_MAGIC                0x10203040
 
@@ -48,7 +48,7 @@
 #define BPB (BLOCK_SIZE * 8)                        // bitmap bits per block
 #define BBLOCK(b, sb) ((b) / BPB + sb.bitmap_start) // block of free map containing bit for block b
 
-#define PIPE_SIZE 512
+#define PIPE_SIZE 2048
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -73,6 +73,9 @@ extern uint8_t _INITCODE_LOAD__[];
 extern uint8_t _INITCODE_RUN__[];
 extern uint8_t _INITCODE_SIZE__[];
 
+// initcode.s
+extern uint8_t init_code[];
+
 // mmu.c
 typedef uint8_t frame_t;
 void  mmu_init(void);
@@ -88,18 +91,20 @@ void fs_init(uint8_t drive);
 typedef struct Pipe Pipe;
 
 // inode.c
-typedef struct Inode Inode;
-typedef struct Dinode Dinode;
-typedef struct Inode_Cache Inode_Cache;
-void inode_init(void);
-
-// file.c
 typedef enum {
     INODE_TYPE_NONE = 0,
     INODE_TYPE_REGULAR,
     INODE_TYPE_DIR,
     INODE_TYPE_DEVICE
 } Inode_Type;
+
+typedef struct Inode Inode;
+typedef struct Dinode Dinode;
+typedef struct Inode_Cache Inode_Cache;
+
+void inode_init(void);
+
+// file.c
 typedef struct File File;
 
 typedef enum {
@@ -114,9 +119,12 @@ typedef enum {
 } Device_Major;
 
 typedef struct File_Operations {
-    int (*read)(File*, void*, uint16_t);
-    int (*write)(File*, void*, uint16_t);
-    int (*close)(File*);
+    int (*open)(struct File* f);
+    int (*read)(struct File* f, void* buffer, uint16_t length);
+    int (*write)(struct File* f, void* buffer, uint16_t length);
+    int (*seek)(struct File* f, uint32_t offset, uint16_t whence);
+    int (*ioctl)(struct File* f, uint8_t request, void* arg);
+    int (*close)(struct File* f);
 } File_Operations;
 
 void  file_init(void);
@@ -217,16 +225,13 @@ extern void first_context_switch(Proc* old, Proc* new);
 extern void make_kernel_stack(frame_t frame);
 extern void get_cpu_state(Context* ctx);
 
-// initcode.s
-extern uint8_t init_code[];
-
 // kalloc.c
 void kalloc_init(void);
 frame_t kalloc(void);
 void kfree(frame_t frame);
 
 // syscall.c
-typedef union SyscallArg{
+typedef union Syscall_Argument {
 
     struct {
         uint32_t ticks;
@@ -252,12 +257,12 @@ typedef union SyscallArg{
     
     // ...
 
-} SyscallArg;
+} Syscall_Argument;
 
 typedef int (*Syscall)(void);
 extern Syscall syscalls_table[256];
 void syscall_init(void);
-bool syscall_populate_argument(SyscallArg* arg);
+bool syscall_populate_argument(Syscall_Argument* arg);
 
 #define SYS_FORK    'F'
 #define SYS_EXIT    'E'
@@ -277,8 +282,6 @@ void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
 uint8_t device_interrupt(void);
-void interrupts_push(void);
-void interrupts_pop(void);
 void kernel_prologue(void);
 void kernel_epilogue(void);
 

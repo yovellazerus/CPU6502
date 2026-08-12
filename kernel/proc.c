@@ -56,7 +56,6 @@ static int pid_alloc(void){
 
 void proc_init(void){
     uint16_t i;
-    memset(proc_table, 0, sizeof(proc_table));
     for(i = 0; i < ARRAY_SIZE(proc_table); i++){
         proc_table[i].state = PROC_STATE_UNUSED;
     }
@@ -100,7 +99,6 @@ Proc* palloc(void){
 
     // initialize the cached PCB struct
     pcb = MAP_PCB(p, old_frame);
-    memset(pcb, 0, sizeof(PCB));
     pcb->pid = pid_alloc();
     pcb->ctx.sp = 0xff;
     pcb->ctx.ksp = 0xff;
@@ -115,7 +113,6 @@ Proc* palloc(void){
 void pfree(Proc* p){
     if(!p) panic("pfree");
     kfree(p->kernel_low_memory[0]);
-    memset(p, 0, sizeof(*p));
     p->state = PROC_STATE_UNUSED;
 }
 
@@ -520,16 +517,16 @@ int sys_getpid(void){
 }
 
 int sys_sleep(void){
-    SyscallArg syscall_arg;
+    Syscall_Argument arg;
     uint32_t ticks;
     uint32_t total;
     uint16_t ax = proc_get_ax(current_process);
 
-    if(!syscall_populate_argument(&syscall_arg)){
+    if(!syscall_populate_argument(&arg)){
         return -1;
     }
 
-    ticks = syscall_arg.sleep.ticks;
+    ticks = arg.sleep.ticks;
 
     // modifies a the systicks and the next_wakeup_call that are accessible to interrupts therefore, must be locked
     INTER_OFF();
@@ -756,7 +753,7 @@ int sys_exit(void){
     return -1;
 }
 
-#define FORK_CHUNK_SIZE 1024
+#define FORK_CHUNK_SIZE (4*1024)
 int sys_fork(void){
     Proc* child;
     PCB* child_pcb;

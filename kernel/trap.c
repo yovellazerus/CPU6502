@@ -194,39 +194,7 @@ uint8_t device_interrupt(void){
     return which_device;
 }
 
-// global counter to track how deep we are in nested critical sections
-static uint8_t interrupt_depth = 0;
-
-// always disable hardware IRQ's
-void interrupts_push(void) {
-
-    INTER_OFF();
-    
-    interrupt_depth++;
-
-    if (interrupt_depth == 0) {
-        panic("interrupts_push");
-    }
-}
-
-// only re-enable hardware interrupts if we have fully exited all nested critical sections
-void interrupts_pop(void) {
-    if (interrupt_depth == 0) {
-        panic("interrupts_pop");
-    }
-
-    interrupt_depth--;
-    
-    if (interrupt_depth == 0) {
-        INTER_ON();
-    }
-}
-
 void kernel_prologue(void){
-
-    if(interrupt_depth != 0){
-        panic("kernel_prologue");
-    }
 
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
@@ -250,11 +218,7 @@ void kernel_prologue(void){
 void kernel_epilogue(void){
 
     INTER_OFF();
-
-    if(interrupt_depth != 0){
-        panic("kernel_epilogue");
-    }
-
+    
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
         proc_set_a(current_process, 1);

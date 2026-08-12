@@ -63,7 +63,6 @@ void buffer_init(void){
     buffer_cache.head.prev = &buffer_cache.head;
     buffer_cache.head.next = &buffer_cache.head;
     for(b = buffer_cache.buffers; b < buffer_cache.buffers + CACHE_SIZE; b++){
-        memset(b, 0, sizeof(*b));
         b->next = buffer_cache.head.next;
         b->prev = &buffer_cache.head;
         buffer_cache.head.next->prev = b;

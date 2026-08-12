@@ -16,20 +16,12 @@ void kalloc_init(void){
 
 frame_t kalloc(void) {
     frame_t frame;
-    frame_t old_frame;
-    void*   buffer;
 
     if(free_top == 0) {
         return FRAME_UNUSED;
     }
     free_top--;
     frame = free_frames[free_top];
-
-    // clear the memory for use
-    buffer = mmu_map_window(1, frame, &old_frame);
-    memset(buffer, 0, 4096);
-    mmu_unmap_window(1, old_frame);
-
     return frame;
 }
 

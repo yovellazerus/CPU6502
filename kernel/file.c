@@ -8,12 +8,14 @@ core UNIX file abstraction implementation
 struct File {
     File_Type type;
     uint8_t refcount;
-    Device_Major major; // FILE_TYPE_DEVICE
+    Device_Major major;
     uint8_t  readable;
     uint8_t  writable;
-    uint32_t offset;    // FILE_TYPE_DEVICE
-    Inode* inode;       // FILE_TYPE_INODE and FILE_TYPE_DEVICE
-    Pipe*  pipe;        // FILE_TYPE_PIPE
+    uint32_t offset;
+    union {
+        Inode* inode;       // FILE_TYPE_INODE and FILE_TYPE_DEVICE
+        Pipe*  pipe;        // FILE_TYPE_PIPE
+    };
     // ...
 };
 
@@ -55,9 +57,6 @@ bool register_device(Device_Major major, File_Operations* devops){
 
 void file_init(void){
 
-    memset(global_file_table, 0, sizeof(global_file_table));
-    memset(devsw_table, 0, sizeof(devsw_table));
-    
     // ...
 }
 
@@ -66,7 +65,7 @@ Unified system call interface for devices and regular files:
 */
 
 int sys_read(void){
-    SyscallArg arg;
+    Syscall_Argument arg;
     File* file;
     uint16_t user_ptr;
     int chunk_size;
@@ -117,7 +116,6 @@ int sys_read(void){
 
         // update variables
         total_bytes_read += bytes_read;
-        file->offset     += bytes_read;
         user_ptr         += bytes_read;
         arg.read.size    -= bytes_read;
 
@@ -131,7 +129,7 @@ int sys_read(void){
 }
 
 int sys_write(void){
-    SyscallArg arg;
+    Syscall_Argument arg;
     File* file;
     int chunk_size;
     uint16_t user_ptr;
@@ -179,7 +177,6 @@ int sys_write(void){
 
         // update variables
         total_bytes_written += bytes_written;
-        file->offset        += bytes_written;
         user_ptr            += bytes_written;
         arg.write.size      -= bytes_written;
 

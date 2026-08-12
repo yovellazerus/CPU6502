@@ -27,17 +27,19 @@ struct Dinode {
     uint8_t  data[DIRECTLY_BLOCK_COUNT + 1];
 };
 
-// TODO: consider making this dynamic using kalloc()
 struct Inode_Cache {
-    Inode table[MAX_ACTIVE_INODES];
+    frame_t frame;
 };
 
-Inode_Cache Inode_cache;
+Inode_Cache inode_cache;
 
 // in-memory inode table init
 void inode_init(void){
     INTER_OFF();
-    memset(&Inode_cache, 0, sizeof(Inode_cache));
+    inode_cache.frame = kalloc();
+    if(inode_cache.frame == FRAME_UNUSED){
+        panic("inode_init");
+    }
     INTER_ON();
 }
 
