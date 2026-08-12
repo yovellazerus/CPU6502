@@ -35,6 +35,7 @@
 #define MAX_FILES_PER_PROC 8
 
 #define CACHE_SIZE 16
+#define BLOCK_SIZE 4096
 
 #define SIGKILL      (-1)
 #define SEGFAULT     (-2)
@@ -55,6 +56,7 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
+typedef uint8_t frame_t;
 typedef struct Proc Proc;
 typedef struct PCB PCB;
 
@@ -79,15 +81,15 @@ extern uint8_t _INITCODE_SIZE__[];
 
 // trampoline.s
 extern uint8_t user_context[];
-extern uint8_t user_page_table[PAGE_TABLE_SIZE];
-extern uint8_t kernel_page_table[PAGE_TABLE_SIZE];
+extern frame_t user_page_table[PAGE_TABLE_SIZE];
+extern frame_t kernel_page_table[PAGE_TABLE_SIZE];
 extern void return_from_trap(void);
 extern void irq_handler(void);
 extern void nmi_handler(void);
 extern void kernel_vector(void);
 extern void context_switch(Proc* old, Proc* new);
 extern void first_context_switch(Proc* old, Proc* new);
-extern void make_kernel_stack(uint8_t frame);
+extern void make_kernel_stack(frame_t frame);
 extern void get_cpu_state(Context* ctx);
 
 // initcode.s
@@ -95,8 +97,8 @@ extern uint8_t init_code[];
 
 // kalloc.c
 void kalloc_init(void);
-uint8_t kalloc(void);
-void kfree(uint8_t frame);
+frame_t kalloc(void);
+void kfree(frame_t frame);
 
 // syscall.c
 typedef union SyscallArg{
@@ -162,6 +164,11 @@ void print_process_state(Proc* p);
 uint16_t gets(char *buf, int max);
 
 // buffer.c
+
+#define BUFFER_FLAGS_BUSY  0x01
+#define BUFFER_FLAGS_VALID 0x02
+#define BUFFER_FLAGS_DIRTY 0x04
+
 typedef struct Block_Buffer {
     uint8_t flags;
     uint8_t drive;
@@ -169,7 +176,8 @@ typedef struct Block_Buffer {
     uint16_t block_number;
     struct Block_Buffer* next;
     struct Block_Buffer* prev;
-    uint8_t frame;
+    struct Block_Buffer* queue;
+    frame_t frame;
 } Block_Buffer;
 
 void buffer_init(void);
@@ -186,7 +194,6 @@ void disk_block_read(Block_Buffer* b);
 void disk_block_write(Block_Buffer* b);
 
 // mmu.c
-typedef uint8_t frame_t;
 void  mmu_init(void);
 void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
 void  mmu_unmap_window(uint8_t window, frame_t old_frame);
@@ -304,9 +311,9 @@ void     proc_get_ctx(const Proc* p, Context* ctx);
 void     proc_set_ctx(Proc* p, Context* ctx);
 
 // memory management
-uint8_t* proc_get_kernel_low_memory(Proc* p);
-void     proc_get_page_table(const Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]);
-void     proc_set_page_table(Proc* p, uint8_t page_table[PAGE_TABLE_SIZE]);
+frame_t* proc_get_kernel_low_memory(Proc* p);
+void     proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
+void     proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
 uint16_t proc_get_top(const Proc* p);
 void     proc_set_top(Proc* p, uint16_t top);
 

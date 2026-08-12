@@ -2,14 +2,11 @@
 #include "comman.h"
 
 typedef struct Cache {
-    Block_Buffer buffers[CACHE_SIZE];
     Block_Buffer head;
+    Block_Buffer buffers[CACHE_SIZE];
 } Cache;
 
 Cache buffer_cache;
-
-#define BUFFER_FLAGS_BUSY  0x01
-#define BUFFER_FLAGS_VALID 0x02
 
 // look through buffer cache for block on a specific drive
 // if not found, allocate a buffer
