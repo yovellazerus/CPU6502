@@ -28,6 +28,12 @@ void uart_rx_interrupt(void){
         
         data = MMIO8(UART_RX);
 
+        // debug
+        if(data == CTRL('D')){
+            proc_dump();
+            return;
+        }
+
         if(ring_buffer.head + 1 != ring_buffer.tail){
             ring_buffer.buffer[ring_buffer.head] = data;
             ring_buffer.head++;

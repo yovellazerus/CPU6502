@@ -63,6 +63,56 @@ void proc_init(void){
     current_process = NULL;
 }
 
+// debug
+void proc_dump(void){
+    uint16_t i;
+    Proc* p;
+    char name[MAX_PROC_NAME];
+    const char* state;
+    INTER_OFF();
+    printk("\n\tproc dump:\n");
+    for(i = 0; i < ARRAY_SIZE(proc_table); i++){
+        p = &proc_table[i];
+        switch (p->state){
+            
+            case PROC_STATE_UNUSED:
+                continue;
+
+            case PROC_STATE_BUILDING:
+                state = "BUILDING";
+                break;
+
+            case PROC_STATE_NEW:
+                state = "NEW";
+                break;
+
+            case PROC_STATE_READY:
+                state = "READY";
+                break;
+
+            case PROC_STATE_RUNING:
+                state = "RUNING";
+                break;
+
+            case PROC_STATE_SLEEPING:
+                state = "SLEEPING";
+                break;
+
+            case PROC_STATE_ZOMBIE:
+                state = "ZOMBIE";
+                break;
+            
+            default:
+                state = "UNKNOWN";
+                break;
+        }
+        proc_get_name(p, name);
+        printk("\t[%d] \"%s\" %s\n", proc_get_pid(p), name, state);
+    }
+    printk("\n");
+    INTER_ON();
+}
+
 /*
 create a new Proc struct and a cached PCB struct in its kernel stack frame with an empty page table, 
 new pid, SP set to $ff and a state of PROC_STATE_BUILDING,

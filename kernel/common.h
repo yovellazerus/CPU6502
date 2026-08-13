@@ -51,8 +51,9 @@
 
 #define PIPE_SIZE 2048
 
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define ARRAY_SIZE(array)   (sizeof(array) / sizeof(array[0]))
+#define MIN(a, b)           ((a) < (b) ? (a) : (b))
+#define CTRL(x)             ((x) - '@')
 
 #define BRK __asm__("brk"); __asm__("nop")
 #define INTER_ON()  __asm__("cli")
@@ -124,11 +125,10 @@ typedef enum {
 
 typedef struct File_Operations {
     int (*open)(struct File* f);
+    int (*close)(struct File* f);
     int (*read)(struct File* f, void* buffer, uint16_t length);
     int (*write)(struct File* f, void* buffer, uint16_t length);
-    int (*seek)(struct File* f, uint32_t offset, uint16_t whence);
     int (*ioctl)(struct File* f, uint8_t request, void* arg);
-    int (*close)(struct File* f);
 } File_Operations;
 
 void  file_init(void);
@@ -189,6 +189,7 @@ void run_init_process(void);
 int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p);
 int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
 void  proc_init(void);
+void  proc_dump(void);
 Proc* palloc(void);
 void  pfree(Proc* p);
 
