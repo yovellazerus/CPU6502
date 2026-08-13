@@ -46,10 +46,7 @@ void uart_putc_sync(char c){
 void uart_putc(char c){
     // yield the CPU until the tx register is empty
     while(!(MMIO8(UART_STAT) & UART_STATUS_TX_READY)){
-        INTER_OFF();
-        proc_set_state(current_process, PROC_STATE_READY);
-        scheduler();
-        INTER_ON();
+        yield();
     }
     MMIO8(UART_TX) = c;
 }

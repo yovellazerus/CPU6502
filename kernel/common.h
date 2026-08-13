@@ -182,6 +182,7 @@ int sys_getpid(void);
 
 void sleep(void* channel);
 void wakeup(void* channel);
+void yield(void);
 void scheduler(void);
 void run_init_process(void);
 int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p);

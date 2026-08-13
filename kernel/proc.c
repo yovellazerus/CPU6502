@@ -473,6 +473,13 @@ void wakeup(void* channel){
     }
 }
 
+void yield(void){
+    INTER_OFF();
+    current_process->state = PROC_STATE_READY;
+    scheduler();
+    INTER_ON();
+}
+
 // WARNING: must be called with interrupts OFF
 // protects the proc_table scan from hardware interrupts that might call wakeup()
 // ensures _context_switch pushes I=1 (interrupts disabled) to the stack, 
@@ -690,6 +697,7 @@ int sys_kill(void){
 int sys_wait(void){
     uint16_t i;
     uint8_t res;
+    uint8_t child_exit;
     bool has_children = false;
     uint16_t user_exit_code = proc_get_ax(current_process);
 
@@ -701,10 +709,9 @@ int sys_wait(void){
 
                 if(proc_table[i].state == PROC_STATE_ZOMBIE){
                     if(user_exit_code != 0){
-                        uint8_t child_exit = proc_get_exit_code(&proc_table[i]);
+                        child_exit = proc_get_exit_code(&proc_table[i]);
                         if(copy_to_user(&child_exit, user_exit_code, sizeof(child_exit), current_process) < 0){
-                            proc_set_ax(current_process, 1);
-                            sys_exit(); 
+                            return -1; 
                         }
                     }
                     res = proc_get_pid(&proc_table[i]);
@@ -796,11 +803,7 @@ int sys_fork(void){
 
     for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
         memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
-        
-        INTER_OFF();
-        current_process->state = PROC_STATE_READY;
-        scheduler();
-        INTER_ON();
+        yield();
     }
     
     // initialize the child PCB
@@ -842,10 +845,7 @@ int sys_fork(void){
 
             for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
                 memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
-                INTER_OFF();
-                current_process->state = PROC_STATE_READY;
-                scheduler();
-                INTER_ON();
+                yield();
             }
 
             mmu_unmap_window(1, old_window1);

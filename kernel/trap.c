@@ -146,10 +146,7 @@ void kernel_irq(void){
         otherwise, it will by pass to the scheduler() and yield the CPU.
         */
         if(proc_ticks_dec(current_process) == 0){
-            INTER_OFF();
-            proc_set_state(current_process, PROC_STATE_READY);
-            scheduler();
-            INTER_ON();
+            yield();
         }
         // process has quantum remaining, so we will return to it
     }
