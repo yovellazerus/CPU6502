@@ -28,19 +28,14 @@ struct Dinode {
 };
 
 struct Inode_Cache {
-    frame_t frame;
+    Inode table[MAX_INMEMORY_INODES];
 };
 
 Inode_Cache inode_cache;
 
 // in-memory inode table init
 void inode_init(void){
-    INTER_OFF();
-    inode_cache.frame = kalloc();
-    if(inode_cache.frame == FRAME_UNUSED){
-        panic("inode_init");
-    }
-    INTER_ON();
+    // ...
 }
 
 // TODO: inode functions...

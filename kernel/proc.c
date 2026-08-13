@@ -35,7 +35,7 @@ struct PCB {
     void* channel;
 
     // file system
-    uint16_t cwd_inode;     
+    Inode* cwd;     
     File* open_files[MAX_FILES_PER_PROC];          
 
     // debug 
@@ -778,7 +778,6 @@ int sys_exit(void){
     return -1;
 }
 
-#define FORK_CHUNK_SIZE (4*1024)
 int sys_fork(void){
     Proc* child;
     PCB* child_pcb;
@@ -786,7 +785,6 @@ int sys_fork(void){
     frame_t parent_frame;
     frame_t child_frame;
     uint8_t old_window1, old_window2;
-    uint16_t offset;
     void *parent_buffer, *child_buffer;
     uint16_t child_pid;
     frame_t parent_page_table[PAGE_TABLE_SIZE];
@@ -794,18 +792,14 @@ int sys_fork(void){
     child = palloc();
     if(!child) return -1;
     
-    // NOTE: save the unique pid palloc() generated before we overwrite the PCB
+    // save the unique pid palloc() generated before we overwrite the PCB
     child_pid = proc_get_pid(child);
     
     // copy the kernel stack (this copies the entire PCB exactly)
     parent_buffer = mmu_map_window(1, current_process->kernel_low_memory[0], &old_window1);
     child_buffer  = mmu_map_window(2, child->kernel_low_memory[0], &old_window2);
 
-    for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
-        memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
-        yield();
-    }
-    
+    memcpy(child_buffer, parent_buffer, 4096);
     // initialize the child PCB
     child_pcb = (PCB*)((uint16_t)child_buffer + PCB_OFFSET);
     child_pcb->pid = child_pid;            // restore correct pid
@@ -822,6 +816,9 @@ int sys_fork(void){
     mmu_unmap_window(1, old_window1);
     mmu_unmap_window(2, old_window2);
 
+    // yielding the CPU for system responsiveness
+    yield();
+
     // clone user memory pages
     for(segment = 0; segment < PAGE_TABLE_SIZE; segment++){
         parent_frame = parent_page_table[segment];
@@ -829,7 +826,14 @@ int sys_fork(void){
         if(parent_frame != FRAME_UNUSED){
             child_frame = kalloc();
 
+            // no more free memory in the system, rolling everything back
             if(child_frame == FRAME_UNUSED){
+                do {
+                    child_pcb = (PCB*)((uint16_t)mmu_map_window(2, child->kernel_low_memory[0], &old_window2) + PCB_OFFSET);
+                    if(child_pcb->page_table[segment] != FRAME_UNUSED) kfree(child_pcb->page_table[segment]);
+                    mmu_unmap_window(2, old_window2);
+                    segment--;
+                } while(segment);
                 pfree(child); 
                 return -1;
             }
@@ -842,14 +846,12 @@ int sys_fork(void){
             // map user pages and copy
             parent_buffer = mmu_map_window(1, parent_frame, &old_window1);
             child_buffer  = mmu_map_window(2, child_frame, &old_window2);
-
-            for(offset = 0; offset < 4096; offset += FORK_CHUNK_SIZE){
-                memcpy((void*)((uint16_t)child_buffer + offset), (void*)((uint16_t)parent_buffer + offset), FORK_CHUNK_SIZE);
-                yield();
-            }
-
+            memcpy(child_buffer, parent_buffer, 4096);
             mmu_unmap_window(1, old_window1);
             mmu_unmap_window(2, old_window2);
+
+            // yielding the CPU for system responsiveness
+            yield();
         }
     }
 
