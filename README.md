@@ -1,4 +1,4 @@
-# xv6502: A UNIX-like Operating System for the 6502
+# xv6502: A UNIX-like Operating System for a 6502 custom built computer emulator
 
 **⚠️ PROJECT STATUS: VERY EARLY BUILD ⚠️**  
 *This project is currently in its early stages of active development. Much of the architecture described below outlines the target roadmap and ongoing implementation.*
@@ -33,22 +33,25 @@ The repository is strictly modularized to separate hardware emulation, boot sequ
 ├── LICENSE
 ├── Makefile
 ├── README.md
-├── mkfs.py                 # Offline file system generator
 │
-├── machine/                # The 6502 Hardware Emulator
-│   ├── MCS6502.[c|h]       # 3rd-party 6502 CPU emulation core
-│   ├── machine.[c|h]       # Custom hardware MMIO, MMU, UART, PLIC
+├── mkfs/              # file system generator
+│   └── mkfs.c
+│
+├── machine/           # The 6502 Hardware Emulator
+│   ├── MCS6502.[c|h]  # 3rd-party 6502 CPU emulation core
+│   ├── machine.[c|h]  # Custom hardware MMIO, MMU, UART, PLIC
 │   ├── ...
-│   ├── rom.s               # Hardware ROM initialization
-│   └── rom.cfg             # ROM linker script
+│   ├── rom.s          # Hardware ROM initialization
+│   └── rom.cfg        # ROM linker script
 │
-├── boot/                   # Two-Stage Bootloader
-│   ├── first_stage.s       # Stage 1: 512-byte sector 0 loader
-│   ├── boot.c              # Stage 2: C-based kernel locator/loader
+├── boot/             # Two-Stage Bootloader
+│   ├── first_stage.s # Stage 1: 512-byte sector 0 loader
+│   ├── boot.c        # Stage 2: C-based kernel locator/loader
 │   ├── ...
 │   └── boot.cfg            
 │
-├── kernel/                 # The Operating System Kernel
+├── kernel/         # The Operating System Kernel
+│   ├── common.h
 │   ├── trampoline.s
 │   ├── main.c              
 │   ├── proc.c              
@@ -58,7 +61,7 @@ The repository is strictly modularized to separate hardware emulation, boot sequ
 │   ├── ...
 │   └── kernel.cfg          
 │
-└── user/                   # User land Programs
+└── user/            # User land Programs
     ├── init.c              
     ├── sh.c                
     ├── ls.c                
