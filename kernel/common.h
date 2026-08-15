@@ -92,15 +92,17 @@ typedef struct {
     uint16_t bitmap_start; // block number of first free bitmap block
 } Super_Block;
 
+extern Super_Block sb;
+
 typedef struct {
     char name[MAX_FILE_NAME];
     uint16_t inode_number; 
 } Dir_Entry;
 
 void fs_init(uint8_t drive);
-
-// pipe.c
-typedef struct Pipe Pipe;
+void read_super_block(uint8_t drive, Super_Block* sb);
+uint16_t balloc(uint8_t drive);
+void bfree(uint8_t drive, uint16_t block);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
@@ -135,9 +137,32 @@ typedef struct {
 
 typedef struct Inode_Cache Inode_Cache;
 
-void inode_init(void);
+typedef struct {
+    uint8_t drive;
+    uint16_t inode_number;
+    Inode_Type type;
+    uint8_t nlink;
+    uint32_t size;
+} Stat;
+
+void   inode_init(void);
 Inode* inode_get(uint8_t drive, uint16_t inode_number);
-void inode_lock(Inode *inode);
+void   inode_lock(Inode* inode);
+Inode* inode_alloc(uint8_t drive, Inode_Type type);
+Inode* inode_dup(Inode* inode);
+void   inode_put(Inode* inode);
+void   inode_unlock(Inode* inode);
+void   inode_update(Inode* inode);
+Inode* inode_name(char* path);
+Inode* inode_name_parent(char* path, char* name);
+int    inode_read(Inode* inode, uint16_t user_buffer, uint32_t offset, uint16_t size);
+void   inode_stat(Inode* inode, Stat* stat);
+int    inode_write(Inode* inode, uint16_t user_buffer, uint32_t offset, uint16_t size);
+void   inode_trunc(Inode* inode);
+void   inode_reclaim(uint8_t drive);
+
+// pipe.c
+typedef struct Pipe Pipe;
 
 // file.c
 typedef struct File File;
@@ -328,9 +353,6 @@ void kernel_epilogue(void);
 
 // debugger.c
 void kernel_debugger(void);
-// void print_cpu_state(Context* ctx);
-// void print_process_state(Proc* p);
-// uint16_t gets(char *buf, int max);
 
 // buffer.c
 #define BUFFER_FLAGS_BUSY  (1 << 0)
@@ -393,6 +415,8 @@ void vprintk(const char* fmt, va_list ap);
 
 #define NULL ((void*)0)
 
+extern void* memset(void *dst, int value, uint16_t size); // form cc65
+
 char*    strcpy(char* s, const char* t);
 int      strcmp(const char* p, const char* q);
 uint16_t strlen(const char* s);
@@ -401,7 +425,7 @@ int      atoi(const char* s);
 void*    memmove(void* vdst, const void* vsrc, int n);
 int      memcmp(const void* s1, const void* s2, uint16_t n);
 void*    memcpy(void* dst, const void* src, uint16_t n);
-extern void* memset(void *dst, int value, uint16_t size); // form cc65
+
 #endif // __CC65__
 
 #endif // COMMON_H

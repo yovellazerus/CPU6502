@@ -3,7 +3,7 @@
 
 Super_Block sb;
 
-static void read_super_block(uint8_t drive, Super_Block* sb){
+void read_super_block(uint8_t drive, Super_Block* sb){
     Block_Buffer* b;
     frame_t old_frame;
     
@@ -23,5 +23,5 @@ void fs_init(uint8_t drive){
     // TODO: xv6 uses a function called: "ireclaim"
 }
 
-// TODO: the balloc(), bfree(), bzero() static functions
+// TODO: the balloc(), bfree(), bzero() functions
 // TODO: fs_open(), fs_close() ... (disk file interface)
