@@ -6,36 +6,39 @@ struct Inode {
     uint8_t  drive;           
     uint16_t inode_number;          
     uint8_t  refcount;
-    uint8_t  valid;  // inode has been read from disk?
-
-    // copy of disk inode
-    Inode_Type type; 
-    uint8_t  major;
-    uint8_t  minor;
-    uint8_t  nlink;
-    uint32_t size;
-    uint8_t  data[DIRECTLY_BLOCK_COUNT + 1];
-};
-
-// On-disk inode structure
-struct Dinode {
-    Inode_Type type; 
-    uint8_t  major;
-    uint8_t  minor;
-    uint8_t  nlink;
-    uint32_t size;
-    uint8_t  data[DIRECTLY_BLOCK_COUNT + 1];
+    uint8_t  flags;  // inode has been read from disk? is it dirty? is it busy?
 };
 
 struct Inode_Cache {
-    Inode table[MAX_INMEMORY_INODES];
+    Inode inmemory[MAX_INMEMORY_INODES];
+    frame_t frame; // for the Dinode array
 };
 
 Inode_Cache inode_cache;
 
-// in-memory inode table init
+// helper to get the disk inode data FROM the dynamic frame
+static void dinode_get(uint8_t inode_index, Dinode* dst){
+    frame_t old_frame;
+    void* src = (void*)(WINDOW2 + inode_index * sizeof(Dinode));
+    mmu_map_window(2, inode_cache.frame, &old_frame);
+    memcpy(dst, src, sizeof(Dinode));
+    mmu_unmap_window(2, old_frame);
+}
+
+// helper to set the disk inode data TO the dynamic frame
+static void dinode_set(uint8_t inode_index, Dinode* src){
+    frame_t old_frame;
+    void* dst = (void*)(WINDOW2 + inode_index * sizeof(Dinode));
+    mmu_map_window(2, inode_cache.frame, &old_frame);
+    memcpy(src, dst, sizeof(Dinode));
+    mmu_unmap_window(2, old_frame);
+}
+
 void inode_init(void){
-    // ...
+    inode_cache.frame = kalloc();
+    if(inode_cache.frame == FRAME_UNUSED){
+        panic("inode_init");
+    }
 }
 
 // TODO: inode functions...

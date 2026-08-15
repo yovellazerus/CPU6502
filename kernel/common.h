@@ -7,8 +7,6 @@
 
 #include "../machine/machine.h"
 
-#define NULL ((void*)0)
-
 // 6502 "P" register flags
 #define FLAG_N 0x80 // negative
 #define FLAG_V 0x40 // overflow
@@ -34,22 +32,25 @@
 #define MAX_PROC_NAME       16
 #define MAX_FILES_PER_PROC  16
 
+#define ROOT_DRIVE              1
 #define CACHE_SIZE              16
 #define BLOCK_SIZE              4096
-#define DIRECTLY_BLOCK_COUNT    15
+#define DIRECTLY_BLOCK_COUNT    12
 #define INDIRECTLY_BLOCK_COUNT  (BLOCK_SIZE / sizeof(uint16_t))
 #define MAX_FILE_SIZE           (DIRECTLY_BLOCK_COUNT + INDIRECTLY_BLOCK_COUNT) // in blocks!
 #define MAX_FILE_NAME           30
+#define MAX_INODE_IN_DISK       1024
+#define SUPER_BLOCK_BLOCK       16
 #define MAX_ACTIVE_INODES       (4096 / sizeof(Inode)) // number of inodes that fit in one dynamic frame
 #define ROOT_INODE              1
-#define FS_MAGIC                0x10203040
+#define FS_MAGIC                0x32303536
 
-#define IPB (BLOCK_SIZE / sizeof(struct Dinode))    // inodes per block
-#define IBLOCK(i, sb) ((i) / IPB + sb.inode_start)  // block containing inode i
-#define BPB (BLOCK_SIZE * 8)                        // bitmap bits per block
-#define BBLOCK(b, sb) ((b) / BPB + sb.bitmap_start) // block of free map containing bit for block b
+#define INODES_PER_BLOCK (BLOCK_SIZE / sizeof(struct Dinode))           // inodes per block
+#define INODE_I_BLOCK(i, sb) ((i) / INODES_PER_BLOCK + sb.inode_start)  // block containing inode i
+#define BITS_PER_BLOCK (BLOCK_SIZE * 8)                                 // bitmap bits per block
+#define BIT_B_BLOCK(b, sb) ((b) / BITS_PER_BLOCK + sb.bitmap_start)     // block of free map containing bit for block b
 
-#define PIPE_SIZE 2048
+#define PIPE_SIZE 256
 
 #define ARRAY_SIZE(array)   (sizeof(array) / sizeof(array[0]))
 #define MIN(a, b)           ((a) < (b) ? (a) : (b))
@@ -67,9 +68,6 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
-// form cc65
-extern void* memset(void *dst, int value, uint16_t size);
-
 // kernel.cfg
 extern uint8_t _INITCODE_LOAD__[];
 extern uint8_t _INITCODE_RUN__[];
@@ -85,14 +83,30 @@ void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
 void  mmu_unmap_window(uint8_t window, frame_t old_frame);
 
 // fs.c
-typedef struct Super_Block Super_Block;
-typedef struct Dir_Entry Dir_Entry;
+typedef struct {
+    uint32_t magic;        // must be FS_MAGIC
+    uint16_t size;         // size of file system image (in blocks)
+    uint16_t block_count;  // number of data blocks
+    uint16_t inode_count;  // number of inodes
+    uint16_t inode_start;  // block number of first inode block
+    uint16_t bitmap_start; // block number of first free bitmap block
+} Super_Block;
+
+typedef struct {
+    char name[MAX_FILE_NAME];
+    uint16_t inode_number; 
+} Dir_Entry;
+
 void fs_init(uint8_t drive);
 
 // pipe.c
 typedef struct Pipe Pipe;
 
 // inode.c
+#define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
+#define INODE_FLAGS_VALID (1 << 1) // is it read form disk?
+#define INODE_FLAGS_DIRTY (1 << 2) // need to updata the disk?
+
 typedef enum {
     INODE_TYPE_NONE = 0,
     INODE_TYPE_REGULAR,
@@ -101,10 +115,29 @@ typedef enum {
 } Inode_Type;
 
 typedef struct Inode Inode;
-typedef struct Dinode Dinode;
+
+// on-disk inode structure (cached to dynamic memory for kernel size footprint)
+typedef struct {
+    Inode_Type type; 
+    uint16_t mode;
+    uint8_t uid;
+    uint8_t gid;
+    uint8_t  major;
+    uint8_t  minor;
+    uint8_t  nlink;
+    uint32_t size;
+    uint16_t  data[DIRECTLY_BLOCK_COUNT + 1];
+
+    uint32_t ctime;
+    uint32_t mtime;
+    uint8_t padding[18]; // pad to 64 bytes
+} Dinode;
+
 typedef struct Inode_Cache Inode_Cache;
 
 void inode_init(void);
+Inode* inode_get(uint8_t drive, uint16_t inode_number);
+void inode_lock(Inode *inode);
 
 // file.c
 typedef struct File File;
@@ -280,7 +313,7 @@ bool syscall_populate_argument(Syscall_Argument* arg);
 #define SYS_SLEEP   'S'
 #define SYS_GETPID  'G'
 
-#define SYS_OPEN     'o'
+#define SYS_OPEN_    'o'
 #define SYS_CLOSE    'c'
 #define SYS_READ     'r'
 #define SYS_WRITE    'w'
@@ -295,14 +328,14 @@ void kernel_epilogue(void);
 
 // debugger.c
 void kernel_debugger(void);
-void print_cpu_state(Context* ctx);
-void print_process_state(Proc* p);
-uint16_t gets(char *buf, int max);
+// void print_cpu_state(Context* ctx);
+// void print_process_state(Proc* p);
+// uint16_t gets(char *buf, int max);
 
 // buffer.c
-#define BUFFER_FLAGS_BUSY  0x01
-#define BUFFER_FLAGS_VALID 0x02
-#define BUFFER_FLAGS_DIRTY 0x04
+#define BUFFER_FLAGS_BUSY  (1 << 0)
+#define BUFFER_FLAGS_VALID (1 << 1)
+#define BUFFER_FLAGS_DIRTY (1 << 2)
 
 typedef struct Block_Buffer {
     uint8_t flags;
@@ -319,8 +352,6 @@ void buffer_init(void);
 Block_Buffer* buffer_read(uint8_t drive, uint16_t block_number);
 void buffer_write(Block_Buffer* b);
 void buffer_release(Block_Buffer* b);
-void buffer_pin(Block_Buffer* b);
-void buffer_unpin(Block_Buffer* b);
 
 // disk.c
 void disk_init(void);
@@ -358,6 +389,10 @@ void printk(const char* fmt, ...);
 void vprintk(const char* fmt, va_list ap);
 
 // string.c
+#ifdef __CC65__
+
+#define NULL ((void*)0)
+
 char*    strcpy(char* s, const char* t);
 int      strcmp(const char* p, const char* q);
 uint16_t strlen(const char* s);
@@ -366,5 +401,7 @@ int      atoi(const char* s);
 void*    memmove(void* vdst, const void* vsrc, int n);
 int      memcmp(const void* s1, const void* s2, uint16_t n);
 void*    memcpy(void* dst, const void* src, uint16_t n);
+extern void* memset(void *dst, int value, uint16_t size); // form cc65
+#endif // __CC65__
 
 #endif // COMMON_H

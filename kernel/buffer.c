@@ -126,14 +126,3 @@ void buffer_release(Block_Buffer* b){
     INTER_ON();
 }
 
-void buffer_pin(Block_Buffer* b){
-    INTER_OFF();
-    b->refcount++;
-    INTER_ON();
-}
-
-void buffer_unpin(Block_Buffer* b){
-    INTER_OFF();
-    b->refcount--;
-    INTER_ON();
-}

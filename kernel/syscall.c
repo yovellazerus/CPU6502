@@ -21,7 +21,7 @@ void syscall_init(void){
     syscalls_table[SYS_SLEEP]  = sys_sleep;
     syscalls_table[SYS_GETPID] = sys_getpid;
     syscalls_table[SYS_CLOSE]  = sys_close;
-    syscalls_table[SYS_OPEN]   = sys_open;
+    syscalls_table[SYS_OPEN_]  = sys_open;
     syscalls_table[SYS_WRITE]  = sys_write;
     syscalls_table[SYS_READ]   = sys_read;
     // ...

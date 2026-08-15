@@ -193,6 +193,8 @@ uint8_t device_interrupt(void){
 
 void kernel_prologue(void){
 
+    static bool first = true;
+
     if(proc_get_killed(current_process) != 0 && proc_get_pid(current_process) != 1){
         LOG();
         proc_set_a(current_process, 1);
@@ -208,6 +210,13 @@ void kernel_prologue(void){
     proc_set_page_table(current_process, user_page_table);
 
     memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
+
+    // upon "init" first entry into the kernel, the file system is mounted
+    // must be in a process context, since it requires sleeping
+    if(first){
+        first = false;
+        fs_init(ROOT_DRIVE);
+    }
 
     // NOTE: not enabling interrupts here yet!
 }

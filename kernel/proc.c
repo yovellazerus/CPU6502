@@ -559,7 +559,7 @@ void scheduler(void) {
                 proc_set_ticks(p, QUANTUM); 
 
                 if(old == NULL){
-                    //  "init" first run, so no previous process to save
+                    // "init" first run, so no previous process to save
                     kernel_epilogue();
                     return_from_trap();
                 } 

@@ -56,7 +56,6 @@ bool register_device(Device_Major major, File_Operations* devops){
 }
 
 void file_init(void){
-
     // ...
 }
 

@@ -13,8 +13,9 @@ void main(void) {
 
     kalloc_init();
     proc_init();
-    buffer_init();
     syscall_init();
+    buffer_init();
+    inode_init();
     file_init();
     console_init();
 
