@@ -43,7 +43,7 @@
 #define SUPER_BLOCK_BLOCK       16
 #define MAX_ACTIVE_INODES       (4096 / sizeof(Inode)) // number of inodes that fit in one dynamic frame
 #define ROOT_INODE              1
-#define FS_MAGIC                0x32303536
+#define FS_MAGIC                0x32303536  // "6502"
 
 #define INODES_PER_BLOCK (BLOCK_SIZE / sizeof(struct Dinode))           // inodes per block
 #define INODE_I_BLOCK(i, sb) ((i) / INODES_PER_BLOCK + sb.inode_start)  // block containing inode i
@@ -100,9 +100,10 @@ typedef struct {
 } Dir_Entry;
 
 void fs_init(uint8_t drive);
-void read_super_block(uint8_t drive, Super_Block* sb);
-uint16_t balloc(uint8_t drive);
-void bfree(uint8_t drive, uint16_t block);
+void     block_read_super_block(uint8_t drive, Super_Block* sb);
+uint16_t block_alloc(uint8_t drive);
+void     block_zero(uint8_t drive, uint16_t block);
+void     block_free(uint8_t drive, uint16_t block);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
@@ -216,7 +217,6 @@ typedef enum Proc_State{
 } Proc_State;
 
 typedef struct Proc Proc;
-typedef struct PCB PCB;
 
 // order is importent for trampoline!
 typedef struct Context {
@@ -248,8 +248,8 @@ int8_t  copy_from_user(void* kernel_dest, uint16_t user_src, uint16_t n, Proc* p
 int8_t  copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p);
 void  proc_init(void);
 void  proc_dump(void);
-Proc* palloc(void);
-void  pfree(Proc* p);
+Proc* proc_alloc(void);
+void  proc_free(Proc* p);
 
 uint16_t proc_get_ax(const Proc* p);
 uint8_t  proc_get_y(const Proc* p);
@@ -292,9 +292,9 @@ extern void make_kernel_stack(frame_t frame);
 extern void get_cpu_state(Context* ctx);
 
 // kalloc.c
-void kalloc_init(void);
+void    kalloc_init(void);
 frame_t kalloc(void);
-void kfree(frame_t frame);
+void    kfree(frame_t frame);
 
 // syscall.c
 typedef union Syscall_Argument {
@@ -347,9 +347,9 @@ bool syscall_populate_argument(Syscall_Argument* arg);
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
-uint8_t device_interrupt(void);
 void kernel_prologue(void);
 void kernel_epilogue(void);
+uint8_t device_interrupt(void);
 
 // debugger.c
 void kernel_debugger(void);

@@ -3,7 +3,7 @@
 
 Super_Block sb;
 
-void read_super_block(uint8_t drive, Super_Block* sb){
+void block_read_super_block(uint8_t drive, Super_Block* sb){
     Block_Buffer* b;
     frame_t old_frame;
     
@@ -16,7 +16,7 @@ void read_super_block(uint8_t drive, Super_Block* sb){
 }
 
 void fs_init(uint8_t drive){
-    read_super_block(drive, &sb);
+    block_read_super_block(drive, &sb);
     if(sb.magic != FS_MAGIC){
         panic("fs_init");
     }

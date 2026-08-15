@@ -14,7 +14,7 @@ struct Proc {
 };
 
 // process control block (cached to the kernel stack frame so, can be as large as needed)
-struct PCB {
+typedef struct {
 
     // CPU and memory context
     frame_t page_table[PAGE_TABLE_SIZE];
@@ -40,7 +40,7 @@ struct PCB {
 
     // debug 
     char name[MAX_PROC_NAME];
-};
+} PCB;
 
 Proc  proc_table[MAX_PROC_COUNT];
 Proc* init_process;
@@ -117,7 +117,7 @@ void proc_dump(void){
 create a new Proc struct and a cached PCB struct in its kernel stack frame with an empty page table, 
 new pid, SP set to $ff and a state of PROC_STATE_BUILDING,
 */
-Proc* palloc(void){
+Proc* proc_alloc(void){
     Proc* p = 0;
     uint16_t i;
     frame_t stack_frame;
@@ -159,8 +159,8 @@ Proc* palloc(void){
     return p;
 }
 
-void pfree(Proc* p){
-    if(!p) panic("pfree");
+void proc_free(Proc* p){
+    if(!p) panic("proc_free");
     kfree(p->kernel_low_memory[0]);
     p->state = PROC_STATE_UNUSED;
 }
@@ -765,7 +765,7 @@ int sys_wait(void){
                         }
                     }
                     res = proc_get_pid(&proc_table[i]);
-                    pfree(&proc_table[i]);
+                    proc_free(&proc_table[i]);
                     INTER_ON();
                     return res; 
                 }
@@ -839,10 +839,10 @@ int sys_fork(void){
     uint16_t child_pid;
     frame_t parent_page_table[PAGE_TABLE_SIZE];
 
-    child = palloc();
+    child = proc_alloc();
     if(!child) return -1;
     
-    // save the unique pid palloc() generated before we overwrite the PCB
+    // save the unique pid proc_alloc() generated before we overwrite the PCB
     child_pid = proc_get_pid(child);
     
     // copy the kernel stack (this copies the entire PCB exactly)
@@ -884,7 +884,7 @@ int sys_fork(void){
                     mmu_unmap_window(2, old_window2);
                     segment--;
                 } while(segment);
-                pfree(child); 
+                proc_free(child); 
                 return -1;
             }
 
@@ -916,9 +916,9 @@ void run_init_process(void){
 
     const char* name = "init";
 
-    init_process = palloc();
+    init_process = proc_alloc();
     if(!init_process){
-        panic("palloc");
+        panic("proc_alloc");
     }
 
     init_pcb = MAP_PCB(init_process, old_frame);
