@@ -120,8 +120,11 @@ typedef enum {
 typedef struct Inode Inode;
 
 // on-disk inode structure (cached to dynamic memory for kernel size footprint)
+#ifndef __CC65__
+#pragma pack(push, 1)
+#endif
 typedef struct {
-    Inode_Type type; 
+    uint8_t type; 
     uint16_t mode;
     uint8_t uid;
     uint8_t gid;
@@ -135,6 +138,9 @@ typedef struct {
     uint32_t mtime;
     uint8_t padding[18]; // pad to 64 bytes
 } Dinode;
+#ifndef __CC65__
+#pragma pack(pop)
+#endif
 
 typedef struct Inode_Cache Inode_Cache;
 
