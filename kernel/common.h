@@ -377,7 +377,7 @@ void buffer_init(void);
 Block_Buffer* buffer_read(uint8_t drive, uint16_t block_number);
 void buffer_write(Block_Buffer* b);
 void buffer_release(Block_Buffer* b);
-void buffer_move(Block_Buffer* b, void* dst, uint16_t offset, uint16_t size);
+void buffer_move(Block_Buffer* b, void* dst, void* src, uint16_t size);
 uint16_t block_alloc(uint8_t drive);
 void     block_zero(uint8_t drive, uint16_t block);
 void     block_free(uint8_t drive, uint16_t block);
