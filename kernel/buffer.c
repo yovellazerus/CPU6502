@@ -126,11 +126,90 @@ void buffer_release(Block_Buffer* b){
     INTER_ON();
 }
 
-// copy in/out of the dynamic data frame pointed by the Block_Buffer b
-void buffer_move(Block_Buffer* b, void* dst, void* src, uint16_t size){
+// allocate a block on the disk with drive number drive
+// return 0 if out of disk space
+uint16_t block_alloc(uint8_t drive) {
     frame_t old_frame;
+    uint16_t found;
+    uint16_t block;
+    uint16_t byte;
+    uint8_t  bit;
+    uint8_t  mask;
+    Block_Buffer* buffer;
+    uint8_t* bitmap = (uint8_t*)WINDOW2;
+
+    for(block = 0; block < sb.size; block += BITS_PER_BLOCK){
+        buffer = buffer_read(drive, BIT_B_BLOCK(block, sb));
+        
+        mmu_map_window(2, buffer->frame, &old_frame);
+
+        for(byte = 0; byte < BLOCK_SIZE; byte++){
+            
+            if(bitmap[byte] == 0xFF) continue; // all 8 bits are used
+
+            // found a byte with a free bit, find exactly which one
+            for(bit = 0; bit < 8; bit++){
+                mask = 1 << bit;
+                if((bitmap[byte] & mask) == 0){
+                    
+                    found = block + (byte * 8) + bit;
+                    if(found >= sb.size) break; // reached end of disk
+
+                    // mark it used
+                    bitmap[byte] |= mask;
+                    
+                    mmu_unmap_window(2, old_frame);
+                    
+                    buffer_write(buffer);
+                    buffer_release(buffer);
+                    
+                    block_zero(drive, found);
+                    return found;
+                }
+            }
+        }
+        mmu_unmap_window(2, old_frame);
+        buffer_release(buffer);
+    }
+
+    // out of disk space
+    LOG();
+    return 0;
+}
+
+void block_zero(uint8_t drive, uint16_t block){
+    frame_t old_frame;
+    Block_Buffer* b = buffer_read(drive, block);
     mmu_map_window(2, b->frame, &old_frame);
-    memcpy(dst, src, size);
+    memset((void*)WINDOW2, 0, BLOCK_SIZE);
     mmu_unmap_window(2, old_frame);
+    buffer_write(b);
+    buffer_release(b);
+}
+
+void block_free(uint8_t drive, uint16_t block) {
+    frame_t old_frame;
+    Block_Buffer* buffer = buffer_read(drive, BIT_B_BLOCK(block, sb));
+    
+    uint16_t bit_offset = block % BITS_PER_BLOCK;
+    uint16_t byte       = bit_offset >> 3;  // faster than / 8
+    uint8_t  bit        = bit_offset & 7;   // faster than % 8
+    uint8_t  mask       = 1 << bit;
+    
+    uint8_t* bitmap = (uint8_t*)WINDOW2;
+
+    mmu_map_window(2, buffer->frame, &old_frame);
+
+    if((bitmap[byte] & mask) == 0){
+        panic("block_free");
+    }
+    
+    // clear the bit
+    bitmap[byte] &= ~mask;
+
+    mmu_unmap_window(2, old_frame);
+    
+    buffer_write(buffer);
+    buffer_release(buffer);
 }
 

@@ -34,7 +34,7 @@
 
 #define ROOT_DRIVE              1
 #define CACHE_SIZE              16
-#define BLOCK_SIZE              4096
+#define BLOCK_SIZE              4096U
 #define DIRECTLY_BLOCK_COUNT    12
 #define INDIRECTLY_BLOCK_COUNT  (BLOCK_SIZE / sizeof(uint16_t))
 #define MAX_FILE_SIZE           (DIRECTLY_BLOCK_COUNT + INDIRECTLY_BLOCK_COUNT) // in blocks!
@@ -47,7 +47,7 @@
 
 #define INODES_PER_BLOCK (BLOCK_SIZE / sizeof(struct Dinode))           // inodes per block
 #define INODE_I_BLOCK(i, sb) ((i) / INODES_PER_BLOCK + sb.inode_start)  // block containing inode i
-#define BITS_PER_BLOCK (BLOCK_SIZE * 8)                                 // bitmap bits per block
+#define BITS_PER_BLOCK (BLOCK_SIZE * 8U)                                 // bitmap bits per block
 #define BIT_B_BLOCK(b, sb) ((b) / BITS_PER_BLOCK + sb.bitmap_start)     // block of free map containing bit for block b
 
 #define PIPE_SIZE 256
@@ -377,7 +377,6 @@ void buffer_init(void);
 Block_Buffer* buffer_read(uint8_t drive, uint16_t block_number);
 void buffer_write(Block_Buffer* b);
 void buffer_release(Block_Buffer* b);
-void buffer_move(Block_Buffer* b, void* dst, void* src, uint16_t size);
 uint16_t block_alloc(uint8_t drive);
 void     block_zero(uint8_t drive, uint16_t block);
 void     block_free(uint8_t drive, uint16_t block);
