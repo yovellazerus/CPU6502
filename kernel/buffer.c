@@ -126,3 +126,15 @@ void buffer_release(Block_Buffer* b){
     INTER_ON();
 }
 
+// copy in/out of the dynamic data frame pointed by the Block_Buffer b
+void buffer_move(Block_Buffer* b, void* in_static, uint16_t offset, uint16_t size){
+    frame_t old_frame;
+    void* in_window = (void*)(WINDOW2 + offset);
+    if((uint16_t)in_window >= WINDOW2 + 4096){
+        return;
+    }
+    mmu_map_window(2, b->frame, &old_frame);
+    memcpy(in_static, in_window, size);
+    mmu_unmap_window(2, old_frame);
+}
+

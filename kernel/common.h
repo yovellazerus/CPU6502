@@ -100,10 +100,7 @@ typedef struct {
 } Dir_Entry;
 
 void fs_init(uint8_t drive);
-void     block_read_super_block(uint8_t drive, Super_Block* sb);
-uint16_t block_alloc(uint8_t drive);
-void     block_zero(uint8_t drive, uint16_t block);
-void     block_free(uint8_t drive, uint16_t block);
+void fs_read_super_block(uint8_t drive, Super_Block* sb);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
@@ -380,6 +377,10 @@ void buffer_init(void);
 Block_Buffer* buffer_read(uint8_t drive, uint16_t block_number);
 void buffer_write(Block_Buffer* b);
 void buffer_release(Block_Buffer* b);
+void buffer_move(Block_Buffer* b, void* dst, uint16_t offset, uint16_t size);
+uint16_t block_alloc(uint8_t drive);
+void     block_zero(uint8_t drive, uint16_t block);
+void     block_free(uint8_t drive, uint16_t block);
 
 // disk.c
 void disk_init(void);
