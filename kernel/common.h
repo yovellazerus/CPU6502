@@ -100,7 +100,6 @@ typedef struct {
 } Dir_Entry;
 
 void fs_init(uint8_t drive);
-void fs_read_super_block(uint8_t drive, Super_Block* sb);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
