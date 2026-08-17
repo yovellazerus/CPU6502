@@ -1,29 +1,24 @@
 
 #include "common.h"
 
+// TODO: using console_open?
 void console_init(void){
-    File_Operations console_devops;
-    console_devops.close = console_close;
-    console_devops.read  = console_read;
-    console_devops.write = console_write;
+
+    // register the console device
+    devsw_table[DEVICE_MAJOR_CONSOLE].close = console_close;
+    devsw_table[DEVICE_MAJOR_CONSOLE].open  = console_open;
+    devsw_table[DEVICE_MAJOR_CONSOLE].read  = console_read;
+    devsw_table[DEVICE_MAJOR_CONSOLE].write = console_write;
+    devsw_table[DEVICE_MAJOR_CONSOLE].ioctl = console_ioctl;
+    devsw_table[DEVICE_MAJOR_CONSOLE].stat  = console_stat;
+
     // manually open the very first entry in the global file table to the console
-    if(!file_open_global(   0,
-                            FILE_TYPE_DEVICE,
-                            DEVICE_MAJOR_CONSOLE,
-                            1,
-                            1,
-                            0
-                        )
-                                                )
-    {
-        goto bad;
-    }
-    if(!register_device(DEVICE_MAJOR_CONSOLE, &console_devops)){
-        goto bad;
-    }
-    return;
-bad:
-    panic("console_init");
+    global_file_table[0].type     = FILE_TYPE_DEVICE;
+    global_file_table[0].offset   = 0;
+    global_file_table[0].inode    = NULL;  // TODO: console inode implementation
+    global_file_table[0].writable = true;
+    global_file_table[0].readable = true;
+    global_file_table[0].major    = DEVICE_MAJOR_CONSOLE;
 }
 
 // using cooked mode
@@ -101,5 +96,23 @@ int console_write(File* file, void* src, uint16_t n){
 int console_close(File* file){
     (void)file;
     panic("console_close");
-    return 0;
+    return -1;
+}
+
+int console_ioctl(File* f, uint8_t request, void* arg){
+    (void)f; (void)request; (void)arg;
+    panic("console_ioctl");
+    return -1;
+}
+
+int console_open(File* f){
+    (void)f;
+    panic("console_open");
+    return -1;
+}
+
+int console_stat(File* f, Stat* st){
+    (void)f; (void)st;
+    panic("console_stat");
+    return -1;
 }

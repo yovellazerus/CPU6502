@@ -930,9 +930,9 @@ void run_init_process(void){
     }
 
     // manually open the 3 first file descriptors to the console
-    init_pcb->open_files[0] = file_get_by_global_index(0); // stdin
-    init_pcb->open_files[1] = file_get_by_global_index(0); // stdout
-    init_pcb->open_files[2] = file_get_by_global_index(0); // stderr
+    init_pcb->open_files[0] = &global_file_table[0]; // stdin
+    init_pcb->open_files[1] = &global_file_table[0]; // stdout
+    init_pcb->open_files[2] = &global_file_table[0]; // stderr
 
     // inject the code to bootstrap the "/init" process
     init_pcb->ctx.pc = (uint16_t)init_code;

@@ -24,6 +24,8 @@ void syscall_init(void){
     syscalls_table[SYS_OPEN_]  = sys_open;
     syscalls_table[SYS_WRITE]  = sys_write;
     syscalls_table[SYS_READ]   = sys_read;
+    syscalls_table[SYS_IOCTL]  = sys_ioctl;
+    syscalls_table[SYS_STAT]   = sys_stat;
     // ...
 }
 

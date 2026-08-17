@@ -68,6 +68,10 @@
 #define MMIO16(register) *(volatile uint16_t*)(register)
 #define MMIO32(register) *(volatile uint32_t*)(register)
 
+// forward declarations
+typedef struct Inode Inode;
+typedef struct Pipe Pipe;
+
 // kernel.cfg
 extern uint8_t _INITCODE_LOAD__[];
 extern uint8_t _INITCODE_RUN__[];
@@ -81,6 +85,65 @@ typedef uint8_t frame_t;
 void  mmu_init(void);
 void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
 void  mmu_unmap_window(uint8_t window, frame_t old_frame);
+
+// file.c
+typedef enum {
+    FILE_TYPE_NONE = 0,
+    FILE_TYPE_DEVICE,
+    FILE_TYPE_INODE,
+    FILE_TYPE_PIPE
+} File_Type;
+
+typedef struct {
+    uint8_t  type;
+    uint8_t  refcount;
+    uint8_t  major;
+    uint8_t  readable;
+    uint8_t  writable;
+    uint32_t offset;
+    union {
+        Inode* inode;       // FILE_TYPE_INODE and FILE_TYPE_DEVICE
+        Pipe*  pipe;        // FILE_TYPE_PIPE
+    };
+    // ...
+} File;
+
+extern File global_file_table[MAX_GLOBAL_OPEN_FILES];
+
+typedef struct {
+    uint8_t  drive;
+    uint16_t inode_number;
+    uint8_t  type;
+    uint8_t  nlink;
+    uint32_t size;
+} Stat;
+
+typedef enum {
+    DEVICE_MAJOR_NULL = 0,
+    DEVICE_MAJOR_CONSOLE,
+    DEVICE_MAJOR_DISK,
+    DEVICE_MAJOR_PIPE
+} Device_Major;
+
+typedef struct File_Operations {
+    int (*open)(File* f);
+    int (*close)(File* f);
+    int (*read)(File* f, void* buffer, uint16_t length);
+    int (*write)(File* f, void* buffer, uint16_t length);
+    int (*ioctl)(File* f, uint8_t request, void* arg);
+    int (*stat)(File* f, Stat* st);
+} File_Operations;
+
+extern File_Operations devsw_table[MAX_REGISTER_DEVICES];
+
+void  file_init(void);
+
+int sys_read(void);
+int sys_write(void);
+int sys_close(void);
+int sys_open(void);
+int sys_ioctl(void);
+int sys_stat(void);
 
 // fs.c
 typedef struct {
@@ -100,6 +163,12 @@ typedef struct {
 } Dir_Entry;
 
 void fs_init(uint8_t drive);
+int fs_open(File* f);
+int fs_close(File* f);
+int fs_read(File* f, void* buffer, uint16_t length);
+int fs_write(File* f, void* buffer, uint16_t length);
+int fs_ioctl(File* f, uint8_t request, void* arg);
+int fs_stat(File* f, Stat* st);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
@@ -112,8 +181,6 @@ typedef enum {
     INODE_TYPE_DIR,
     INODE_TYPE_DEVICE
 } Inode_Type;
-
-typedef struct Inode Inode;
 
 // on-disk inode structure (cached to dynamic memory for kernel size footprint)
 #ifndef __CC65__
@@ -140,14 +207,6 @@ typedef struct {
 
 typedef struct Inode_Cache Inode_Cache;
 
-typedef struct {
-    uint8_t drive;
-    uint16_t inode_number;
-    Inode_Type type;
-    uint8_t nlink;
-    uint32_t size;
-} Stat;
-
 void   inode_init(void);
 Inode* inode_get(uint8_t drive, uint16_t inode_number);
 void   inode_lock(Inode* inode);
@@ -165,47 +224,13 @@ void   inode_trunc(Inode* inode);
 void   inode_reclaim(uint8_t drive);
 
 // pipe.c
-typedef struct Pipe Pipe;
-
-// file.c
-typedef struct File File;
-
-typedef enum {
-    FILE_TYPE_NONE = 0,
-    FILE_TYPE_DEVICE,
-    FILE_TYPE_INODE,
-    FILE_TYPE_PIPE
-} File_Type;
-
-typedef enum {
-    DEVICE_MAJOR_NONE = 0,
-    DEVICE_MAJOR_CONSOLE,
-    DEVICE_MAJOR_DISK,
-    DEVICE_MAJOR_PIPE
-} Device_Major;
-
-typedef struct File_Operations {
-    int (*open)(struct File* f);
-    int (*close)(struct File* f);
-    int (*read)(struct File* f, void* buffer, uint16_t length);
-    int (*write)(struct File* f, void* buffer, uint16_t length);
-    int (*ioctl)(struct File* f, uint8_t request, void* arg);
-} File_Operations;
-
-void  file_init(void);
-File* file_get_by_global_index(uint8_t index);
-bool  file_open_global( uint8_t index,
-                        File_Type type,
-                        Device_Major major,
-                        uint8_t  readable,
-                        uint8_t  writable,
-                        uint32_t offset);
-bool  register_device(Device_Major major, File_Operations* devops);
-
-int sys_read(void);
-int sys_write(void);
-int sys_close(void);
-int sys_open(void);
+void pipe_init(void);
+int pipe_open(File* f);
+int pipe_close(File* f);
+int pipe_read(File* f, void* buffer, uint16_t length);
+int pipe_write(File* f, void* buffer, uint16_t length);
+int pipe_ioctl(File* f, uint8_t request, void* arg);
+int pipe_stat(File* f, Stat* st);
 
 // proc.c
 typedef enum Proc_State{
@@ -344,6 +369,8 @@ bool syscall_populate_argument(Syscall_Argument* arg);
 #define SYS_CLOSE    'c'
 #define SYS_READ     'r'
 #define SYS_WRITE    'w'
+#define SYS_IOCTL    'i'
+#define SYS_STAT     's'
 
 // trap.c
 void kernel_brk(void);
@@ -406,9 +433,12 @@ void timer_interrupt(void);
 
 // consol.c
 void console_init(void);
-int  console_read(File* file, void* dst, uint16_t n);
-int  console_write(File* file, void* src, uint16_t n);
-int  console_close(File* file);
+int console_open(File* f);
+int console_close(File* f);
+int console_read(File* f, void* buffer, uint16_t length);
+int console_write(File* f, void* buffer, uint16_t length);
+int console_ioctl(File* f, uint8_t request, void* arg);
+int console_stat(File* f, Stat* st);
 
 // printk.c
 void panic(const char* fmt, ...);

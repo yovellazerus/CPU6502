@@ -18,6 +18,7 @@ void main(void) {
     inode_init();
     file_init();
     console_init();
+    pipe_init();
 
     printk("kernel: starting init process...\n");
     run_init_process();

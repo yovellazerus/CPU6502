@@ -11,6 +11,14 @@ void fs_init(uint8_t drive){
     uint16_t block;
     Block_Buffer* buffer;
 
+    // register the disk as a device
+    devsw_table[DEVICE_MAJOR_DISK].close = fs_close;
+    devsw_table[DEVICE_MAJOR_DISK].open  = fs_open;
+    devsw_table[DEVICE_MAJOR_DISK].read  = fs_read;
+    devsw_table[DEVICE_MAJOR_DISK].write = fs_write;
+    devsw_table[DEVICE_MAJOR_DISK].ioctl = fs_ioctl;
+    devsw_table[DEVICE_MAJOR_DISK].stat  = fs_stat;
+
     // read the super block
     buffer = buffer_read(drive, SUPER_BLOCK_BLOCK);
     mmu_map_window(2, buffer->frame, &old_frame);
@@ -39,4 +47,41 @@ void fs_init(uint8_t drive){
     buffer_release(buffer);
 }
 
-// TODO: fs_create(), fs_open(), fs_close() ... (disk file interface)
+// TODO: fs_create()
+
+int fs_open(File* f){
+    (void)f;
+    panic("fs_open");
+    return -1;
+}
+
+int fs_close(File* f){
+    (void)f;
+    panic("fs_close");
+    return -1;
+}
+
+int fs_read(File* f, void* buffer, uint16_t length){
+    (void)f; (void)buffer; (void)length;
+    panic("fs_read");
+    return -1;
+}
+
+int fs_write(File* f, void* buffer, uint16_t length){
+    (void)f; (void)buffer; (void)length;
+    panic("fs_write");
+    return -1;
+}
+
+int fs_ioctl(File* f, uint8_t request, void* arg){
+    (void)f; (void)request; (void)arg;
+    panic("fs_ioctl");
+    return -1;
+}
+
+int fs_stat(File* f, Stat* st){
+    (void)f; (void)st;
+    panic("fs_stat");
+    return -1;
+}
+
