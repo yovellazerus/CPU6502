@@ -71,6 +71,7 @@
 // forward declarations
 typedef struct Inode Inode;
 typedef struct Pipe Pipe;
+typedef struct File_Operations File_Operations;
 
 // kernel.cfg
 extern uint8_t _INITCODE_LOAD__[];
@@ -95,12 +96,11 @@ typedef enum {
 } File_Type;
 
 typedef struct {
-    uint8_t  type;
     uint8_t  refcount;
-    uint8_t  major;
     uint8_t  readable;
     uint8_t  writable;
     uint32_t offset;
+    File_Operations* fops;
     union {
         Inode* inode;       // FILE_TYPE_INODE and FILE_TYPE_DEVICE
         Pipe*  pipe;        // FILE_TYPE_PIPE
@@ -125,19 +125,18 @@ typedef enum {
     DEVICE_MAJOR_PIPE
 } Device_Major;
 
-typedef struct File_Operations {
+struct File_Operations {
     int (*open)(File* f);
     int (*close)(File* f);
     int (*read)(File* f, void* buffer, uint16_t length);
     int (*write)(File* f, void* buffer, uint16_t length);
     int (*ioctl)(File* f, uint8_t request, void* arg);
     int (*stat)(File* f, Stat* st);
-} File_Operations;
+};
 
-extern File_Operations devsw_table[MAX_REGISTER_DEVICES];
+extern File_Operations* devsw_table[MAX_REGISTER_DEVICES];
 
 void  file_init(void);
-
 int sys_read(void);
 int sys_write(void);
 int sys_close(void);

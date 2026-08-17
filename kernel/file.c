@@ -3,7 +3,7 @@
 
 File global_file_table[MAX_GLOBAL_OPEN_FILES];
 
-File_Operations devsw_table[MAX_REGISTER_DEVICES];
+File_Operations* devsw_table[MAX_REGISTER_DEVICES];
 
 void file_init(void){
     // ...
@@ -47,7 +47,7 @@ int sys_read(void){
         chunk_size = (arg.read.size < sizeof(chunk_buffer)) ? arg.read.size : sizeof(chunk_buffer);
 
         // dispatch to driver using the devsw (fill the stack buffer)
-        bytes_read = devsw_table[file->major].read(file, chunk_buffer, chunk_size);
+        bytes_read = file->fops->read(file, chunk_buffer, chunk_size);
         
         // handle read errors or EOF
         if(bytes_read < 0){
@@ -117,7 +117,7 @@ int sys_write(void){
         }
 
         // dispatch to driver using the devsw (write the data from the stack buffer)
-        bytes_written = devsw_table[file->major].write(file, chunk_buffer, chunk_size);
+        bytes_written = file->fops->write(file, chunk_buffer, chunk_size);
         
         // handle write errors
         if(bytes_written < 0){

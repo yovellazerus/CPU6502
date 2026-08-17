@@ -3,6 +3,15 @@
 
 Super_Block sb;
 
+File_Operations fs_ops = {
+    fs_open,
+    fs_close,
+    fs_read,
+    fs_write,
+    fs_ioctl,
+    fs_stat
+};
+
 char* msg = "Hello from the kernel to disk!\n";
 char* msg2 = "and i wrote this to disk to!!!\n";
 
@@ -11,13 +20,8 @@ void fs_init(uint8_t drive){
     uint16_t block;
     Block_Buffer* buffer;
 
-    // register the disk as a device
-    devsw_table[DEVICE_MAJOR_DISK].close = fs_close;
-    devsw_table[DEVICE_MAJOR_DISK].open  = fs_open;
-    devsw_table[DEVICE_MAJOR_DISK].read  = fs_read;
-    devsw_table[DEVICE_MAJOR_DISK].write = fs_write;
-    devsw_table[DEVICE_MAJOR_DISK].ioctl = fs_ioctl;
-    devsw_table[DEVICE_MAJOR_DISK].stat  = fs_stat;
+    // register the disk file system as a device driver
+    devsw_table[DEVICE_MAJOR_DISK] = &fs_ops;
 
     // read the super block
     buffer = buffer_read(drive, SUPER_BLOCK_BLOCK);

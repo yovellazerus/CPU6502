@@ -1,24 +1,27 @@
 
 #include "common.h"
 
+File_Operations console_ops = {
+    console_open,
+    console_close,
+    console_read,
+    console_write,
+    console_ioctl,
+    console_stat
+};
+
 // TODO: using console_open?
-void console_init(void){
+void console_init(void) {
 
-    // register the console device
-    devsw_table[DEVICE_MAJOR_CONSOLE].close = console_close;
-    devsw_table[DEVICE_MAJOR_CONSOLE].open  = console_open;
-    devsw_table[DEVICE_MAJOR_CONSOLE].read  = console_read;
-    devsw_table[DEVICE_MAJOR_CONSOLE].write = console_write;
-    devsw_table[DEVICE_MAJOR_CONSOLE].ioctl = console_ioctl;
-    devsw_table[DEVICE_MAJOR_CONSOLE].stat  = console_stat;
-
-    // manually open the very first entry in the global file table to the console
-    global_file_table[0].type     = FILE_TYPE_DEVICE;
-    global_file_table[0].offset   = 0;
-    global_file_table[0].inode    = NULL;  // TODO: console inode implementation
-    global_file_table[0].writable = true;
+    // register the device
+    devsw_table[DEVICE_MAJOR_CONSOLE] = &console_ops;
+    
+    // manually open the first entry in the global file table to the console
+    global_file_table[0].offset = 0;
+    global_file_table[0].inode  = NULL;       // TODO: console inode implementation
     global_file_table[0].readable = true;
-    global_file_table[0].major    = DEVICE_MAJOR_CONSOLE;
+    global_file_table[0].writable = true;
+    global_file_table[0].fops = devsw_table[DEVICE_MAJOR_CONSOLE];
 }
 
 // using cooked mode

@@ -9,15 +9,19 @@ struct Pipe {
     uint8_t  write_open; 
 };
 
-void pipe_init(void){
+File_Operations pipe_ops = {
+    pipe_open,
+    pipe_close,
+    pipe_read,
+    pipe_write,
+    pipe_ioctl,
+    pipe_stat
+};
 
-    // register the pipes as a devices
-    devsw_table[DEVICE_MAJOR_PIPE].close = pipe_close;
-    devsw_table[DEVICE_MAJOR_PIPE].open  = pipe_open;
-    devsw_table[DEVICE_MAJOR_PIPE].read  = pipe_read;
-    devsw_table[DEVICE_MAJOR_PIPE].write = pipe_write;
-    devsw_table[DEVICE_MAJOR_PIPE].ioctl = pipe_ioctl;
-    devsw_table[DEVICE_MAJOR_PIPE].stat  = pipe_stat;
+void pipe_init(void){
+    // register the pipes as devices
+    devsw_table[DEVICE_MAJOR_PIPE] = &pipe_ops;
+    // ...
 }
 
 int pipe_open(File* f){
