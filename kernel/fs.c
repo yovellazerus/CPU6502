@@ -9,7 +9,6 @@ File_Operations fs_ops = {
     fs_read,
     fs_write,
     fs_ioctl,
-    fs_stat
 };
 
 char* msg = "Hello from the kernel to disk!\n";
@@ -82,10 +81,3 @@ int fs_ioctl(File* f, uint8_t request, void* arg){
     panic("fs_ioctl");
     return -1;
 }
-
-int fs_stat(File* f, Stat* st){
-    (void)f; (void)st;
-    panic("fs_stat");
-    return -1;
-}
-

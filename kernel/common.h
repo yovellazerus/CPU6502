@@ -131,7 +131,6 @@ struct File_Operations {
     int (*read)(File* f, void* buffer, uint16_t length);
     int (*write)(File* f, void* buffer, uint16_t length);
     int (*ioctl)(File* f, uint8_t request, void* arg);
-    int (*stat)(File* f, Stat* st);
 };
 
 extern File_Operations* devsw_table[MAX_REGISTER_DEVICES];
@@ -142,7 +141,8 @@ int sys_write(void);
 int sys_close(void);
 int sys_open(void);
 int sys_ioctl(void);
-int sys_stat(void);
+int sys_fstat(void);
+int sys_fseek(void);
 
 // fs.c
 typedef struct {
@@ -167,7 +167,6 @@ int fs_close(File* f);
 int fs_read(File* f, void* buffer, uint16_t length);
 int fs_write(File* f, void* buffer, uint16_t length);
 int fs_ioctl(File* f, uint8_t request, void* arg);
-int fs_stat(File* f, Stat* st);
 
 // inode.c
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
@@ -229,7 +228,6 @@ int pipe_close(File* f);
 int pipe_read(File* f, void* buffer, uint16_t length);
 int pipe_write(File* f, void* buffer, uint16_t length);
 int pipe_ioctl(File* f, uint8_t request, void* arg);
-int pipe_stat(File* f, Stat* st);
 
 // proc.c
 typedef enum Proc_State{
@@ -369,7 +367,6 @@ bool syscall_populate_argument(Syscall_Argument* arg);
 #define SYS_READ     'r'
 #define SYS_WRITE    'w'
 #define SYS_IOCTL    'i'
-#define SYS_STAT     's'
 
 // trap.c
 void kernel_brk(void);
@@ -437,7 +434,6 @@ int console_close(File* f);
 int console_read(File* f, void* buffer, uint16_t length);
 int console_write(File* f, void* buffer, uint16_t length);
 int console_ioctl(File* f, uint8_t request, void* arg);
-int console_stat(File* f, Stat* st);
 
 // printk.c
 void panic(const char* fmt, ...);

@@ -15,7 +15,6 @@ File_Operations pipe_ops = {
     pipe_read,
     pipe_write,
     pipe_ioctl,
-    pipe_stat
 };
 
 void pipe_init(void){
@@ -51,11 +50,5 @@ int pipe_write(File* f, void* buffer, uint16_t length){
 int pipe_ioctl(File* f, uint8_t request, void* arg){
     (void)f; (void)request; (void)arg;
     panic("pipe_ioctl");
-    return -1;
-}
-
-int pipe_stat(File* f, Stat* st){
-    (void)f; (void)st;
-    panic("pipe_stat");
     return -1;
 }

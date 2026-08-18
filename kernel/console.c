@@ -7,7 +7,6 @@ File_Operations console_ops = {
     console_read,
     console_write,
     console_ioctl,
-    console_stat
 };
 
 // TODO: using console_open?
@@ -25,75 +24,88 @@ void console_init(void) {
 }
 
 // using cooked mode
-int console_read(File* file, void* dst, uint16_t n){
+int console_read(File* file, void* user_dst, uint16_t n){
     int c;
-    char* dest = (char*)dst;
     int bytes_read = 0;
+    uint8_t buffer[128];
+    
+    // prevent buffer overflows if user asks for less than the buffer
+    int max_read = (n < sizeof(buffer)) ? n : sizeof(buffer);
     (void)file;
 
-    while(bytes_read < n){
-
-        // modifies a the uart ring buffer that is accessible to interrupts therefore, must be locked
+    while(bytes_read < max_read){
         INTER_OFF();
         c = uart_getc();
         if(c == -1){
-            // ring buffer is empty
             sleep(&ring_buffer);
             INTER_ON();
-            // very importent! if 2 processes will wakeup at the same time,
-            // the first will read the character, and the second will get -1 form uart_getc()
-            // and will go back to sleep
             continue;
         }
         INTER_ON();
 
-        // BACKSPACE or DEL
         if(c == '\b' || c == 0x7f){
             if(bytes_read > 0){
-                // remove from user buffer
                 bytes_read--;
-
-                // deleting the character visually
                 uart_putc_sync('\b'); 
                 uart_putc_sync(' ');
                 uart_putc_sync('\b');
             }
-            // skip adding the BACKSPACE to the ring buffer
             continue;
         }
 
-        // TODO: need to check for '\0'?
-
-        // is it the end of the line?
+        // end of the line
         if(c == '\r' || c == '\n'){
-            // standard UNIX '\n' in the user buffer
-            dest[bytes_read++] = '\n';
-
+            buffer[bytes_read++] = '\n';
             uart_putc_sync('\r');
             uart_putc_sync('\n');
             break;
         }
 
         // normal character
-        dest[bytes_read++] = c;
-        // echo
+        buffer[bytes_read++] = c;
         uart_putc_sync(c);
+    }
+
+    // the line is ready (or max bytes hit), copy to user space
+    if(copy_to_user(buffer, (uint16_t)user_dst, bytes_read, current_process) < 0){
+        return -1;
     }
 
     return bytes_read;
 }
 
-int console_write(File* file, void* src, uint16_t n){
-    uint16_t bytes_written;
-    char* source = (char*)src;
+int console_write(File* file, void* user_src, uint16_t n){
+    uint16_t chunk_size;
+    uint16_t i;
+    uint8_t buffer[128];
+    uint16_t total_written = 0;
+    uint16_t user_ptr = (uint16_t)user_src;
     (void)file;
-    for(bytes_written = 0; bytes_written < n; bytes_written++){
-        if(source[bytes_written] == '\n'){
-            uart_putc('\r');
+
+    while(total_written < n){
+
+        // calculate the chunk size for this iteration
+        chunk_size = ((n - total_written) < sizeof(buffer)) ? (n - total_written) : sizeof(buffer);
+        
+        // copy one chunk FROM user space into the driver's buffer
+        if(copy_from_user(buffer, user_ptr, chunk_size, current_process) < 0){
+            if(total_written == 0) return -1;
+            break; // something was written before faulting
         }
-        uart_putc(source[bytes_written]);
+
+        // move the chunk to the hardware driver
+        for(i = 0; i < chunk_size; i++){
+            if(buffer[i] == '\n'){
+                uart_putc('\r'); // for standard UNIX terminals
+            }
+            uart_putc(buffer[i]);
+        }
+        
+        total_written += chunk_size;
+        user_ptr      += chunk_size;
     }
-    return bytes_written;
+    
+    return total_written;
 }
 
 int console_close(File* file){
@@ -111,11 +123,5 @@ int console_ioctl(File* f, uint8_t request, void* arg){
 int console_open(File* f){
     (void)f;
     panic("console_open");
-    return -1;
-}
-
-int console_stat(File* f, Stat* st){
-    (void)f; (void)st;
-    panic("console_stat");
     return -1;
 }
