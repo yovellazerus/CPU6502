@@ -8,15 +8,6 @@
 
 #include "../machine/machine.h"
 
-// 6502 "P" register flags
-#define FLAG_N 0x80 // negative
-#define FLAG_V 0x40 // overflow
-#define FLAG_B 0x10 // break
-#define FLAG_D 0x08 // decimal
-#define FLAG_I 0x04 // interrupt Disable
-#define FLAG_Z 0x02 // zero
-#define FLAG_C 0x01 // carry
-
 #define WINDOW1         0x1000
 #define WINDOW2         0x2000
 #define PAGE_TABLE_SIZE MMU_PAGE_TABLE_SIZE
@@ -82,13 +73,19 @@ extern uint8_t _INITCODE_SIZE__[];
 // initcode.s
 extern uint8_t init_code[];
 
+// =========================================================================================================================
 // mmu.c
+// =========================================================================================================================
+
 typedef uint8_t frame_t;
 void  mmu_init(void);
 void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame);
 void  mmu_unmap_window(uint8_t window, frame_t old_frame);
 
+// =========================================================================================================================
 // file.c
+// =========================================================================================================================
+
 typedef enum {
     FILE_TYPE_NONE = 0,
     FILE_TYPE_DEVICE,
@@ -145,7 +142,10 @@ int sys_ioctl(void);
 int sys_fstat(void);
 int sys_fseek(void);
 
+// =========================================================================================================================
 // fs.c
+// =========================================================================================================================
+
 typedef struct {
     uint32_t magic;        // must be FS_MAGIC
     uint16_t size;         // size of file system image (in blocks)
@@ -169,7 +169,10 @@ int fs_read(File* f, void* buffer, uint16_t length);
 int fs_write(File* f, void* buffer, uint16_t length);
 int fs_ioctl(File* f, uint8_t request, void* arg);
 
+// =========================================================================================================================
 // inode.c
+// =========================================================================================================================
+
 #define INODE_FLAGS_BUSY  (1 << 0) // for sleep lock
 #define INODE_FLAGS_VALID (1 << 1) // is it read form disk?
 #define INODE_FLAGS_DIRTY (1 << 2) // need to updata the disk?
@@ -222,7 +225,10 @@ int    inode_write(Inode* inode, uint16_t user_buffer, uint32_t offset, uint16_t
 void   inode_trunc(Inode* inode);
 void   inode_reclaim(uint8_t drive);
 
+// =========================================================================================================================
 // pipe.c
+// =========================================================================================================================
+
 void pipe_init(void);
 int pipe_open(File* f);
 int pipe_close(File* f);
@@ -230,7 +236,10 @@ int pipe_read(File* f, void* buffer, uint16_t length);
 int pipe_write(File* f, void* buffer, uint16_t length);
 int pipe_ioctl(File* f, uint8_t request, void* arg);
 
+// =========================================================================================================================
 // proc.c
+// =========================================================================================================================
+
 typedef enum Proc_State{
     PROC_STATE_UNUSED = 0,
     PROC_STATE_BUILDING,
@@ -241,18 +250,24 @@ typedef enum Proc_State{
     PROC_STATE_ZOMBIE
 } Proc_State;
 
-typedef struct Proc Proc;
-
 // order is importent for trampoline!
 typedef struct Context {
     uint8_t sp;
     uint8_t p;
     uint16_t pc; 
+    uint8_t a;
     uint8_t x;
     uint8_t y;
-    uint8_t a;
     uint8_t ksp;
 } Context;
+
+// in virtual static memory, try to keep as thin as possible!
+// WARNING: order is importent for trampoline.s
+typedef struct Proc {
+    uint8_t ksp;                    // for trampoline context switch functions 
+    frame_t kernel_low_memory[3];   // for the MMU map/unmap functions, and for trampoline and tracing
+    Proc_State state;               // for fast scheduler and process syscalls actions
+} Proc;
 
 // process control block (cached to the kernel stack frame so, can be as large as needed)
 typedef struct {
@@ -282,6 +297,10 @@ typedef struct {
     // debug 
     char name[MAX_PROC_NAME];
 } PCB;
+
+#define PCB_OFFSET 0x200
+#define MAP_PCB(proc, old_frame) (PCB*)((uint16_t)mmu_map_window(2, proc->kernel_low_memory[0], &old_frame) + PCB_OFFSET)
+#define UNMAP_PCB(old_frame)     mmu_unmap_window(2, old_frame) 
 
 extern Proc* current_process;
 
@@ -325,6 +344,8 @@ void proc_write_bytes(Proc* p, uint8_t offset, void* src, uint8_t size);
 #define proc_get_y(p)           proc_get_8(p, offsetof(PCB, ctx.y))
 
 // 16-bit getters & setters (pointers are cast back to their correct types)
+#define proc_get_ax(p)          proc_get_16(p, offsetof(PCB, ctx.a))
+#define proc_set_ax(p, v)       proc_set_16(p, offsetof(PCB, ctx.a), v)
 #define proc_get_pid(p)         proc_get_16(p, offsetof(PCB, pid))
 #define proc_set_pid(p, v)      proc_set_16(p, offsetof(PCB, pid), v)
 #define proc_get_top(p)         proc_get_16(p, offsetof(PCB, top))
@@ -348,13 +369,10 @@ void proc_write_bytes(Proc* p, uint8_t offset, void* src, uint8_t size);
     (((fd) < 0 || (fd) >= MAX_FILES_PER_PROC) ? NULL : \
     (File*)proc_get_16(p, offsetof(PCB, open_files) + ((fd) * sizeof(File*))))
 
-// spacial cassis that must be functions
-uint16_t proc_get_ax(const Proc* p);
-void     proc_set_ax(Proc* p, uint16_t ax);
-uint8_t* proc_get_kernel_low_memory(Proc* p);
-uint8_t  proc_ticks_dec(Proc* p);
-
+// =========================================================================================================================
 // trampoline.s
+// =========================================================================================================================
+
 extern uint8_t user_context[];
 extern frame_t user_page_table[PAGE_TABLE_SIZE];
 extern frame_t kernel_page_table[PAGE_TABLE_SIZE];
@@ -367,12 +385,18 @@ extern void first_context_switch(Proc* old, Proc* new);
 extern void make_kernel_stack(frame_t frame);
 extern void get_cpu_state(Context* ctx);
 
+// =========================================================================================================================
 // kalloc.c
+// =========================================================================================================================
+
 void    kalloc_init(void);
 frame_t kalloc(void);
 void    kfree(frame_t frame);
 
+// =========================================================================================================================
 // syscall.c
+// =========================================================================================================================
+
 typedef union Syscall_Argument {
 
     struct {
@@ -420,7 +444,10 @@ bool syscall_populate_argument(Syscall_Argument* arg);
 #define SYS_WRITE    'w'
 #define SYS_IOCTL    'i'
 
+// =========================================================================================================================
 // trap.c
+// =========================================================================================================================
+
 void kernel_brk(void);
 void kernel_irq(void);
 void kernel_nmi(void);
@@ -428,10 +455,16 @@ void kernel_prologue(void);
 void kernel_epilogue(void);
 uint8_t device_interrupt(void);
 
+// =========================================================================================================================
 // debugger.c
+// =========================================================================================================================
+
 void kernel_debugger(void);
 
+// =========================================================================================================================
 // buffer.c
+// =========================================================================================================================
+
 #define BUFFER_FLAGS_BUSY  (1 << 0)
 #define BUFFER_FLAGS_VALID (1 << 1)
 #define BUFFER_FLAGS_DIRTY (1 << 2)
@@ -455,13 +488,19 @@ uint16_t block_alloc(uint8_t drive);
 void     block_zero(uint8_t drive, uint16_t block);
 void     block_free(uint8_t drive, uint16_t block);
 
+// =========================================================================================================================
 // disk.c
+// =========================================================================================================================
+
 void disk_init(void);
 void disk_interrupt(void);
 void disk_block_read(Block_Buffer* b);
 void disk_block_write(Block_Buffer* b);
 
+// =========================================================================================================================
 // uart.c
+// =========================================================================================================================
+
 typedef struct Ring_Buffer Ring_Buffer;
 extern Ring_Buffer ring_buffer;
 void uart_init(void);
@@ -471,7 +510,10 @@ void uart_putc(char c);
 int  uart_getc_sync(void);
 int  uart_getc(void);
 
+// =========================================================================================================================
 // timer.c
+// =========================================================================================================================
+
 extern volatile uint32_t systicks;
 extern volatile uint32_t next_wakeup_call;
 void timer_init(void);
@@ -479,7 +521,10 @@ void timer_pause(void);
 void timer_resume(void);
 void timer_interrupt(void);
 
-// consol.c
+// =========================================================================================================================
+// console.c
+// =========================================================================================================================
+
 void console_init(void);
 int console_open(File* f);
 int console_close(File* f);
@@ -487,12 +532,18 @@ int console_read(File* f, void* buffer, uint16_t length);
 int console_write(File* f, void* buffer, uint16_t length);
 int console_ioctl(File* f, uint8_t request, void* arg);
 
+// =========================================================================================================================
 // printk.c
+// =========================================================================================================================
+
 void panic(const char* fmt, ...);
 void printk(const char* fmt, ...);
 void vprintk(const char* fmt, va_list ap);
 
+// =========================================================================================================================
 // string.c
+// =========================================================================================================================
+
 #ifdef __CC65__
 
 extern void* memset(void *dst, int value, uint16_t size); // form cc65

@@ -1,18 +1,6 @@
 
 #include "common.h"
 
-#define PCB_OFFSET 0x200
-#define MAP_PCB(proc, old_frame) (PCB*)((uint16_t)mmu_map_window(2, proc->kernel_low_memory[0], &old_frame) + PCB_OFFSET)
-#define UNMAP_PCB(old_frame)     mmu_unmap_window(2, old_frame)  
-
-// in virtual static memory, try to keep as thin as possible!
-// WARNING: order is importent for trampoline.s
-struct Proc {
-    uint8_t ksp;                    // for trampoline context switch functions 
-    frame_t kernel_low_memory[3];   // for the MMU map/unmap functions, and for trampoline and tracing
-    Proc_State state;               // for fast scheduler and process syscalls actions
-};
-
 Proc  proc_table[MAX_PROC_COUNT];
 Proc* init_process;
 Proc* current_process;
@@ -180,46 +168,6 @@ void proc_write_bytes(Proc* p, uint8_t offset, void* src, uint8_t size) {
     PCB* pcb = MAP_PCB(p, old_frame);
     memcpy((uint8_t*)pcb + offset, src, size);
     UNMAP_PCB(old_frame);
-}
-
-// X is High, A is Low
-uint16_t proc_get_ax(const Proc* p){
-    uint8_t a;
-    uint8_t x;
-    uint16_t ax;
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    a = pcb->ctx.a;
-    x = pcb->ctx.x;
-    ax = ((uint16_t)x << 8) | a;
-    UNMAP_PCB(old_frame);
-    return ax;
-}
-
-void proc_set_ax(Proc* p, uint16_t ax){
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    pcb->ctx.a = (uint8_t)(ax & 0x00ff);
-    pcb->ctx.x = (uint8_t)((ax & 0xff00) >> 8);
-    UNMAP_PCB(old_frame);
-}
-
-uint8_t* proc_get_kernel_low_memory(Proc* p){
-    return (uint8_t*)p->kernel_low_memory;
-}
-
-uint8_t proc_ticks_dec(Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint16_t ticks;
-    pcb = MAP_PCB(p, old_frame);
-    ticks = --pcb->ticks;
-    UNMAP_PCB(old_frame);
-    return ticks;
 }
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){

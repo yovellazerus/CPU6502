@@ -125,6 +125,7 @@ if the time slice has been exhausted.
 */
 void kernel_irq(void){
     uint8_t which_device;
+    uint8_t ticks;
 
     if(!current_process){
         panic("kernel_irq");
@@ -145,9 +146,11 @@ void kernel_irq(void){
         if the process has any quantum remaining, it will return to user space here.
         otherwise, it will by pass to the scheduler() and yield the CPU.
         */
-        if(proc_ticks_dec(current_process) == 0){
+        ticks = proc_get_ticks(current_process);
+        if(--ticks == 0){
             yield();
         }
+        proc_set_ticks(current_process, ticks);
         // process has quantum remaining, so we will return to it
     }
 
@@ -209,7 +212,7 @@ void kernel_prologue(void){
     
     proc_set_page_table(current_process, user_page_table);
 
-    memcpy(proc_get_kernel_low_memory(current_process), kernel_page_table, 3);
+    memcpy(current_process->kernel_low_memory, kernel_page_table, 3);
 
     // upon "init" first entry into the kernel, the file system is mounted
     // must be in a process context, since it requires sleeping
@@ -239,5 +242,5 @@ void kernel_epilogue(void){
     
     proc_get_page_table(current_process, user_page_table);
 
-    memcpy(kernel_page_table, proc_get_kernel_low_memory(current_process), 3);
+    memcpy(kernel_page_table, current_process->kernel_low_memory, 3);
 }

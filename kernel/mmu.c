@@ -32,7 +32,7 @@ void* mmu_map_window(uint8_t window, frame_t frame, frame_t* out_old_frame){
 
     // update the active process's tracking
     if(current_process != NULL) {
-        proc_get_kernel_low_memory(current_process)[window] = frame;
+        current_process->kernel_low_memory[window] = frame;
     }
 
     return (window == 1) ? (void*)WINDOW1 : (void*)WINDOW2;
@@ -47,6 +47,6 @@ void mmu_unmap_window(uint8_t window, frame_t old_frame){
 
     // restore the active process's tracking
     if(current_process != NULL) {
-        proc_get_kernel_low_memory(current_process)[window] = old_frame;
+        current_process->kernel_low_memory[window] = old_frame;
     }
 }

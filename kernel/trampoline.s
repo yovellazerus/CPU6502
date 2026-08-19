@@ -29,9 +29,9 @@ _irq_handler:
     cld
 
     ;; save user CPU registers to the life raft
-    sta _user_context + 6    ;; A
-    sty _user_context + 5    ;; Y
-    stx _user_context + 4    ;; X
+    sta _user_context + 4    ;; A 
+    sty _user_context + 6    ;; Y 
+    stx _user_context + 5    ;; X 
     pla
     sta _user_context + 1    ;; P 
     pla
@@ -70,7 +70,7 @@ _irq_handler:
     
     ;; jmp to C functions in the kernel
     lda _user_context + 1   ;; load P
-    and #%00010000         ;; check the "B" flag
+    and #%00010000          ;; check the "B" flag
     beq @irq
     jsr _kernel_brk
     jmp _return_from_trap
@@ -86,15 +86,15 @@ _nmi_handler:
     cld
 
     ;; save user CPU registers to the life raft
-    sta _user_context + 6    ;; A   
-    sty _user_context + 5    ;; Y
-    stx _user_context + 4    ;; X
+    sta _user_context + 4    ;; A 
+    sty _user_context + 6    ;; Y 
+    stx _user_context + 5    ;; X 
     pla
-    sta _user_context + 1    ;; P
+    sta _user_context + 1    ;; P 
     pla
     sta _user_context + 2    ;; PCL
     pla
-    sta _user_context + 3    ;; PCH
+    sta _user_context + 3    ;; PCH 
     tsx
     stx _user_context + 0    ;; SP
 
@@ -173,9 +173,9 @@ _return_from_trap:
     pha
     lda _user_context + 1         ;; P
     pha
-    ldx _user_context + 4         ;; X
-    ldy _user_context + 5         ;; Y
-    lda _user_context + 6         ;; A
+    ldx _user_context + 5         ;; X 
+    ldy _user_context + 6         ;; Y 
+    lda _user_context + 4         ;; A
 
     ;; restore the last user segment from MMU prev register
     rti  
@@ -258,19 +258,19 @@ _get_cpu_state:
 
     ;; load Y 
     lda STACK, x
-    ldy #5    
+    ldy #6    
     sta (ptr1), y
-
+    
     ;; load X
     inx
     lda STACK, x
-    ldy #4    
+    ldy #5    ;; 
     sta (ptr1), y
-
+    
     ;; load A
     inx
     lda STACK, x
-    ldy #6    
+    ldy #4    ;
     sta (ptr1), y
 
     ;; load P 
