@@ -13,35 +13,6 @@ struct Proc {
     Proc_State state;               // for fast scheduler and process syscalls actions
 };
 
-// process control block (cached to the kernel stack frame so, can be as large as needed)
-typedef struct {
-
-    // CPU and memory context
-    frame_t page_table[PAGE_TABLE_SIZE];
-    Context ctx;
-    uint16_t top;
-     
-    // scheduler
-    uint16_t pid;                   
-    uint8_t  uid;           
-    uint8_t  gid;           
-    uint8_t  exit_code;         
-    uint8_t  priority;      
-    uint8_t  ticks;   
-
-    // inter process communication
-    Proc* parent;
-    uint16_t  killed;
-    void* channel;
-
-    // file system
-    Inode* cwd;     
-    File* open_files[MAX_FILES_PER_PROC];          
-
-    // debug 
-    char name[MAX_PROC_NAME];
-} PCB;
-
 Proc  proc_table[MAX_PROC_COUNT];
 Proc* init_process;
 Proc* current_process;
@@ -165,6 +136,52 @@ void proc_free(Proc* p){
     p->state = PROC_STATE_UNUSED;
 }
 
+uint8_t proc_get_8(const Proc* p, uint8_t offset) {
+    frame_t old_frame;
+    uint8_t value;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    value = *((uint8_t*)pcb + offset);
+    UNMAP_PCB(old_frame);
+    return value;
+}
+
+void proc_set_8(Proc* p, uint8_t offset, uint8_t value) {
+    frame_t old_frame;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    *((uint8_t*)pcb + offset) = value;
+    UNMAP_PCB(old_frame);
+}
+
+uint16_t proc_get_16(const Proc* p, uint8_t offset) {
+    frame_t old_frame;
+    uint16_t value;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    value = *(uint16_t*)((uint8_t*)pcb + offset); 
+    UNMAP_PCB(old_frame);
+    return value;
+}
+
+void proc_set_16(Proc* p, uint8_t offset, uint16_t value) {
+    frame_t old_frame;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    *(uint16_t*)((uint8_t*)pcb + offset) = value;
+    UNMAP_PCB(old_frame);
+}
+
+void proc_read_bytes(const Proc* p, uint8_t offset, void* dst, uint8_t size) {
+    frame_t old_frame;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    memcpy(dst, (uint8_t*)pcb + offset, size);
+    UNMAP_PCB(old_frame);
+}
+
+void proc_write_bytes(Proc* p, uint8_t offset, void* src, uint8_t size) {
+    frame_t old_frame;
+    PCB* pcb = MAP_PCB(p, old_frame);
+    memcpy((uint8_t*)pcb + offset, src, size);
+    UNMAP_PCB(old_frame);
+}
+
 // X is High, A is Low
 uint16_t proc_get_ax(const Proc* p){
     uint8_t a;
@@ -181,16 +198,6 @@ uint16_t proc_get_ax(const Proc* p){
     return ax;
 }
 
-uint8_t proc_get_y(const Proc* p){
-    uint8_t old_frame;
-    PCB* pcb;
-    uint8_t y;
-    pcb = MAP_PCB(p, old_frame);
-    y = pcb->ctx.y;
-    UNMAP_PCB(old_frame);
-    return y;
-}
-
 void proc_set_ax(Proc* p, uint16_t ax){
     frame_t old_frame;
     PCB* pcb;
@@ -201,194 +208,8 @@ void proc_set_ax(Proc* p, uint16_t ax){
     UNMAP_PCB(old_frame);
 }
 
-void proc_set_a(Proc* p, uint8_t a){
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    pcb->ctx.a = a;
-    UNMAP_PCB(old_frame);
-}
-
 uint8_t* proc_get_kernel_low_memory(Proc* p){
     return (uint8_t*)p->kernel_low_memory;
-}
-
-void proc_get_ctx(const Proc* p, Context* ctx){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    *ctx = pcb->ctx;
-    UNMAP_PCB(old_frame);
-}
-
-void proc_set_ctx(Proc* p, Context* ctx){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->ctx = *ctx;
-    UNMAP_PCB(old_frame);
-}
-
-Proc* proc_get_parent(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    Proc* parent;
-    pcb = MAP_PCB(p, old_frame);
-    parent = pcb->parent;
-    UNMAP_PCB(old_frame);
-    return parent;
-}
-
-void proc_set_parent(Proc* p, Proc* parent){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->parent = parent;
-    UNMAP_PCB(old_frame);
-}
-
-void* proc_get_channel(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    void* channel;
-    pcb = MAP_PCB(p, old_frame);
-    channel = pcb->channel;
-    UNMAP_PCB(old_frame);
-    return channel;
-}
-
-void proc_set_channel(Proc* p, void* channel){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->channel = channel;
-    UNMAP_PCB(old_frame);
-}
-
-
-uint8_t proc_get_exit_code(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint8_t exit_code;
-    pcb = MAP_PCB(p, old_frame);
-    exit_code = pcb->exit_code;
-    UNMAP_PCB(old_frame);
-    return exit_code;
-}
-
-void proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]){
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    memcpy(page_table, pcb->page_table, PAGE_TABLE_SIZE);
-    UNMAP_PCB(old_frame);
-}
-
-void proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]){
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    memcpy(pcb->page_table, page_table, PAGE_TABLE_SIZE);
-    UNMAP_PCB(old_frame);
-}
-
-uint8_t proc_get_ticks(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint8_t ticks;
-    pcb = MAP_PCB(p, old_frame);
-    ticks = pcb->ticks;
-    UNMAP_PCB(old_frame);
-    return ticks;
-}
-
-void proc_set_ticks(Proc* p, uint8_t ticks){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->ticks = ticks;
-    UNMAP_PCB(old_frame);
-}
-
-uint16_t proc_get_top(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint16_t top;
-    pcb = MAP_PCB(p, old_frame);
-    top = pcb->top;
-    UNMAP_PCB(old_frame);
-    return top;
-}
-
-void proc_set_top(Proc* p, uint16_t top){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->top = top;
-    UNMAP_PCB(old_frame);
-}
-
-void proc_set_killed(Proc* p, uint16_t killed){
-    frame_t old_frame;
-    PCB* pcb;
-    pcb = MAP_PCB(p, old_frame);
-    pcb->killed = killed;
-    UNMAP_PCB(old_frame);
-}
-
-uint16_t proc_get_killed(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint16_t killed;
-    pcb = MAP_PCB(p, old_frame);
-    killed = pcb->killed;
-    UNMAP_PCB(old_frame);
-    return killed;
-}
-
-uint8_t proc_get_uid(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint8_t uid;
-    pcb = MAP_PCB(p, old_frame);
-    uid = pcb->uid;
-    UNMAP_PCB(old_frame);
-    return uid;
-}
-
-File* proc_get_file(const Proc* p, int fd){
-    frame_t old_frame;
-    PCB* pcb;
-    File* file;
-
-    if(fd < 0 || fd >= MAX_FILES_PER_PROC) return NULL;
-    
-    pcb = MAP_PCB(p, old_frame);
-    file = pcb->open_files[fd];
-    UNMAP_PCB(old_frame);
-    return file;
-}
-
-void proc_get_name(const Proc* p, char name[MAX_PROC_NAME]){
-    frame_t old_frame;
-    PCB* pcb;
-
-    pcb = MAP_PCB(p, old_frame);
-    memcpy(name, pcb->name, MAX_PROC_NAME);
-    UNMAP_PCB(old_frame);
-}
-
-uint16_t proc_get_pid(const Proc* p){
-    frame_t old_frame;
-    PCB* pcb;
-    uint16_t pid;
-    pcb = MAP_PCB(p, old_frame);
-    pid = pcb->pid;
-    UNMAP_PCB(old_frame);
-    return pid;
 }
 
 uint8_t proc_ticks_dec(Proc* p){
@@ -399,10 +220,6 @@ uint8_t proc_ticks_dec(Proc* p){
     ticks = --pcb->ticks;
     UNMAP_PCB(old_frame);
     return ticks;
-}
-
-void proc_set_state(Proc* p, Proc_State state){
-    p->state = state;
 }
 
 int8_t copy_to_user(void* kernel_src, uint16_t user_dest, uint16_t n, Proc* p){

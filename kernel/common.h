@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stddef.h>
 
 #include "../machine/machine.h"
 
@@ -253,6 +254,35 @@ typedef struct Context {
     uint8_t ksp;
 } Context;
 
+// process control block (cached to the kernel stack frame so, can be as large as needed)
+typedef struct {
+
+    // CPU and memory context
+    frame_t page_table[PAGE_TABLE_SIZE];
+    Context ctx;
+    uint16_t top;
+     
+    // scheduler
+    uint16_t pid;                   
+    uint8_t  uid;           
+    uint8_t  gid;           
+    uint8_t  exit_code;         
+    uint8_t  priority;      
+    uint8_t  ticks;   
+
+    // inter process communication
+    Proc* parent;
+    uint16_t  killed;
+    void* channel;
+
+    // file system
+    Inode* cwd;     
+    File* open_files[MAX_FILES_PER_PROC];          
+
+    // debug 
+    char name[MAX_PROC_NAME];
+} PCB;
+
 extern Proc* current_process;
 
 int sys_fork(void);
@@ -275,32 +305,54 @@ void  proc_dump(void);
 Proc* proc_alloc(void);
 void  proc_free(Proc* p);
 
+// generic getters & setters engine for the offsetof macros
+uint8_t proc_get_8(const Proc* p, uint8_t offset);
+void proc_set_8(Proc* p, uint8_t offset, uint8_t value);
+uint16_t proc_get_16(const Proc* p, uint8_t offset);
+void proc_set_16(Proc* p, uint8_t offset, uint16_t value);
+void proc_read_bytes(const Proc* p, uint8_t offset, void* dst, uint8_t size);
+void proc_write_bytes(Proc* p, uint8_t offset, void* src, uint8_t size);
+
+// 8-bit getters & setters
+#define proc_get_ticks(p)       proc_get_8(p, offsetof(PCB, ticks))
+#define proc_set_ticks(p, v)    proc_set_8(p, offsetof(PCB, ticks), v)
+#define proc_get_uid(p)         proc_get_8(p, offsetof(PCB, uid))
+#define proc_set_uid(p, v)      proc_set_8(p, offsetof(PCB, uid), v)
+#define proc_get_exit_code(p)   proc_get_8(p, offsetof(PCB, exit_code))
+#define proc_set_exit_code(p, v) proc_set_8(p, offsetof(PCB, exit_code), v)
+#define proc_get_a(p)           proc_get_8(p, offsetof(PCB, ctx.a))
+#define proc_set_a(p, v)        proc_set_8(p, offsetof(PCB, ctx.a), v)
+#define proc_get_y(p)           proc_get_8(p, offsetof(PCB, ctx.y))
+
+// 16-bit getters & setters (pointers are cast back to their correct types)
+#define proc_get_pid(p)         proc_get_16(p, offsetof(PCB, pid))
+#define proc_set_pid(p, v)      proc_set_16(p, offsetof(PCB, pid), v)
+#define proc_get_top(p)         proc_get_16(p, offsetof(PCB, top))
+#define proc_set_top(p, v)      proc_set_16(p, offsetof(PCB, top), v)
+#define proc_get_killed(p)      proc_get_16(p, offsetof(PCB, killed))
+#define proc_set_killed(p, v)   proc_set_16(p, offsetof(PCB, killed), v)
+#define proc_get_parent(p)      (Proc*)proc_get_16(p, offsetof(PCB, parent))
+#define proc_set_parent(p, v)   proc_set_16(p, offsetof(PCB, parent), (uint16_t)(v))
+#define proc_get_channel(p)     (void*)proc_get_16(p, offsetof(PCB, channel))
+#define proc_set_channel(p, v)  proc_set_16(p, offsetof(PCB, channel), (uint16_t)(v))
+
+// struct & array copies
+#define proc_get_page_table(p, dst) proc_read_bytes(p, offsetof(PCB, page_table), dst, PAGE_TABLE_SIZE)
+#define proc_set_page_table(p, src) proc_write_bytes(p, offsetof(PCB, page_table), src, PAGE_TABLE_SIZE)
+#define proc_get_name(p, dst)       proc_read_bytes(p, offsetof(PCB, name), dst, MAX_PROC_NAME)
+#define proc_get_ctx(p, dst)        proc_read_bytes(p, offsetof(PCB, ctx), dst, sizeof(Context))
+#define proc_set_ctx(p, src)        proc_write_bytes(p, offsetof(PCB, ctx), src, sizeof(Context))
+
+// advanced array indexing with bounds checking (for files)
+#define proc_get_file(p, fd) \
+    (((fd) < 0 || (fd) >= MAX_FILES_PER_PROC) ? NULL : \
+    (File*)proc_get_16(p, offsetof(PCB, open_files) + ((fd) * sizeof(File*))))
+
+// spacial cassis that must be functions
 uint16_t proc_get_ax(const Proc* p);
-uint8_t  proc_get_y(const Proc* p);
 void     proc_set_ax(Proc* p, uint16_t ax);
-void     proc_set_a(Proc* p, uint8_t a);
-void     proc_get_ctx(const Proc* p, Context* ctx);
-void     proc_set_ctx(Proc* p, Context* ctx);
-frame_t* proc_get_kernel_low_memory(Proc* p);
-void     proc_get_page_table(const Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
-void     proc_set_page_table(Proc* p, frame_t page_table[PAGE_TABLE_SIZE]);
-uint16_t proc_get_top(const Proc* p);
-void     proc_set_top(Proc* p, uint16_t top);
-uint16_t proc_get_pid(const Proc* p);
-uint8_t  proc_get_uid(const Proc* p);
-void     proc_get_name(const Proc* p, char name[MAX_PROC_NAME]);
-Proc*    proc_get_parent(const Proc* p);
-void     proc_set_parent(Proc* p, Proc* parent);
-void*    proc_get_channel(const Proc* p);
-void     proc_set_channel(Proc* p, void* channel);
-void     proc_set_state(Proc* p, Proc_State state);
-uint8_t  proc_get_ticks(const Proc* p);
-void     proc_set_ticks(Proc* p, uint8_t ticks);
+uint8_t* proc_get_kernel_low_memory(Proc* p);
 uint8_t  proc_ticks_dec(Proc* p);
-uint16_t proc_get_killed(const Proc* p);
-void     proc_set_killed(Proc* p, uint16_t killed);
-uint8_t  proc_get_exit_code(const Proc* p);
-File*    proc_get_file(const Proc* p, int fd);
 
 // trampoline.s
 extern uint8_t user_context[];
@@ -442,8 +494,6 @@ void vprintk(const char* fmt, va_list ap);
 
 // string.c
 #ifdef __CC65__
-
-#define NULL ((void*)0)
 
 extern void* memset(void *dst, int value, uint16_t size); // form cc65
 
