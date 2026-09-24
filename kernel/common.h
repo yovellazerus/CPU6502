@@ -54,7 +54,11 @@
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-#define LOG(...) printk("\t[" __FILE__ ":" TOSTRING(__LINE__) "] " __VA_ARGS__); uart_putc_sync('\n');
+#define LOG(...) do {                           \
+    printk("\t[%s:%d] ", __FILE__, __LINE__);   \
+    printk("" __VA_ARGS__);                     \
+    uart_putc_sync('\n');                       \
+} while(0)
 
 #define MMIO8(register)  *(volatile uint8_t*)(register)
 #define MMIO16(register) *(volatile uint16_t*)(register)

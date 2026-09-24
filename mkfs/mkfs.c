@@ -99,13 +99,15 @@ int main(int argc, char *argv[]) {
     }
 
     fseek(src, BOOT_SRC_OFFSET, SEEK_SET);
-    fread(boot, 1, BOOT_SIZE, src);
+    size_t dummy = fread(boot, 1, BOOT_SIZE, src);
+    (void)dummy;
     fseek(dst, BOOT_DST_OFFSET, SEEK_SET);
     fwrite(boot, 1, BOOT_SIZE, dst);
     free(boot);
 
     fseek(src, KERNEL_SRC_OFFSET, SEEK_SET);
-    fread(kernel, 1, KERNEL_SIZE, src);
+    size_t dummy2= fread(kernel, 1, KERNEL_SIZE, src);
+    (void)dummy2;
     fseek(dst, KERNEL_DST_OFFSET, SEEK_SET);
     fwrite(kernel, 1, KERNEL_SIZE, dst);
     free(kernel);

@@ -1,4 +1,4 @@
-.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
+.include "zeropage.inc"
 
 .segment "INITCODE"
 .org $0200

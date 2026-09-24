@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -6,8 +5,10 @@
 #include <string.h>
 #include <ctype.h>
 
-// windows only
-#include <conio.h>
+// Linux specific headers for non-blocking UART terminal I/O
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "MCS6502.h"
 #include "ansi_codes.h"
@@ -106,6 +107,10 @@ struct Machine
     // ...
 
 };
+
+// globals to store original terminal settings
+static struct termios orig_termios;
+static int orig_fcntl_flags;
 
 /* ================================================= MMU and PLIC functions ======================================================*/
 
@@ -422,8 +427,13 @@ void RAM_destroy(RAM* ram){
 }
 
 void Uart_destroy(Uart* uart){
+    // Restore original Linux terminal settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+    fcntl(STDIN_FILENO, F_SETFL, orig_fcntl_flags);
+    
     free(uart);
     printf(COLOR_RESET);
+    fflush(stdout);
 }
 
 void Disk_destroy(Disk* disk){
@@ -519,7 +529,18 @@ Uart* Uart_create(void){
     Uart* uart = (Uart*)calloc(1, sizeof(Uart));
     if(!uart) return NULL;
     uart->m = NULL;
+    
+    // Configure Linux terminal for non-blocking raw input
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG); 
+    tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+
+    orig_fcntl_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, orig_fcntl_flags | O_NONBLOCK);
+
     printf(COLOR_GREEN);
+    fflush(stdout);
     return uart;
 }
 
@@ -611,15 +632,21 @@ bool Disk_step(Disk* disk){
             if (m->disk->cmd == DISK_CMD_READ)
             {
                 fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
+                size_t result = fread(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+                if (result != DISK_SECTOR_SIZE) {
+                    m->disk->status = DISK_STATUS_ERROR;
+                    return false;
+                }
                 m->disk->status = DISK_STATUS_READY;
             }
             else if (m->disk->cmd == DISK_CMD_WRITE)
             {
                 fseek(m->disk->file, lba * DISK_SECTOR_SIZE, SEEK_SET);
-                fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
-            
+                size_t result = fwrite(m->disk->buffer, 1, DISK_SECTOR_SIZE, m->disk->file);
+                if (result != DISK_SECTOR_SIZE) {
+                    m->disk->status = DISK_STATUS_ERROR;
+                    return false;
+                }
                 m->disk->status = DISK_STATUS_READY;
             }
             else{
@@ -637,22 +664,19 @@ bool Disk_step(Disk* disk){
 bool Uart_step(Uart* uart){
     if(!uart) return false;
 
-    // keyboard
-    if (_kbhit())
+    // keyboard (Linux non-blocking read)
+    char c;
+    if (read(STDIN_FILENO, &c, 1) == 1)
     {
-        int c = _getch();
-        
         // ESC 
         if(c == 0x1B){
             return false; // power-off
         }
 
-        if (c != -1){
-            uart->m->uart->rx = (uint8_t)c;
-            uart->m->uart->status |= UART_STATUS_RX_READY;
-            // raise the hardware IRQ line
-            PLIC_raise(uart->m->plic, PLIC_PIN_UART_RX);
-        }
+        uart->m->uart->rx = (uint8_t)c;
+        uart->m->uart->status |= UART_STATUS_RX_READY;
+        // raise the hardware IRQ line
+        PLIC_raise(uart->m->plic, PLIC_PIN_UART_RX);
     }
 
     // display
@@ -660,7 +684,8 @@ bool Uart_step(Uart* uart){
     if (!(uart->m->uart->status & UART_STATUS_TX_READY))
     {
         uint8_t byte = uart->m->uart->tx;
-        _putch(byte);
+        size_t result = write(STDOUT_FILENO, &byte, 1);
+        (void)result;
         uart->m->uart->status |= UART_STATUS_TX_READY;
     }
 
@@ -754,15 +779,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Machine* m = Machine_create("machine\\rom.bin", argv[1]);
+    Machine* m = Machine_create("machine/rom.bin", argv[1]);
     if(!m){
         fprintf(stderr, COLOR_RED "ERROR: failure to create the virtual machine form disk image: \"%s\".\n" COLOR_RESET, argv[1]);
         return 1;
     }
     while(Machine_step(m));
-    Machine_coredump(m, ".\\machine\\coredump.bin");
+    Machine_coredump(m, "machine/coredump.bin");
     Machine_destroy(m);
 
     return 0;
 }
-

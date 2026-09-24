@@ -1,27 +1,43 @@
 # ====================================================================================
-#  makefile for CPU6502 and xv6502 project (Windows 64-bit)
+#  makefile for CPU6502 and xv6502 project (Cross-Platform: Windows / Linux WSL)
 # ====================================================================================
 
-# --- toolchain Paths ---
+# --- OS Detection & Dynamic Toolchain Paths ---
+ifeq ($(OS),Windows_NT)
+    # Windows environments
+    CC65_BIN = C:/Users/yovel/Desktop/VScode/CPU6502/cc65-snapshot-win64/bin
+    CA       = $(CC65_BIN)/ca65.exe
+    LD       = $(CC65_BIN)/ld65.exe
+    CL       = $(CC65_BIN)/cl65.exe
+    EXE      = .exe
+    RM       = del /Q /F
+    FIXPATH  = $(subst /,\,$1)
+    QUIET    = >nul 2>&1
+else
+    # Linux / WSL environments
+    # In WSL, the apt packages for cc65 are automatically in the system PATH
+    CA       = ca65
+    LD       = ld65
+    CL       = cl65
+    EXE      = 
+    RM       = rm -f
+    FIXPATH  = $1
+    QUIET    = >/dev/null 2>&1
+endif
+
 CC       = gcc
-CC65_BIN = C:/Users/yovel/Desktop/VScode/CPU6502/cc65-snapshot-win64/bin
-CA       = $(CC65_BIN)/ca65.exe
-LD       = $(CC65_BIN)/ld65.exe
-CL       = $(CC65_BIN)/cl65.exe
+CFLAGS   = -Wall -Wextra -O2
 
 # --- directories ---
 MACH_DIR = machine
 KERN_DIR = kernel
 MKFS_DIR = mkfs
 
-# --- flags ---
-# Added basic warnings and optimization for the C compiler
-CFLAGS   = -Wall -Wextra -O2
-
 # --- files ---
 MACH_SRC = $(MACH_DIR)/machine.c $(MACH_DIR)/MCS6502.c
 MACH_OBJ = $(MACH_SRC:.c=.o)
-EMULATOR = $(MACH_DIR)/machine.exe
+# Dynamically append .exe on Windows, or leave blank on Linux
+EMULATOR = $(MACH_DIR)/machine$(EXE) 
 
 ROM_SRC  = $(MACH_DIR)/rom.s
 ROM_CFG  = $(MACH_DIR)/rom.cfg
@@ -33,12 +49,9 @@ KERN_CFG = $(KERN_DIR)/kernel.cfg
 KERN_BIN = $(KERN_DIR)/kernel.bin
 
 MKFS_SRC = $(MKFS_DIR)/mkfs.c
-MKFS_EXE = $(MKFS_DIR)/mkfs.exe
+MKFS_EXE = $(MKFS_DIR)/mkfs$(EXE)
 
 DISK_IMG = $(MACH_DIR)/disk.bin
-
-# windows cleanup command (del requires backslashes)
-RM       = del /Q /F
 
 .PHONY: all clean run
 
@@ -78,12 +91,14 @@ run: all
 	$(EMULATOR) $(DISK_IMG)
 
 # ====================================================================================
-#  cleanup
+#  cleanup (using FIXPATH macro to handle Windows backslashes dynamically)
 # ====================================================================================
 clean:
-	-$(RM) $(MACH_DIR)\*.o >nul 2>&1
-	-$(RM) $(MACH_DIR)\*.exe >nul 2>&1
-	-$(RM) $(MACH_DIR)\*.bin >nul 2>&1
-	-$(RM) $(KERN_DIR)\*.o >nul 2>&1
-	-$(RM) $(KERN_DIR)\*.bin >nul 2>&1
-	-$(RM) $(MKFS_DIR)\*.exe >nul 2>&1
+	-$(RM) $(call FIXPATH,$(MACH_OBJ)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(EMULATOR)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(ROM_OBJ)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(ROM_BIN)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(KERN_BIN)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(DISK_IMG)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(MKFS_EXE)) $(QUIET)
+	-$(RM) $(call FIXPATH,$(KERN_DIR)/*.o) $(QUIET)

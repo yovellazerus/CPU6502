@@ -1,5 +1,5 @@
 
-.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
+.include "zeropage.inc"
 .include "../machine/machine.inc"
 
 .import __KERNEL_START__

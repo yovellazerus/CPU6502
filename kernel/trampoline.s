@@ -1,8 +1,10 @@
 
-.include "..\cc65-snapshot-win64\asminc\zeropage.inc"
-.include "..\machine\machine.inc"
+.include "zeropage.inc"
+.include "../machine/machine.inc"
 
 .segment "TRAMPOLINE"
+
+.importzp sp
 
 ;; form ca65
 .import popax
@@ -317,8 +319,8 @@ _make_kernel_stack:
     lda #$10
     sta ptr1+1
 
-    ;; use of the zp address of c_sp as the Y index 
-    ldy #<c_sp 
+    ;; use of the zp address of sp as the Y index 
+    ldy #<sp 
 
     ;; store the value of __STACK_START__ to the offset of c_sp in the NEW stack frame
     lda #<__STACK_START__
