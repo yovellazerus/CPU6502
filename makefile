@@ -5,17 +5,15 @@
 # --- OS Detection & Dynamic Toolchain Paths ---
 ifeq ($(OS),Windows_NT)
     # Windows environments
-    CC65_BIN = C:/Users/yovel/Desktop/VScode/CPU6502/cc65-snapshot-win64/bin
-    CA       = $(CC65_BIN)/ca65.exe
-    LD       = $(CC65_BIN)/ld65.exe
-    CL       = $(CC65_BIN)/cl65.exe
+    CA       = ca65.exe
+    LD       = ld65.exe
+    CL       = cl65.exe
     EXE      = .exe
     RM       = del /Q /F
     FIXPATH  = $(subst /,\,$1)
     QUIET    = >nul 2>&1
 else
     # Linux / WSL environments
-    # In WSL, the apt packages for cc65 are automatically in the system PATH
     CA       = ca65
     LD       = ld65
     CL       = cl65
