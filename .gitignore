@@ -3,4 +3,6 @@
 *.exe
 *.o
 *.bin
+machine
+mkfs
 cc65-snapshot-win64
